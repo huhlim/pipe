@@ -1,0 +1,12 @@
+{
+  "resource": {
+    "gpu": {
+      "green1": "0,1",
+      "green2": "0,2"
+    },
+    "cpu": {
+      "green1": 24,
+      "green2": 24
+    }
+  }
+}
