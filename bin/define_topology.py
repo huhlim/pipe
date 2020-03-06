@@ -25,6 +25,8 @@ def prep(job, input_pdb):
             fout.writelines(pdb)
             fout.write("TER\n")
             fout.write("END\n")
+    else:
+        return
 
     job.n_atom = n_atom
     job.ssbond = ssbond

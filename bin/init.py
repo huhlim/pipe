@@ -9,6 +9,12 @@ import argparse
 from libcommon import *
 
 def prep(arg):
+    work_home = path.Dir("%s/%s"%(arg.work_dir, arg.title))
+    json_job = work_home.fn("job.json")
+    if json_job.status():
+        job = Job.from_json(json_job)
+        return job
+    #
     job = Job(arg.work_dir, arg.title, build=True)
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
@@ -22,6 +28,8 @@ def prep(arg):
             fout.write(output)
     job.init_pdb = [out]
     job.to_json()
+    job.append_to_joblist()
+    return job
 
 def override(arg):
     pass
@@ -34,10 +42,6 @@ def main():
             help='input PDB file')
     arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
             help='working directory (default=./)')
-    #arg.add_argument('-p', '--protocol', dest='protocol', default='standard', choices=['standard'], \
-    #        help='protocol type (default=standard)')
-    #arg.add_argument('--resource', dest='resource', default=None, \
-    #        help='set resource via a JSON file')
     arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
             help='set temporary file mode (default=False)')
     arg.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,\

@@ -12,7 +12,7 @@ METHOD = 'locPREFMD'
 EXEC = '%s/locprefmd.sh'%EXEC_HOME
 
 def prep(job, input_pdb):
-    if len(job.get_task(METHOD)) > 0:
+    if len(job.get_task(METHOD, not_status='DONE')) > 0:
         return
     #
     for fn in input_pdb:
@@ -26,7 +26,7 @@ def prep(job, input_pdb):
     job.to_json()
 
 def run(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='WAIT') 
+    task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
         return
     os.environ['CHARMMEXEC'] = CHARMMEXEC_MPI

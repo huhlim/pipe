@@ -12,7 +12,7 @@ METHOD = 'equil'
 EXEC = '%s/equil.py'%EXEC_HOME
 
 def prep(job, input_pdb, input_json):
-    if len(job.get_task(METHOD)) > 0:
+    if len(job.get_task(METHOD, not_status='DONE')) > 0:
         return
     #
     job.equil_home = job.work_home.subdir("equil", build=True)
@@ -34,7 +34,7 @@ def prep(job, input_pdb, input_json):
     job.to_json()
 
 def run(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='WAIT') 
+    task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
         return
     os.environ['CHARMMEXEC'] = CHARMMEXEC

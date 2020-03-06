@@ -15,6 +15,12 @@ assert WORK_HOME is not None
 BIN_HOME = '%s/bin'%WORK_HOME
 EXEC_HOME = '%s/exec'%BIN_HOME
 DEFAULT_HOME = '%s/default'%BIN_HOME
+HOST_HOME = '%s/hosts'%BIN_HOME
+JOBs_json = path.Path("%s/job_s.json"%HOST_HOME)
+HOSTs_json = path.Path("%s/host_s.json"%HOST_HOME)
+
+RUNNER_METHOD = 'run'
+#RUNNER_METHOD = 'submit'
 
 CHARMMEXEC = '/home/huhlim/apps/charmm/current/charmm'
 if os.path.exists("/usr/bin/mpirun"):
@@ -53,7 +59,6 @@ class Job(dict):
         if build:
             self.work_home = path.Dir("%s/%s"%(work_dir, title), build=True)
             self.json_job = self.work_home.fn("job.json")
-            #self.json_resource = self.work_home.fn("resource.json")
         self.task = {}
     def __repr__(self):
         return self.work_home.path()
@@ -129,7 +134,7 @@ class Job(dict):
                  'etc': arg\
                  })
                  
-    def get_task(self, method, host=None, status=None):
+    def get_task(self, method, host=None, status=None, not_status=None):
         if method not in self.task:
             return []
         #
@@ -137,11 +142,36 @@ class Job(dict):
         for i,task in enumerate(self.task[method]):
             if status is not None and task['resource'][0] != status:
                 continue
-            if host is not None and task['resource'][1].split("/")[0] != host:
+            if not_status is not None and task['resource'][0] == status:
+                continue
+            if host is not None and task['resource'][1] != host:
                 continue
             task_s.append((i, task))
         return task_s
     def update_task_status(self, method, index, status):
-        self.task[method][index][0] = status
+        self.task[method][index]['resource'][0] = status
+    def update_task_host(self, method, index, host):
+        self.task[method][index]['resource'][1] = host
     def write_submit_script(self, method, index, cmd, submit=False):
         pass
+    def append_to_joblist(self):
+        if JOBs_json.status():
+            with JOBs_json.open() as fp:
+                job_s = json.load(fp)
+        else:
+            job_s = []
+        #
+        if self.json_job.path() not in job_s:
+            job_s.append(self.json_job.path())
+        with JOBs_json.open('wt') as fout:
+            fout.write(json.dumps(job_s))
+    def remove_from_joblist(self):
+        if not JOBs_json.status():
+            return
+        with JOBs_json.open() as fp:
+            job_s = json.load(fp)
+        if self.json_job.path() in job_s:
+            job_s.remove(self.json_job.path())
+        with JOBs_json.open('wt') as fout:
+            fout.write(json.dumps(job_s))
+
