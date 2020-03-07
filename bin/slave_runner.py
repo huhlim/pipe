@@ -12,69 +12,113 @@ from libgpu import GPU
 from libcommon import *
 
 class Queue(object):
-    def __init__(self, task_s, gpu, verbose):
-        self.task_s = task_s
+    def __init__(self, gpu, time_interval, verbose):
+        self.task_s = []
         self.gpu = gpu
+        self.time_interval = time_interval
         self.verbose = verbose
-    def run(self):
+    def wait(self):
+        time.sleep(self.time_interval)
+    def update_tasks(self):
+        if not JOBs_json.status():
+            return
+        with JOBs_json.open() as fp:
+            json_job_s = [path.Path(fn) for fn in json.load(fp)]
+            #
+        for json_job in json_job_s:
+            if not json_job.status(): continue
+            job = Job.from_json(json_job)
+            for method in job.task:
+                task = job.get_task(method, host=HOSTNAME, status='RUN')
+                for index,X in task:
+                    is_gpu_job = X['resource'][2]
+                    t = ['WAIT', json_job, method, index, is_gpu_job]
+                    is_new = True
+                    for t0 in self.task_s:
+                        if (t0[1] == t[1]) and (t0[2] == t[2]) and (t0[3] == t[3]):
+                            is_new = False ; break
+                    if is_new:
+                        self.task_s.append(t)
+    def check_resources(self, proc_s):
         cpu_status = True
         gpu_status = {}
         for gpu_id in self.gpu.usable():
             gpu_status[gpu_id] = True
-        #
+        for proc in proc_s:
+            _, use_gpu, gpu_id, _ = proc
+            if use_gpu:
+                gpu_status[gpu_id] = False
+            else:
+                cpu_status = False
+        resource_available = cpu_status
+        for gpu_id in gpu_status:
+            if gpu_status[gpu_id]:
+                resource_available = True
+                break
+        return resource_available, cpu_status, gpu_status
+    def run(self):
         proc_s = []
-        submitted = [False for _ in self.task_s]
-        finished = [False for _ in self.task_s]
-        while (False in finished):
-            for task_id,task in enumerate(self.task_s):
-                if finished[task_id]: continue
-                if submitted[task_id]: continue
+        while True:
+            resource_available, cpu_status, gpu_status = self.check_resources(proc_s)
+            #
+            if resource_available:
+                self.update_tasks()
+                if len(self.task_s) == 0:
+                    self.wait()
+                    continue
                 #
-                use_gpu = task[0]
-                if use_gpu:
-                    gpu_id_assigned = None
-                    for gpu_id in gpu_status:
-                        if gpu_status[gpu_id]:
-                            gpu_id_assigned = gpu_id
-                            break
-                    if gpu_id_assigned is None:
-                        continue
-                    cmd = self.get_cmd(task, use_gpu, gpu_id=gpu_id)
-                    gpu_status[gpu_id] = False
-                else:
-                    if not cpu_status: continue
-                    cmd = self.get_cmd(task, use_gpu)
-                    cpu_status = False
-                    gpu_id = None
-                #
-                if self.verbose:
-                    sys.stdout.write("%s\n"%cmd)
-                proc = sp.Popen(cmd, shell=True)
-                time.sleep(1.)
-                if proc.poll() is None:
-                    proc_s.append((task_id, use_gpu, gpu_id, proc))
-                else:
-                    finished[task_id] = True
-                submitted[task_id] = True
+                for task_id,task in enumerate(self.task_s):
+                    if task[0] == 'RUNNING': continue
+                    if task[0] == 'FINISHED': continue
+                    #
+                    use_gpu = task[4]
+                    if use_gpu:
+                        gpu_id_assigned = None
+                        for gpu_id in gpu_status:
+                            if gpu_status[gpu_id]:
+                                gpu_id_assigned = gpu_id
+                                break
+                        if gpu_id_assigned is None:
+                            continue
+                        cmd = self.get_cmd(task, use_gpu, gpu_id=gpu_id)
+                        gpu_status[gpu_id] = False
+                    else:
+                        if not cpu_status: continue
+                        cmd = self.get_cmd(task, use_gpu)
+                        cpu_status = False
+                        gpu_id = None
+                    #
+                    if self.verbose:
+                        sys.stdout.write("%s\n"%cmd)
+                    proc = sp.Popen(cmd, shell=True)
+                    time.sleep(1.)
+                    #
+                    if proc.poll() is None:
+                        task[0] = 'RUNNING'
+                        proc_s.append((task_id, use_gpu, gpu_id, proc))
+                    else:
+                        task[0] = 'FINISHED'
             #
             proc_status, proc_running = self.check_proc_status(proc_s)
             for status, proc in zip(proc_status, proc_s):
                 if not status: continue
                 task_id, use_gpu, gpu_id, _ = proc
-                finished[task_id] = True
+                self.task_s[task_id][0] = 'FINISHED'
                 if use_gpu:
                     gpu_status[gpu_id] = True
                 else:
                     cpu_status = True
-
             proc_s = proc_running
-            time.sleep(30.)
+            #
+            self.wait()
 
     def get_cmd(self, task, use_gpu, gpu_id=None):
         wrt = []
         if use_gpu and gpu_id is not None:
             wrt.append("export CUDA_VISIBLE_DEVICES=%s"%gpu_id)
-        use_gpu, method, json_job = task
+
+        json_job = task[1]
+        method = task[2]
         wrt.append("%s/%s.py run %s"%(BIN_HOME, method, json_job.short()))
         wrt = ' ; '.join(wrt)
         return wrt
@@ -137,10 +181,6 @@ def main():
     arg.add_argument('--interval', dest='time_interval', default=60, type=int)
     arg.add_argument('--verbose', dest='verbose', action='store_true', default=False)
     #
-    if not JOBs_json.status():
-        sys.stderr.write("There is no available job\n")
-        return
-    #
     arg = arg.parse_args()
     #
     if arg.use_gpu:
@@ -148,17 +188,7 @@ def main():
     else:
         gpu = None
     #
-    while True:
-        with JOBs_json.open() as fp:
-            job_s = [path.Path(fn) for fn in json.load(fp)]
-        if len(job_s) == 0: 
-            time.sleep(arg.time_interval)
-            continue
-        #
-        task_s = get_tasks(job_s)
-        Queue(task_s, gpu, arg.verbose).run()
-        #
-        time.sleep(arg.time_interval)
+    Queue(gpu, arg.time_interval, arg.verbose).run()
 
 if __name__ == '__main__':
     try:
