@@ -18,7 +18,8 @@ AVOGADRO = 6.0221420e23
 
 water_pdb_fn = '%s/water.pdb'%DEFAULT_HOME
 water_box = 1.8662
-water_cutoff = 0.14
+#water_cutoff = 0.14
+water_cutoff = 0.20
 
 def calc_dist(arg):
     # prot.shape = (n_atom, 3)

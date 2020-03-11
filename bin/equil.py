@@ -11,25 +11,30 @@ from libcommon import *
 METHOD = 'equil'
 EXEC = '%s/equil.py'%EXEC_HOME
 
-def prep(job, input_pdb, input_json):
+def prep(job, equil_index, input_pdb, input_json):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
         return
     #
+    OUTs = ['%s.psf'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
+    #
     job.equil_home = job.work_home.subdir("equil", build=True)
-    index = len(job.equil_home.glob("*"))
+    job.equil_home.chdir()
     #
     for fn in input_pdb:
-        run_home = job.equil_home.subdir("%d"%index)
+        run_home = job.equil_home.subdir("%d"%equil_index)
+        #
         input_s = [run_home, fn, input_json]
-        output_s = [run_home.fn(X) for X in ['%s.psf'%job.title, '%s.equil.restart.pkl'%job.title]]
+        output_s = [run_home.fn(X) for X in ['%s.psf'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]]
         status = True
         for output in output_s:
             if not output.status():
                 status = False ; break
-        if status: continue
+        if status: 
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
+            continue
 
         job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
-        index += 1
+        equil_index += 1
     #
     job.to_json()
 
@@ -61,13 +66,16 @@ def run(job):
                 line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
             options['ssbond'].append(line)
         #
+        options['input_pdb'] = input_pdb
+        options['input_json'] = input_json
+        #
         run_home.build()
         run_home.chdir()
         #
         equil_json = run_home.fn("input.json")
         if not equil_json.status():
             with equil_json.open("wt") as fout:
-                fout.write(json.dumps(options, indent=2))
+                fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd = [EXEC, job.title, input_pdb.short()]
         cmd.extend(['--input', equil_json.short()])
@@ -102,7 +110,6 @@ def submit(job):
             if chain_1 == ' ' and chain_2 == ' ':
                 line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
             options['ssbond'].append(line)
-
         #
         run_home.build()
         run_home.chdir()
@@ -133,7 +140,7 @@ def status(job):
                 status = False ; break
         #
         if status:
-            job.update_task_status(METHOD, index, "END")
+            job.update_task_status(METHOD, index, "DONE")
         elif run_home.exists():
             job.update_task_status(METHOD, index, "RUN")
 
@@ -141,6 +148,7 @@ def main():
     arg = argparse.ArgumentParser(prog='equil')
     arg.add_argument(dest='command', choices=['prep', 'run'], help='exec type')
     arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
+    arg.add_argument('--index', dest='equil_index', help='equil_index', type=int)
     arg.add_argument('-i', '--input', dest='input_pdb', nargs='*', \
             help='input PDB file, mandatory for "prep"')  
     arg.add_argument('-j', '--json', dest='input_json', \
@@ -165,7 +173,7 @@ def main():
             sys.exit("Error: input_json required\n")
         arg.input_pdb = [path.Path(fn) for fn in arg.input_pdb]
         #
-        prep(job, arg.input_pdb, path.Path(arg.input_json))
+        prep(job, arg.equil_index, arg.input_pdb, path.Path(arg.input_json))
 
     elif arg.command == 'run':
         run(job)

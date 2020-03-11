@@ -146,7 +146,7 @@ def get_outputs(job, method):
 def main():
     arg = argparse.ArgumentParser(prog='PREFMD')
     arg.add_argument(dest='title', help='Job title')
-    arg.add_argument('-i', '--input', dest='input_pdb', nargs='?', required=True, \
+    arg.add_argument('-i', '--input', dest='input_pdb', \
             help='input PDB file')
     arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
             help='working directory (default=./)')
@@ -161,7 +161,8 @@ def main():
         return arg.print_help()
     #
     arg = arg.parse_args()
-    arg.input_pdb = path.Path(arg.input_pdb)
+    if arg.input_pdb is not None:
+        arg.input_pdb = path.Path(arg.input_pdb)
     #
     # init
     job = import_module("init").prep(arg)
@@ -176,10 +177,25 @@ def main():
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
 
     # equil
-    import_module("equil").prep(job, [out[0] for out in locPREFMD_out], path.Path("%s/equil.json"%(DEFAULT_HOME)))
+    import_module("equil").prep(job, 0, [out[0] for out in locPREFMD_out], path.Path("%s/equil.json"%(DEFAULT_HOME)))
     if not run(job, arg.wait_after_run):
         return 
+    
+    # prod
+    import_module("prod").prep(job, 0, 0, path.Path("%s/prod.json"%DEFAULT_HOME), 5)
+    if not run(job, arg.wait_after_run):
+        return
+    prod_out = get_outputs(job, 'prod')
+    
+    # score
+    import_module("score").prep(job, [out[0] for out in prod_out])
+    if not run(job, arg.wait_after_run):
+        return
 
+    # average
+    import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
+    if not run(job, arg.wait_after_run):
+        return
     #
     job.remove_from_joblist()
 

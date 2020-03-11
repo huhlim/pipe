@@ -23,7 +23,7 @@ options['openmm']['platform'] = 'CUDA'
 
 options['md'] = {}
 options['md']['dyntstep'] = 0.002
-options['md']['dyntemp'] = 298.15
+options['md']['dyntemp'] = 360.0
 options['md']['lang'] = True
 options['md']['langfbeta'] = 0.01
 options['md']['ion_conc'] = 0.

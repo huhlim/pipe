@@ -17,7 +17,7 @@ def prep(job, input_pdb):
     #
     for fn in input_pdb:
         out = fn.dirname().fn("%s.prefmd.pdb"%(fn.name()))
-        if out.status(): continue
+        #
         if CHARMM_MPI:
             job.add_task(METHOD, [fn], [out], use_gpu=False, n_proc=16)
         else:
@@ -72,7 +72,7 @@ def status(job):
     for index,task in task_s:
         output_pdb = task['output'][0]
         if output_pdb.status():
-            job.update_task_status(METHOD, index, "END")
+            job.update_task_status(METHOD, index, "DONE")
         elif output_pdb.exists():
             job.update_task_status(METHOD, index, "RUN")
 

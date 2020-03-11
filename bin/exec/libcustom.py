@@ -17,8 +17,8 @@ def construct_custom_restraint(ref, custom_s):
     if len(custom_s) == 0:
         return rsr
     #
-    crd = pdb.xyz[0]
-    mass = [atom.element.mass for atom in pdb.topology.atoms()]
+    crd = ref.xyz[0]
+    mass = [atom.element.mass for atom in ref.topology.atoms]
     #
     bond = CustomBondForce("k * (r-r0)^2")
     bond.addPerBondParameter('k')
@@ -58,13 +58,13 @@ def construct_custom_restraint(ref, custom_s):
             pass
         elif custom.r_type == 'position':
             i_atm = custom.i_atm[0]
-            p = list(crd[i_atm].value_in_unit(nanometers))
+            p = crd[i_atm].tolist()
             p.append(custom.prm[0]*mass[i_atm]*kilocalories_per_mole/angstroms**2)
             pos.addParticle(i_atm, p)
         elif custom.r_type == 'position_flat':
             i_atm = custom.i_atm[0]
             p = [custom.prm[0]*mass[i_atm]*kilocalories_per_mole/angstroms**2]
-            p.extend(list(crd[i_atm].value_in_unit(nanometers)))
+            p.extend(crd[i_atm].tolist())
             p.append(custom.prm[1]*angstroms)
             pos_flat.addParticle(i_atm, p)
     #

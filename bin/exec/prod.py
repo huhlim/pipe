@@ -187,6 +187,8 @@ def run(output_prefix, input_json, options, verbose):
             n_error += 1
             system("mv %s.err %s.err.%d"%(output_prefix, output_prefix, n_error))
             if n_error >= MAX_ERROR:
+                with run_home.fn("ERROR").open("wt") as fout:
+                    fout.write("#")
                 sys.exit("ERROR: failed to run %s\n"%run_home)
     #
     system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\

@@ -13,7 +13,12 @@ def prep(arg):
     json_job = work_home.fn("job.json")
     if json_job.status():
         job = Job.from_json(json_job)
+        job.verbose = arg.verbose
+        job.keep_tmp = arg.keep
+        job.append_to_joblist()
         return job
+    #
+    assert arg.input_pdb is not None
     #
     job = Job(arg.work_dir, arg.title, build=True)
     job.init_home = job.work_home.subdir("init", build=True)
@@ -38,7 +43,7 @@ def main():
     arg = argparse.ArgumentParser(prog='init')
     arg.add_argument(dest='command', choices=['prep', 'override'], help='exec type')
     arg.add_argument(dest='title', help='Job title')
-    arg.add_argument('-i', '--input', dest='input_pdb', nargs='?', required=True, \
+    arg.add_argument('-i', '--input', dest='input_pdb', required=True, \
             help='input PDB file')
     arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
             help='working directory (default=./)')

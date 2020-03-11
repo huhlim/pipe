@@ -89,7 +89,7 @@ class Queue(object):
                         gpu_id = None
                     #
                     if self.verbose:
-                        sys.stdout.write("%s\n"%cmd)
+                        sys.stdout.write("PROC: %s\n"%cmd)
                     proc = sp.Popen(cmd, shell=True)
                     time.sleep(1.)
                     #
@@ -142,7 +142,7 @@ def register_host(gpu):
     if HOSTNAME not in host_s:
         host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES)
         with HOSTs_json.open('wt') as fout:
-            fout.write(json.dumps(host_s))
+            fout.write(json.dumps(host_s, indent=2))
     else:
         host = host_s[HOSTNAME]
         if host[0]:
@@ -159,7 +159,7 @@ def unregister_host():
     if HOSTNAME in host_s:
         del host_s[HOSTNAME]
     with HOSTs_json.open("wt") as fout:
-        fout.write(json.dumps(host_s))
+        fout.write(json.dumps(host_s, indent=2))
 
 def get_tasks(json_job_s):
     task_s = []   # cpu / gpu

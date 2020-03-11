@@ -200,8 +200,8 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     simulation.step(steps_left)
     #
     chk_fn = '%s.equil.restart'%(output_prefix)
-    with open(chk_fn, 'wb') as fout:
-        fout.write(simulation.context.createCheckpoint())
+    #with open(chk_fn, 'wb') as fout:
+    #    fout.write(simulation.context.createCheckpoint())
 
     state = simulation.context.getState(getPositions=True,\
                                         getVelocities=True,\
@@ -212,13 +212,14 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     with open("%s.pkl"%chk_fn, 'wb') as fout:
         pickle.dump(state, fout)
     #
-    boxinfo = state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(angstrom)
-    with open("boxsize", 'wt') as fout:
-        fout.write("%13.8f %13.8f %13.8f"%(boxinfo[0][0], boxinfo[1][1], boxinfo[2][2]))
+    boxinfo = state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer)
+    #with open("boxsize", 'wt') as fout:
+    #    fout.write("%13.8f %13.8f %13.8f"%(boxinfo[0][0], boxinfo[1][1], boxinfo[2][2]))
     #
     equil_pdb_fn = path.Path('%s.equil.pdb'%output_prefix)
     pdb.xyz = state.getPositions(asNumpy=True).value_in_unit(nanometer)[None,:]
-    pdb.unitcell_vectors = boxinfo[None,:]/10.0
+    #pdb.unitcell_vectors = boxinfo[None,:]/10.0
+    pdb.unitcell_vectors = boxinfo[None,:]
     pdb.save(equil_pdb_fn.short())
     #
     cmd = []
