@@ -196,6 +196,12 @@ def main():
     import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
     if not run(job, arg.wait_after_run):
         return
+    average_out = get_outputs(job, 'average')
+
+    # qa
+    import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
+    if not run(job, arg.wait_after_run):
+        return
     #
     job.remove_from_joblist()
 
