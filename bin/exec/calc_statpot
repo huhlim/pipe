@@ -1,0 +1,133 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import subprocess as sp
+import argparse
+import tempfile
+
+WORK_HOME = os.getenv("PREFMD_HOME")
+assert WORK_HOME is not None
+sys.path.insert(0, '%s/bin'%WORK_HOME)
+
+import path
+from libcommon import EXEC_HOME
+
+def distribute_jobs(pdb_fn_s, n_proc=1, method='rwplus'):
+    job_s = [[] for i in range(n_proc)]
+    for i,pdb_fn in enumerate(pdb_fn_s):
+        job_s[i%n_proc].append(path.Path(pdb_fn))
+    #
+    dir_s = []
+    for i in range(n_proc):
+        dir = tempfile.mkdtemp(prefix='statpot.')
+        #
+        with open("%s/cmd"%dir, 'wt') as fout:
+            fout.write("cd %s\n"%dir)
+            for pdb_fn in job_s[i]:
+                fout.write("%s/calc_%s.sh "%(EXEC_HOME, method))
+                fout.write("%s "%pdb_fn)
+                fout.write(">> out\n")
+        dir_s.append(dir)
+    #
+    return dir_s
+
+def run_jobs(dir_s, n_proc=1):
+    script_fn = tempfile.mkstemp(prefix='statpot.', suffix='.sh')[1]
+    with open(script_fn, 'wt') as fout:
+        for dir in dir_s:
+            fout.write("sh %s/cmd\n"%dir)
+    #
+    pwd = os.getcwd()
+    os.chdir(os.path.dirname(script_fn))
+    #
+    cmd = []
+    cmd.append('parallel')
+    cmd.append('-j')
+    cmd.append('%d'%n_proc)
+    cmd.append('--workdir')
+    cmd.append('.')
+    cmd.append("::::")
+    cmd.append(script_fn)
+    #
+    with open(os.devnull, 'w') as stdout:
+        sp.call(cmd, stdout=stdout)
+    #
+    os.remove(script_fn)
+    #
+    os.chdir(pwd)
+
+def merge_output(dir_s, n_proc=1, index=0):
+    output_s = []
+    for dir in dir_s:
+        output = []
+        with open("%s/out"%dir) as fp:
+            for line in fp:
+                output.append(float(line.strip().split()[index]))
+        output_s.append(output)
+    n_output = sum([len(output) for output in output_s])
+    #
+    score = []
+    for i in range(n_output):
+        out = output_s[i%n_proc][int(i/n_proc)]
+        score.append(output_s[i%n_proc][int(i/n_proc)])
+    return score
+
+def clear_jobs(dir_s):
+    for dir in dir_s:
+        sp.call(['rm', '-rf', dir])
+
+def main():
+    arg = argparse.ArgumentParser(prog='calc_tmscore')
+    arg.add_argument('-j', '--cpu', dest='n_proc', help='number of proc.', default=1, type=int)
+    arg.add_argument('-p', '--pdb', dest='pdb_fn_s', help='PDB files', default=[], nargs='*')
+    arg.add_argument('-l', '--list', dest='pdb_list', help='PDB file lists', default=[], nargs='*')
+    arg.add_argument('--rwplus', dest='run_rwplus', help='evaluate RWplus', default=False, action='store_true')
+    arg.add_argument('--dfire', dest='run_dfire', help='evaluate dfire', default=False, action='store_true')
+    if len(sys.argv) == 1:
+        return arg.print_help()
+    arg = arg.parse_args()
+    #
+    #if (not arg.run_rwplus) and (not arg.run_dfire):
+    #    return
+    #
+    pdb_fn_s = arg.pdb_fn_s
+    for fn in arg.pdb_list:
+        with open(fn) as fp:
+            for line in fp:
+                if not line.startswith("#"):
+                    pdb_fn_s.append(line.strip())
+    arg.n_proc = min(arg.n_proc, len(pdb_fn_s))
+    #
+    header = []
+    score_s = []
+    fmt_s = []
+    #
+    if arg.run_rwplus:
+        header.append("RWplus")
+        fmt_s.append("%12.4f  ")
+        dir_s = distribute_jobs(pdb_fn_s, n_proc=arg.n_proc, method='rwplus')
+        run_jobs(dir_s, n_proc=arg.n_proc)
+        score_s.append(merge_output(dir_s, n_proc=arg.n_proc, index=0))
+        clear_jobs(dir_s)
+    #
+    if arg.run_dfire:
+        header.append("dDFIRE")
+        header.append("DFIRE")
+        fmt_s.append("%8.3f  ")
+        fmt_s.append("%8.3f  ")
+        dir_s = distribute_jobs(pdb_fn_s, n_proc=arg.n_proc, method='dDFIRE')
+        run_jobs(dir_s, n_proc=arg.n_proc)
+        score_s.append(merge_output(dir_s, n_proc=arg.n_proc, index=0))
+        score_s.append(merge_output(dir_s, n_proc=arg.n_proc, index=1))
+        clear_jobs(dir_s)
+    #
+    sys.stdout.write('# '+"  ".join(header)+'\n')
+    #
+    for i,pdb_fn in enumerate(pdb_fn_s):
+        for j in range(len(score_s)):
+            sys.stdout.write(fmt_s[j]%score_s[j][i])
+        sys.stdout.write("%s\n"%pdb_fn)
+
+if __name__=='__main__':
+    main()
