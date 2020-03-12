@@ -41,8 +41,8 @@ class Queue(object):
                         self.task_s.append(t)
     def check_resources(self, proc_s):
         cpu_status = True
-        gpu_status = {}
-        for gpu_id in self.gpu.usable():
+        gpu_status = {} ; self.gpu.check()
+        for gpu_id in self.gpu.usable(update=True):
             gpu_status[gpu_id] = True
         for proc in proc_s:
             _, use_gpu, gpu_id, _ = proc
@@ -63,9 +63,6 @@ class Queue(object):
             #
             if resource_available:
                 self.update_tasks()
-                if len(self.task_s) == 0:
-                    self.wait()
-                    continue
                 #
                 for task_id,task in enumerate(self.task_s):
                     if task[0] == 'RUNNING': continue

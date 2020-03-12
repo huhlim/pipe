@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import time
 import subprocess as sp
 import xml.etree.ElementTree as ET
 
@@ -19,15 +20,24 @@ class GPU:
 
         self.n_gpu = 0
         self.proc_s = []
-        self.update()
+        self.check()
         self._visible_devices = None
     def __len__(self):
         return len(self.usable())
-    def update(self):
+    def check(self):
         if self.host == None or self.host == self.login:
-            xml = sp.check_output(["nvidia-smi", "-q", '-x'])
+            self.check_proc = sp.Popen(["nvidia-smi", "-q", '-x'], stdout=sp.PIPE)
         else:
-            xml = sp.check_output(["ssh", self.host, "nvidia-smi", "-q", "-x"])
+            self.check_proc = sp.Popen(["ssh", self.host, "nvidia-smi", "-q", "-x"], stdout=sp.PIPE)
+    def update(self):
+        t_wait0 = time.time()
+        while True:
+            if self.check_proc.poll() is not None:
+                break
+            if (time.time() - t_wait0) > 10.0:
+                return
+            time.sleep(0.1)
+        xml = self.check_proc.stdout.read()
         info = ET.fromstring(xml)
         #
         self.n_gpu = int(info.find("attached_gpus").text)

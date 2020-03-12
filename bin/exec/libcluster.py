@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import copy
+import mdtraj
+import argparse
+import numpy as np
+from sklearn.cluster import DBSCAN
+
+def get_clusters(top_pdb, dcd_fn_s, rmsd_cutoff=2.0, subsample=0):
+    top = mdtraj.load(top_pdb.short())
+    #
+    frame_s = []
+    for dcd_fn in dcd_fn_s:
+        frame = mdtraj.load(dcd_fn.short(), top=top)
+        frame_s.append(frame)
+    frame_s = mdtraj.join(frame_s, check_topology=False)
+    #
+    if subsample > 0:
+        subsampled = np.zeros(len(frame_s), dtype=bool)
+        subsampled[::subsample] = True
+        notsampled = np.logical_not(subsampled)
+        frame_s0 = copy.deepcopy(frame_s)
+        frame_s = frame_s0[subsampled]
+        frame_x = frame_s0[notsampled]
+    #
+    dmtx = np.array([mdtraj.rmsd(frame_s, frame) for frame in frame_s], dtype=float)
+    dbscan = DBSCAN(eps=rmsd_cutoff*0.1, min_samples=1, metric='precomputed', n_jobs=-1)
+    labels = dbscan.fit_predict(dmtx)
+    n_cluster = labels.max()+1
+    #
+    if subsample > 0:
+        rmsd_to_center = []
+        for i in range(n_cluster):
+            c = (labels == i)
+            index = np.ix_(c,c)
+            d = dmtx[index].sum(axis=0)
+            #
+            member = frame_s[c]
+            center = member[np.argmin(d)]
+            rmsd_to_center.append(mdtraj.rmsd(frame_x, center))
+        rmsd_to_center = np.array(rmsd_to_center, dtype=float)
+        label_x = np.argmin(rmsd_to_center, axis=0)
+    #
+    cluster_s = []
+    for i in range(n_cluster):
+        c = (labels == i)
+        index = np.ix_(c,c)
+        d = dmtx[index].sum(axis=0)
+        #
+        member = frame_s[c]
+        center = member[np.argmin(d)]
+        if subsample > 0:
+            x = (label_x == i)
+            member = mdtraj.join([member, frame_x[x]])
+        n_member = len(member)
+        #
+        superposed = member.superpose(center)
+        xyz = superposed.xyz.mean(axis=0)
+        averaged = copy.deepcopy(center)
+        averaged.xyz = xyz
+        cluster_s.append((n_member, center, averaged))
+    cluster_s.sort(key=lambda x: x[0], reverse=True)
+    return cluster_s
+
+def main():
+    arg = argparse.ArgumentParser(prog='cluster_models')
+    arg.add_argument(dest='output_prefix')
+    arg.add_argument(dest='init_pdb')
+    arg.add_argument('--dcd', dest='dcd_fn_s', required=True, nargs='*')
+    arg.add_argument('--rmsd', dest='rmsd_cutoff', type=float, default=2.0)
+    arg.add_argument('--subsample', dest='subsample', type=int, default=0)
+    #
+    if len(sys.argv) == 1:
+        arg.print_help()
+        return
+    arg = arg.parse_args()
+    #
+    run(arg)
+
+if __name__ == '__main__':
+    main()

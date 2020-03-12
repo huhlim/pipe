@@ -10,6 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import numpy as np
+from importlib import import_module
 
 import mdtraj
 from simtk.unit import *
@@ -149,14 +150,27 @@ def get_input_structures(arg, options):
     return avrg, cntr
 
 def run(arg, options):
-    avrg, cntr = get_input_structures(arg, options)
-    #
-    orient_fn, solv_fn = solvate_pdb(arg.output_prefix, cntr, options, False)
-    #
-    psf_fn, crd_fn = generate_PSF(arg.output_prefix, solv_fn, options, False)
-    #
-    final = run_md(arg.output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
-    return final
+    if options['rule'][0] == 'cluster':
+        cluster_s = import_module("libcluster").get_clusters(arg.top_pdb, arg.input_dcd_s,
+                rmsd_cutoff=options['rule'][1][0], subsample=options['rule'][1][1])
+        final_s = []
+        for i in range(min(options['rule'][1][2], len(cluster_s))):
+            output_prefix = '%s.%04d'%(arg.output_prefix, i)
+            cntr = cluster_s[i][1]
+            avrg = cluster_s[i][2]
+            #
+            orient_fn, solv_fn = solvate_pdb(output_prefix, cntr, options, False)
+            psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, False)
+            final = run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
+            final_s.append((output_prefix, final))
+    else:
+        avrg, cntr = get_input_structures(arg, options)
+        #
+        orient_fn, solv_fn = solvate_pdb(arg.output_prefix, cntr, options, False)
+        psf_fn, crd_fn = generate_PSF(arg.output_prefix, solv_fn, options, False)
+        final = run_md(arg.output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
+        final_s = [(arg.output_prefix, final)]
+    return final_s
 
 def main():
     arg = argparse.ArgumentParser(prog='average')
@@ -189,7 +203,8 @@ def main():
     output = run(arg, options)
     #
     os.chdir(cwd)
-    output.save("%s.pdb"%arg.output_prefix)
+    for prefix, final in output:
+        final.save("%s.pdb"%prefix)
 
 if __name__=='__main__':
     main()

@@ -72,6 +72,14 @@ def assign_resource(job, updated):
     else:
         host_s = {}
     #
+    gpu_host_s = {}
+    for host in host_s:
+        if not host_s[host][0]:
+            continue
+        gpu = GPU(host=host, login=HOSTNAME)
+        gpu._visible_devices = host_s[host][1]
+        gpu_host_s[host] = gpu
+    #
     cpu_taken, gpu_taken = get_resource_taken()
     #
     cpu_s = []
@@ -81,9 +89,8 @@ def assign_resource(job, updated):
             cpu_s.append(host)
         if not host_s[host][0]:
             continue
-        gpu = GPU(host=host, login=HOSTNAME)
-        gpu._visible_devices = host_s[host][1]
-        n_usable = len(gpu.usable())
+        gpu = gpu_host_s[host]
+        n_usable = len(gpu.usable(update=True))
         if host in gpu_taken:
             n_usable -= gpu_taken[host]
         if n_usable >= 0:
@@ -196,12 +203,15 @@ def main():
     import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
     if not run(job, arg.wait_after_run):
         return
+    import_module("average").prep(job, '%s.prod_0.cluster'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
+    if not run(job, arg.wait_after_run):
+        return
     average_out = get_outputs(job, 'average')
 
     # qa
-    import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
-    if not run(job, arg.wait_after_run):
-        return
+    #import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
+    #if not run(job, arg.wait_after_run):
+    #    return
     #
     job.remove_from_joblist()
 

@@ -14,6 +14,7 @@ EXEC = '%s/average.py'%EXEC_HOME
 PARAM = {}
 PARAM['score'] = ("RWplus", 25.0)
 PARAM['casp12'] = (0.5, 225., 45.)
+PARAM['cluster'] = (2.0, 20, 5) # rmsd_cutoff, subsample, max_run_md
 
 def prep(job, output_prefix, input_prod, input_json, rule='score'):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
@@ -27,29 +28,42 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
     job.average_home = job.work_home.subdir("average", build=True)
     job.average_home.chdir()
     #
-    input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], []]
+    if rule == 'score':
+        input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], []]
+    elif rule == 'casp12':
+        input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], [], []]
+    elif rule == 'cluster':
+        input_s = [output_prefix, (rule, PARAM[rule]), input_json, []]
+    #
     for prod in prod_s:
         if prod['resource'][0] != 'DONE':
             return
         if not prod['output'][0].status():
             return
 
-        score = None
-        for _,s in score_s:
-            if s['input'][0] == prod['output'][0]:
-                score = s
-                break
-        if score is None:
-            return
-        if score['resource'][0] != 'DONE':
-            return
-        if not score['output'][0].status():
-            return
+        if rule in ['score', 'casp12']:
+            score = None
+            for _,s in score_s:
+                if s['input'][0] == prod['output'][0]:
+                    score = s
+                    break
+            if score is None:
+                return
+            if score['resource'][0] != 'DONE':
+                return
+            if not score['output'][0].status():
+                return
         #
         input_s[3].append(prod['output'][0])
-        input_s[4].append(score['output'][0])
+        if rule in ['score', 'casp12']:
+            input_s[4].append(score['output'][0])
+        #if rule in ['casp12']:
+        #    input_s[5].append(score['output'][0])
     #
-    output_s = [job.average_home.fn("%s.pdb"%output_prefix)]
+    if rule in ['score', 'casp12']:
+        output_s = [job.average_home.fn("%s.pdb"%output_prefix)]
+    else:
+        output_s = [job.average_home.fn("%s.0000.pdb"%output_prefix)]
     job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
     #
     job.to_json()
@@ -65,7 +79,6 @@ def run(job):
         rule = input_s[1]
         input_json = input_s[2]
         input_dcd_s = input_s[3]
-        input_score_s = input_s[4]
         output_pdb = task['output'][0]
         if output_pdb.status():
             continue
@@ -91,8 +104,12 @@ def run(job):
         cmd.extend(['--input', input_json.short()])
         cmd.append('--dcd')
         cmd.extend([fn.short() for fn in input_dcd_s])
-        cmd.append('--score')
-        cmd.extend([fn.short() for fn in input_score_s])
+        if rule in ['score', 'casp12']:
+            cmd.append('--score')
+            cmd.extend([fn.short() for fn in input_s[4]])
+        #if rule in ['casp12']:
+        #    cmd.append('--score')
+        #    cmd.extend([fn.short() for fn in input_s[5]])
         #
         system(cmd, verbose=job.verbose)
 
