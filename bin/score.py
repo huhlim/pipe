@@ -9,7 +9,8 @@ import argparse
 from libcommon import *
 
 METHOD = 'score'
-EXEC = '%s/calc_statpot'%EXEC_HOME
+EXEC1 = '%s/calc_statpot'%EXEC_HOME
+EXEC2 = '%s/calc_tmscore'%EXEC_HOME
 
 def prep(job, input_dcd):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
@@ -20,7 +21,7 @@ def prep(job, input_dcd):
             continue
         run_home = dcd_fn.dirname()
         input_s = [dcd_fn]
-        output_s = [run_home.fn("statpot.dat")]
+        output_s = [run_home.fn("statpot.dat"), run_home.fn("qual_init.dat")]
         job.add_task(METHOD, input_s, output_s, use_gpu=False, n_proc=24)
     #
     job.to_json()
@@ -33,8 +34,9 @@ def run(job):
     for index,task in task_s:
         input_dcd = task['input'][0]
         run_home = input_dcd.dirname()
-        output_dat = task['output'][0]
-        if output_dat.status():
+        output_score = task['output'][0]
+        output_qual = task['output'][1]
+        if output_score.status() and output_qual:
             continue
         #
         run_home.chdir()
@@ -49,13 +51,22 @@ def run(job):
                 cmd.extend(['--dcd', input_dcd.short()])
                 system(cmd, outfile=fout)
 
-        cmd = [EXEC]
-        cmd.extend(['-j', '%d'%task['resource'][3]])
-        cmd.extend(['-l', pdblist.short()])
-        cmd.append('--rwplus')
-        cmd.append('--dfire')
-        with output_dat.open("wt") as fout:
-            system(cmd, outfile=fout, errfile='/dev/null')
+        if not output_score.status():
+            cmd = [EXEC1]
+            cmd.extend(['-j', '%d'%task['resource'][3]])
+            cmd.extend(['-l', pdblist.short()])
+            cmd.append('--rwplus')
+            cmd.append('--dfire')
+            with output_score.open("wt") as fout:
+                system(cmd, outfile=fout, errfile='/dev/null')
+
+        if not output_qual.status():
+            cmd = [EXEC2]
+            cmd.extend(['-j', '%d'%task['resource'][3]])
+            cmd.extend(['-r', job.init_pdb[0].short()])
+            cmd.extend(['-l', pdblist.short()])
+            with output_qual.open("wt") as fout:
+                system(cmd, outfile=fout, errfile='/dev/null')
     #
 
 def submit(job):

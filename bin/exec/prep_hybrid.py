@@ -44,7 +44,7 @@ def run_hhsearch(homolog_home, id, fa_fn, input_pdb):
         cmd = ['%s/run_hhpred.py'%EXEC_HOME, fa_fn.short()]
         cmd.extend(['-p', 'simple'])
         cmd.extend(['-d', HH_sequence_database])
-        system(cmd, verbose=False, stdout=True, stderr='/dev/null')
+        system(cmd, verbose=False, stdout=True, errfile='/dev/null')
     #
     hh_s = libhhsuite.parse_hhr(hh_fn.short())
     #
@@ -57,7 +57,7 @@ def run_hhsearch(homolog_home, id, fa_fn, input_pdb):
             #
             pdb_fn = homolog_home.fn("%s.pdb"%pdb_id)
             if not pdb_fn.status():
-                system(['%s/pdb_get'%EXEC_HOME, '-f', pdb_id], verbose=False, stdout=True, stderr='/dev/null')
+                system(['%s/pdb_get'%EXEC_HOME, '-f', pdb_id], verbose=False, stdout=True, errfile='/dev/null')
             if pdb_fn.status():
                 pdb_fn_s.append(pdb_fn)
         with homolog_home.fn("pdb_s").open("wt") as fout:
@@ -103,7 +103,7 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
         cmd.append("--hhdb")
         cmd.append(HH_pdb70_database)
         if len(selected) > 0:
-            system(cmd, verbose=False, stdout=True, stderr='/dev/null')
+            system(cmd, verbose=False, stdout=True, errfile='/dev/null')
         #
         model_s = []
         for pdb_id in selected:
@@ -117,7 +117,7 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
                     cmd.append(input_pdb.short())
                     cmd.append(m.short())
                     with out_fn.open("wt") as fout:
-                        system(cmd, outfile=fout, verbose=False, stdout=True, stderr='/dev/null')
+                        system(cmd, outfile=fout, verbose=False, stdout=True, errfile='/dev/null')
                 model_s.append(out_fn)
 
         with model_fn.open("wt") as fout:
@@ -176,7 +176,7 @@ def main():
     fa_fn = homolog_home.fn("%s.fa"%id)
     if not fa_fn.status():
         with fa_fn.open("wt") as fout:
-            system(["%s/pdb_seq"%EXEC_HOME, input_pdb.short()], outfile=fout, verbose=False, stdout=True, stderr='/dev/null')
+            system(["%s/pdb_seq"%EXEC_HOME, input_pdb.short()], outfile=fout, verbose=False, stdout=True, errfile='/dev/null')
     #
     selected = run_hhsearch(homolog_home, id, fa_fn, input_pdb)
     #

@@ -31,6 +31,7 @@ def prep(job, equil_index, input_pdb, input_json):
                 status = False ; break
         if status: 
             job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
+            equil_index += 1
             continue
 
         job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
@@ -43,8 +44,10 @@ def run(job):
     if len(task_s) == 0:
         return
     os.environ['CHARMMEXEC'] = CHARMMEXEC
+    gpu_id = os.environ['CUDA_VISIBLE_DEVICES']
     #
     for index,task in task_s:
+        if task['resource'][1].split("/")[1] != gpu_id: continue
         run_home = task['input'][0]
         input_pdb  = task['input'][1]
         input_json = task['input'][2]

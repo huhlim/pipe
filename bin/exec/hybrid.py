@@ -23,7 +23,7 @@ def run(arg):
     #
     model_NA = path.Path("hybrid/DONE")
     model_list = path.Path("hybrid/init_s")
-    if not model_list.status() and not mode_NA.status():
+    if not model_list.status() and not model_NA.status():
         cmd = ['%s/prep_hybrid.py'%EXEC_HOME, arg.output_prefix, arg.init_pdb.short()]
         system(cmd)
     #
@@ -36,6 +36,11 @@ def run(arg):
     if len(sel_s) < 10:
         cmd = ['%s/run_hybrid.py'%EXEC_HOME, model_list.short()]
         system(cmd)
+    #
+    if len(sel_s) == 0:
+        with model_summary.open("wt") as fout:
+            fout.write("#")
+        return
     #
     final = sorted(sel_s, key=lambda x: int(x.split("/")[-2].split("_")[-1]))[-1]
     model_home = path.Dir("model", build=True)

@@ -20,25 +20,6 @@ SCRIPT_HOME="%s/main/source/scripts/python/public/iterative_hybridize"%ROSETTA_H
 
 VERBOSE=True
 
-def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None):
-    if type(cmd) == type(""):
-        cmd = cmd.strip().split()
-    if verbose and VERBOSE:
-        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
-    #
-    if (not stdout) and (outfile is None) and (errfile is None):
-        sp.call(cmd, stdin=stdin)
-    else:
-        try:
-            out = sp.check_output(cmd, stdin=stdin, stderr=errfile)
-            if sys.version_info.major == 3:
-                out = out.decode("utf8")
-            if outfile is not None:
-                outfile.write(out)
-        except sp.CalledProcessError:
-            return ''
-        return out
-
 def prep_init_models(init_s):
     prep_s = []
     init = path.Path("init.pdb") ; prep_s.append(init)

@@ -39,8 +39,10 @@ def run(job):
     task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
         return
+    gpu_id = os.environ['CUDA_VISIBLE_DEVICES']
     #
     for index,task in task_s:
+        if task['resource'][1].split("/")[1] != gpu_id: continue
         run_home = task['input'][0]
         input_equil_index  = task['input'][1]
         input_json = task['input'][2]

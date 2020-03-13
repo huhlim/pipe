@@ -48,10 +48,9 @@ def get_resource_taken():
                 host = task['resource'][1]
                 is_gpu = task['resource'][2]
                 if is_gpu:
-                    if host in gpu_s:
-                        gpu_s[host] += 1
-                    else:
-                        gpu_s[host] = 1
+                    if host not in gpu_s:
+                        gpu_s[host] = []
+                    gpu_s[host].append(int(host.split("/")[-1]) )
                 else:
                     cpu_s.append(host)
     return cpu_s, gpu_s
@@ -90,12 +89,12 @@ def assign_resource(job, updated):
         if not host_s[host][0]:
             continue
         gpu = gpu_host_s[host]
-        n_usable = len(gpu.usable(update=True))
+        usable = gpu.usable(update=True)
         if host in gpu_taken:
-            n_usable -= gpu_taken[host]
-        if n_usable >= 0:
-            for _ in range(n_usable):
-                gpu_s.append(host)
+            usable = [x for x in usable if x not in gpu_taken[host]]
+        if len(usable) >= 0:
+            for gpu_id in usable:
+                gpu_s.append('%s/%d'%(host, gpu_id))
     cpu_status = [True for _ in cpu_s]
     gpu_status = [True for _ in gpu_s]
     #

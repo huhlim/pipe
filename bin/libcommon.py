@@ -177,7 +177,7 @@ class Job(dict):
                 continue
             if not_status is not None and task['resource'][0] == not_status:
                 continue
-            if host is not None and task['resource'][1] != host:
+            if host is not None and (task['resource'][1] != host and task['resource'][1].split("/")[0] != host):
                 continue
             task_s.append((i, task))
         return task_s

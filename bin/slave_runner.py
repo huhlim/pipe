@@ -48,9 +48,9 @@ class Queue(object):
                 if not o.status():
                     status = False
             if status:
-                self.task_s[i] = 'FINISHED'
+                self.task_s[i][0] = 'FINISHED'
             else:
-                self.task_s[i] = 'WAIT'
+                self.task_s[i][0] = 'WAIT'
     def check_resources(self, proc_s):
         cpu_status = True
         gpu_status = {} ; self.gpu.check()
@@ -194,7 +194,10 @@ def main():
     arg = arg.parse_args()
     #
     if arg.use_gpu:
-        gpu = register_host(GPU())
+        gpu = GPU()
+        gpu.check()
+        gpu.update()
+        gpu = register_host(gpu)
     else:
         gpu = None
     #

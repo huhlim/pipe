@@ -132,12 +132,14 @@ def build_restraint(output_prefix, options, verbose):
 def run(output_prefix, input_json, options, verbose):
     run_home = path.Dir(".")
     #
-    LOCK = run_home.fn("lock")
+    #LOCK = run_home.fn("lock")
     DONE = run_home.fn("solute.dcd")
-    if LOCK.exists() or DONE.status():
+    if DONE.status():
         return
-    with LOCK.open('wt') as fout:
-        fout.write("#")
+    #if LOCK.exists() or DONE.status():
+    #    return
+    #with LOCK.open('wt') as fout:
+    #    fout.write("#")
     #
     if 'restraint' in options:
         rsr_s = build_restraint(output_prefix, options, verbose)
@@ -195,7 +197,7 @@ def run(output_prefix, input_json, options, verbose):
             (DONE.short(), options['input']['n_atom'], boxsize, \
             ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))
     #
-    LOCK.remove()
+    #LOCK.remove()
 
 def main():
     arg = argparse.ArgumentParser(prog='prod')
