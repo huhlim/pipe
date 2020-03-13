@@ -33,6 +33,10 @@ else:
 
 MAX_ERROR = 20
 
+TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
+HH_sequence_database = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
+HH_pdb70_database = "/green/s2/huhlim/work/database/hhsuite/pdb70/current/pdb70"
+
 def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
     if type(cmd) == type(""):
         cmd = cmd.strip().split()

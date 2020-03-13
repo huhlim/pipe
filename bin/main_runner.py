@@ -174,6 +174,11 @@ def main():
     # init
     job = import_module("init").prep(arg)
 
+    # hybrid
+    import_module("hybrid").prep(job, job.init_pdb[0])
+    if not run(job, arg.wait_after_run):
+        return 
+
     # locPREFMD
     import_module("locPREFMD").prep(job, job.init_pdb)
     if not run(job, arg.wait_after_run):
