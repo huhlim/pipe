@@ -33,8 +33,10 @@ def run(job):
     task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
         return
+    gpu_id = os.environ['CUDA_VISIBLE_DEVICES']
     #
     for index,task in task_s:
+        if task['resource'][1].split("/")[1] != gpu_id: continue
         run_home = task['input'][0]
         input_pdb  = task['input'][1]
         input_json = task['input'][2]
@@ -75,7 +77,54 @@ def run(job):
         system(cmd, verbose=job.verbose)
 
 def submit(job):
-    pass
+    task_s = job.get_task(METHOD, status='SUBMIT')
+    if len(task_s) == 0:
+        return
+    #
+    for index,task in task_s:
+        run_home = task['input'][0]
+        input_pdb  = task['input'][1]
+        input_json = task['input'][2]
+        #
+        output_s = task['output']
+        status = True
+        for output in output_s:
+            if not output.status():
+                status = False ; break
+        if status: continue
+        #
+        with input_json.open() as fp:
+            options = json.load(fp)
+        options['ssbond'] = []
+        for line in job.ssbond:
+            chain_1 = line[15]
+            chain_2 = line[29]
+            if chain_1 == ' ' and chain_2 == ' ':
+                line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
+            options['ssbond'].append(line)
+        #
+        options['input_pdb'] = input_pdb
+        options['input_json'] = input_json
+        #
+        run_home.build()
+        run_home.chdir()
+        #
+        equil_json = run_home.fn("input.json")
+        if not equil_json.status():
+            with equil_json.open("wt") as fout:
+                fout.write(json.dumps(options, indent=2, default=JSONserialize))
+        #
+        cmd_s = []
+        cmd_s.append("cd %s\n"%run_home)
+        #
+        cmd = [EXEC, input_pdb.name(), input_pdb.short()]
+        cmd.extend(['--input', equil_json.short()])
+        if job.verbose:  cmd.append('--verbose')
+        if job.keep_tmp: cmd.append('--keep')
+        cmd_s.append(" ".join(cmd_s) + '\n')
+        #
+        job.write_submit_script(METHOD, index, cmd_s, submit=True)
+        #
 
 def status(job):
     pass

@@ -36,7 +36,7 @@ def run(job):
         run_home = input_dcd.dirname()
         output_score = task['output'][0]
         output_qual = task['output'][1]
-        if output_score.status() and output_qual:
+        if output_score.status() and output_qual.status():
             continue
         #
         run_home.chdir()
@@ -70,7 +70,50 @@ def run(job):
     #
 
 def submit(job):
-    pass
+    task_s = job.get_task(METHOD, status='SUBMIT') 
+    if len(task_s) == 0:
+        return
+    #
+    for index,task in task_s:
+        input_dcd = task['input'][0]
+        run_home = input_dcd.dirname()
+        output_score = task['output'][0]
+        output_qual = task['output'][1]
+        if output_score.status() and output_qual.status():
+            continue
+        #
+        cmd_s = []
+        run_home.chdir()
+        cmd_s.append("cd %s\n"%run_home)
+        #
+        pdblist = run_home.fn("pdb_s")
+        if not run_home.subdir("ens").status() or not pdblist.status():
+            cmd = ['%s/pdb_extract'%EXEC_HOME, job.top_fn.short()]
+            cmd.extend(['--dir', 'ens'])
+            cmd.extend(['--name', 'sample'])
+            cmd.append("--structured")
+            cmd.extend(['--dcd', input_dcd.short()])
+            cmd.append("> %s 2> /dev/null"%pdblist.short())
+            cmd_s.append(' '.join(cmd)+'\n')
+
+        if not output_score.status():
+            cmd = [EXEC1]
+            cmd.extend(['-j', '%d'%task['resource'][3]])
+            cmd.extend(['-l', pdblist.short()])
+            cmd.append('--rwplus')
+            cmd.append('--dfire')
+            cmd.append("> %s 2> /dev/null"%output_score.short())
+            cmd_s.append(' '.join(cmd)+'\n')
+
+        if not output_qual.status():
+            cmd = [EXEC2]
+            cmd.extend(['-j', '%d'%task['resource'][3]])
+            cmd.extend(['-r', job.init_pdb[0].short()])
+            cmd.extend(['-l', pdblist.short()])
+            cmd.append("> %s 2> /dev/null"%output_qual.short())
+            cmd_s.append(' '.join(cmd)+'\n')
+        #
+        job.write_submit_script(METHOD, index, cmd_s, submit=True)
 
 def status(job):
     pass

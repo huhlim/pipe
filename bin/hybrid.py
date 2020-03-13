@@ -40,7 +40,25 @@ def run(job):
         system(cmd, verbose=job.verbose)
 
 def submit(job):
-    pass
+    task_s = job.get_task(METHOD, status='SUBMIT') 
+    if len(task_s) == 0:
+        return
+    #
+    for index,task in task_s:
+        title = task['input'][0]
+        input_pdb = task['input'][1]
+        run_home = task['input'][2]
+        output_list = task['output'][0]
+        if output_list.status():
+            continue
+        #
+        run_home.chdir()
+        #
+        cmd = []
+        cmd.append("cd %s\n"%run_home)
+        cmd.append(" ".join([EXEC, title, input_pdb.short()]) + '\n')
+        #
+        job.write_submit_script(METHOD, index, cmd, submit=True)
 
 def status(job):
     task_s = job.get_task(METHOD)

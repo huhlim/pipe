@@ -57,8 +57,8 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
         input_s[3].append(prod['output'][0])
         if rule in ['score', 'casp12']:
             input_s[4].append(score['output'][0])
-        #if rule in ['casp12']:
-        #    input_s[5].append(score['output'][0])
+        if rule in ['casp12']:
+            input_s[5].append(score['output'][1])
     #
     if rule in ['score', 'casp12']:
         output_s = [job.average_home.fn("%s.pdb"%output_prefix)]
@@ -72,8 +72,10 @@ def run(job):
     task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
         return
+    gpu_id = os.environ['CUDA_VISIBLE_DEVICES']
     #
     for index,task in task_s:
+        if task['resource'][1].split("/")[1] != gpu_id: continue
         input_s = task['input']
         output_prefix = input_s[0]
         rule = input_s[1]
@@ -107,14 +109,60 @@ def run(job):
         if rule in ['score', 'casp12']:
             cmd.append('--score')
             cmd.extend([fn.short() for fn in input_s[4]])
-        #if rule in ['casp12']:
-        #    cmd.append('--score')
-        #    cmd.extend([fn.short() for fn in input_s[5]])
+        if rule in ['casp12']:
+            cmd.append('--score')
+            cmd.extend([fn.short() for fn in input_s[5]])
         #
         system(cmd, verbose=job.verbose)
 
 def submit(job):
-    pass
+    task_s = job.get_task(METHOD, status='SUBMIT')
+    if len(task_s) == 0:
+        return
+    #
+    for index,task in task_s:
+        if task['resource'][1].split("/")[1] != gpu_id: continue
+        input_s = task['input']
+        output_prefix = input_s[0]
+        rule = input_s[1]
+        input_json = input_s[2]
+        input_dcd_s = input_s[3]
+        output_pdb = task['output'][0]
+        if output_pdb.status():
+            continue
+        #
+        with input_json.open() as fp:
+            options = json.load(fp)
+        options['ssbond'] = []
+        for line in job.ssbond:
+            chain_1 = line[15]
+            chain_2 = line[29]
+            if chain_1 == ' ' and chain_2 == ' ':
+                line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
+            options['ssbond'].append(line)
+        options['rule'] = rule
+        #
+        job.average_home.chdir()
+        #
+        input_json = job.average_home.fn("%s.json"%output_prefix)
+        with input_json.open("wt") as fout:
+            fout.write(json.dumps(options, indent=2, default=JSONserialize))
+        #
+        cmd_s = []
+        cmd_s.append("cd %s\n"%average_home)
+        cmd = [EXEC, output_prefix, job.top_fn.short()]
+        cmd.extend(['--input', input_json.short()])
+        cmd.append('--dcd')
+        cmd.extend([fn.short() for fn in input_dcd_s])
+        if rule in ['score', 'casp12']:
+            cmd.append('--score')
+            cmd.extend([fn.short() for fn in input_s[4]])
+        if rule in ['casp12']:
+            cmd.append('--score')
+            cmd.extend([fn.short() for fn in input_s[5]])
+        cmd_s.append(" ".join(cmd) + '\n')
+        #
+        job.write_submit_script(METHOD, index, cmd_s, submit=True)
 
 def status(job):
     pass

@@ -85,7 +85,54 @@ def run(job):
         system(cmd, verbose=job.verbose)
 
 def submit(job):
-    pass
+    task_s = job.get_task(METHOD, status='SUBMIT') 
+    if len(task_s) == 0:
+        return
+    #
+    for index,task in task_s:
+        run_home = task['input'][0]
+        input_equil_index  = task['input'][1]
+        input_json = task['input'][2]
+        #
+        equil_home = job.get_task("equil")[input_equil_index][1]['input'][0]
+        #
+        output_s = task['output']
+        status = True
+        for output in output_s:
+            if not output.status():
+                status = False ; break
+        if status: continue
+        #
+        with input_json.open() as fp:
+            options = json.load(fp)
+        #
+        run_home.build()
+        run_home.chdir()
+        run_name = 'r%s'%(run_home.split("/")[-1])
+        #
+        if 'restraint' in options:
+            options['restraint']['reference'] = equil_home.fn("%s.orient.pdb"%job.title).short()
+        options['input'] = {}
+        options['input']['psf'] = equil_home.fn("%s.psf"%job.title).short()
+        options['input']['pdb'] = equil_home.fn("%s.equil.pdb"%job.title).short()
+        options['input']['n_atom'] = job.n_atom
+        if options['restart']:
+            options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
+        #
+        run_json = run_home.fn("input.json")
+        if not run_json.status():
+            with run_json.open("wt") as fout:
+                fout.write(json.dumps(options, indent=2))
+        #
+        cmd_s = []
+        cmd_s.append("cd %s\n"%run_home)
+        cmd = [EXEC, run_name]
+        cmd.extend(["--input", run_json.short()])
+        if job.verbose:  cmd.append('--verbose')
+        if job.keep_tmp: cmd.append('--keep')
+        cmd_s.append(" ".join(cmd) + '\n')
+        #
+        job.write_submit_script(METHOD, index, cmd_s, submit=True)
 
 def status(job):
     pass

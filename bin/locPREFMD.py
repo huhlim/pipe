@@ -44,7 +44,7 @@ def run(job):
             system(cmd, outfile=fout, verbose=job.verbose)
 
 def submit(job):
-    task_s = job.get_task(METHOD, status='WAIT') 
+    task_s = job.get_task(METHOD, status='SUBMIT') 
     if len(task_s) == 0:
         return
     #

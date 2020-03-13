@@ -88,7 +88,7 @@ def run(job):
         system(cmd, verbose=job.verbose)
 
 def submit(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='WAIT') 
+    task_s = job.get_task(METHOD, status='SUBMIT') 
     if len(task_s) == 0:
         return
     #
@@ -122,12 +122,15 @@ def submit(job):
             with equil_json.open("wt") as fout:
                 fout.write(json.dumps(options, indent=2))
         #
+        cmd_s = []
+        cmd_s.append("cd %s\n"%run_home)
         cmd = [EXEC, job.title, input_pdb.short()]
         cmd.extend(['--input', equil_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
+        cmd_s.append(" ".join(cmd) + '\n')
         #
-        system(cmd, verbose=job.verbose)
+        job.write_submit_script(METHOD, index, cmd_s, submit=True)
 
 def status(job):
     task_s = job.get_task(METHOD)
