@@ -17,8 +17,8 @@ PARAM['casp12'] = (0.5, 225., 45.)
 PARAM['cluster'] = (2.0, 20, 5) # rmsd_cutoff, subsample, max_run_md
 
 def prep(job, output_prefix, input_prod, input_json, rule='score'):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
-        return
+#    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+#        return
     #
     prod_s = job.get_task("prod")
     prod_s = [prod for _,prod in prod_s if prod['input'][1] in input_prod]

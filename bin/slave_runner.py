@@ -32,13 +32,25 @@ class Queue(object):
                 task = job.get_task(method, host=HOSTNAME, status='RUN')
                 for index,X in task:
                     is_gpu_job = X['resource'][2]
-                    t = ['WAIT', json_job, method, index, is_gpu_job]
+                    t = ['WAIT', json_job, method, index, is_gpu_job, X['output']]
                     is_new = True
                     for t0 in self.task_s:
                         if (t0[1] == t[1]) and (t0[2] == t[2]) and (t0[3] == t[3]):
-                            is_new = False ; break
+                            is_new = False
+                            break
                     if is_new:
                         self.task_s.append(t)
+        for i,task in enumerate(self.task_s):
+            if task[0] != 'CHECK': continue
+            output = task[5]
+            status = True
+            for o in output:
+                if not o.status():
+                    status = False
+            if status:
+                self.task_s[i] = 'FINISHED'
+            else:
+                self.task_s[i] = 'WAIT'
     def check_resources(self, proc_s):
         cpu_status = True
         gpu_status = {} ; self.gpu.check()
@@ -66,6 +78,7 @@ class Queue(object):
                 #
                 for task_id,task in enumerate(self.task_s):
                     if task[0] == 'RUNNING': continue
+                    if task[0] == 'CHECK': continue
                     if task[0] == 'FINISHED': continue
                     #
                     use_gpu = task[4]
@@ -94,13 +107,13 @@ class Queue(object):
                         task[0] = 'RUNNING'
                         proc_s.append((task_id, use_gpu, gpu_id, proc))
                     else:
-                        task[0] = 'FINISHED'
+                        task[0] = 'CHECK'
             #
             proc_status, proc_running = self.check_proc_status(proc_s)
             for status, proc in zip(proc_status, proc_s):
                 if not status: continue
                 task_id, use_gpu, gpu_id, _ = proc
-                self.task_s[task_id][0] = 'FINISHED'
+                self.task_s[task_id][0] = 'CHECK'
                 if use_gpu:
                     gpu_status[gpu_id] = True
                 else:

@@ -12,8 +12,8 @@ METHOD = 'prod'
 EXEC = '%s/prod.py'%EXEC_HOME
 
 def prep(job, prod_index, input_equil, input_json, n_replica):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
-        return
+    #if len(job.get_task(METHOD, not_status='DONE')) > 0:
+    #    return
     #
     job.prod_home = job.work_home.subdir("prod", build=True)
     job.prod_home.chdir()

@@ -155,7 +155,7 @@ def select_init(hybrid_home, input_pdb, model_s, tm_s):
     init_s = init_s[:N_HYBRID]
     #
     hybrid_home.chdir()
-    if len(init_s) == 1:
+    if len(init_s) < 5:
         with hybrid_home.fn("DONE").open("wt") as fout:
             fout.write("Failed to detect templates for hybridization\n")
     else:

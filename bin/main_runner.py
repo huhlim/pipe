@@ -178,6 +178,14 @@ def main():
     import_module("hybrid").prep(job, job.init_pdb[0])
     if not run(job, arg.wait_after_run):
         return 
+    hybrid_out = get_outputs(job, 'hybrid')
+    with hybrid_out[0][0].open() as fp:
+        for line in fp:
+            if line.startswith("#"): continue
+            fn = path.Path(line.strip())
+            job.init_pdb.append(fn)
+    job.init_pdb = job.init_pdb[:5]
+    job.to_json()
 
     # locPREFMD
     import_module("locPREFMD").prep(job, job.init_pdb)
@@ -194,7 +202,8 @@ def main():
         return 
     
     # prod
-    import_module("prod").prep(job, 0, 0, path.Path("%s/prod.json"%DEFAULT_HOME), 5)
+    for i in range(len(job.init_pdb)):
+        import_module("prod").prep(job, i, i, path.Path("%s/prod.json"%DEFAULT_HOME), 5)
     if not run(job, arg.wait_after_run):
         return
     prod_out = get_outputs(job, 'prod')
@@ -205,12 +214,18 @@ def main():
         return
 
     # average
-    import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
-    if not run(job, arg.wait_after_run):
-        return
-    import_module("average").prep(job, '%s.prod_0.cluster'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
-    if not run(job, arg.wait_after_run):
-        return
+    if len(job.init_pdb) == 1:
+        import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
+        import_module("average").prep(job, '%s.prod_0.cluster'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
+        if not run(job, arg.wait_after_run):
+            return
+    else:
+        import_module("average").prep(job, job.title, [i for i in range(len(job.init_pdb))], path.Path("%s/average.json"%DEFAULT_HOME), rule='casp12')
+        for i in range(len(job.init_pdb)):
+            import_module("average").prep(job, '%s.prod_%d'%(job.title, i), [i], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
+        if not run(job, arg.wait_after_run):
+            return
+
     average_out = get_outputs(job, 'average')
 
     # qa
