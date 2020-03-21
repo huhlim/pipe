@@ -5,6 +5,7 @@ import sys
 import json
 import argparse
 import pickle
+import numpy as np
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -30,8 +31,9 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     #
     pdb = mdtraj.load(solv_fn.short())
     #
-    box = pdb.unitcell_lengths[0]
-    psf.setBox(*box)
+    box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
+    boxsize = np.max(box, 0) - np.min(box, 0)
+    psf.setBox(*boxsize)
     #
     ff = CharmmParameterSet(*options['ff']['toppar'])
     platform = Platform.getPlatformByName(options['openmm']['platform'])

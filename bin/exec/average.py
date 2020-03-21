@@ -35,8 +35,9 @@ def run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options):
     avrg = avrg.superpose(pdb, atom_indices=avrg.top.select("name CA"),\
                                ref_atom_indices=pdb.top.select("name CA"))
     #
-    box = pdb.unitcell_lengths[0]
-    psf.setBox(*box)
+    box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
+    boxsize = np.max(box, 0) - np.min(box, 0)
+    psf.setBox(*boxsize)
     #
     ff = CharmmParameterSet(*options['ff']['toppar'])
     platform = Platform.getPlatformByName(options['openmm']['platform'])
@@ -139,6 +140,27 @@ def get_input_structures(arg, options):
         score_s = np.concatenate(score_s)
         score_cutoff = np.percentile(score_s, options['rule'][1][1])
         frame = (score_s < score_cutoff)
+    elif options['rule'][0] == 'casp12':
+        score_s = np.concatenate(score_s)
+        rmsd_s = np.concatenate(rmsd_s)
+        #
+        z_score = (score_s - score_s.mean()) / score_s.std()
+        z_rmsd = (rmsd_s - rmsd_s.mean()) / rmsd_s.std()
+        #
+        _, radius, angle0, angle1 = options['rule'][1]
+        angle0 = np.deg2rad(angle0)
+        angle1 = np.deg2rad(angle1)
+        #
+        r = np.sqrt(z_score**2 + z_rmsd**2)
+        gamma = z_rmsd * np.cos(angle0) + z_score * np.sin(angle0)
+        gamma = np.arccos(gamma / r)
+        #
+        while True:
+            frame = (r > radius) & (gamma < angle1)
+            if np.where(frame)[0].shape[0] > 10:
+                break
+            radius = max(0.0, radius-0.05)
+            angle1 += 0.1
     #
     avrg = copy.deepcopy(top)
     avrg.xyz = np.mean(traj_s[frame].xyz, 0)

@@ -55,9 +55,9 @@ def run(arg, options):
         with open(arg.restart_fn, 'rb') as fp:
             restart_state = pickle.load(fp)
         simulation.context.setState(restart_state)
-        simulation.context.setTime(0.0)
     else:
         simulation.context.setVelocitiesToTemperature(options['md']['dyntemp']*kelvin)
+    simulation.context.setTime(0.0)
     #
     if 'n_atom' in options['input']:
         simulation.reporters.append(mdtraj.reporters.DCDReporter(arg.out_dcd_fn, options['md']['dynoutfrq'],\

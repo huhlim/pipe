@@ -35,10 +35,13 @@ def prep_init_models(init_s):
         prep_s.append(prep)
     return prep_s
 
-def build_frag(fa_fn):
+def build_frag(fa_fn, n_proc):
     if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
         with open(os.devnull, 'wt') as ferr:
-            system(["%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME, fa_fn.short()], errfile=ferr)
+            cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
+            cmd.extend(['-cpus', '%d'%n_proc])
+            cmd.append(fa_fn.short())
+            system(cmd, errfile=ferr)
     if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
         return False
     if not os.path.exists("t000_.3mers"):
@@ -105,7 +108,7 @@ def main():
         with fa_fn.open("wt") as fout:
             system(["%s/pdb_seq"%EXEC_HOME, init_s[0].short()], outfile=fout, verbose=False)
     #
-    if not build_frag(fa_fn):
+    if not build_frag(fa_fn, n_proc):
         sys.exit("Failed to build fragments\n")
     #
     prep_run(init_s)

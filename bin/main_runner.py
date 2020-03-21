@@ -137,7 +137,7 @@ def run(job, wait_after_run):
         if updated: job.to_json()
         #
         if wait_after_run:
-            time.sleep(60)
+            time.sleep(30)
         else:
             break
     return status
@@ -225,12 +225,12 @@ def main():
         if not run(job, arg.wait_after_run):
             return
 
-    average_out = get_outputs(job, 'average')
+    average_out = get_outputs(job, 'average')[:5]
 
     # qa
-    #import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
-    #if not run(job, arg.wait_after_run):
-    #    return
+    import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
+    if not run(job, arg.wait_after_run):
+        return
     #
     job.remove_from_joblist()
 

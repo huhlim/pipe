@@ -13,7 +13,7 @@ EXEC = '%s/average.py'%EXEC_HOME
 
 PARAM = {}
 PARAM['score'] = ("RWplus", 25.0)
-PARAM['casp12'] = (0.5, 225., 45.)
+PARAM['casp12'] = ("RWplus", 0.5, 225., 45.)
 PARAM['cluster'] = (2.0, 20, 5) # rmsd_cutoff, subsample, max_run_md
 
 def prep(job, output_prefix, input_prod, input_json, rule='score'):
@@ -106,11 +106,11 @@ def run(job):
         cmd.extend(['--input', input_json.short()])
         cmd.append('--dcd')
         cmd.extend([fn.short() for fn in input_dcd_s])
-        if rule in ['score', 'casp12']:
+        if rule[0] in ['score', 'casp12']:
             cmd.append('--score')
             cmd.extend([fn.short() for fn in input_s[4]])
-        if rule in ['casp12']:
-            cmd.append('--score')
+        if rule[0] in ['casp12']:
+            cmd.append('--qual')
             cmd.extend([fn.short() for fn in input_s[5]])
         #
         system(cmd, verbose=job.verbose)

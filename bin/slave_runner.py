@@ -32,7 +32,11 @@ class Queue(object):
                 task = job.get_task(method, host=HOSTNAME, status='RUN')
                 for index,X in task:
                     is_gpu_job = X['resource'][2]
-                    t = ['WAIT', json_job, method, index, is_gpu_job, X['output']]
+                    if is_gpu_job:
+                        gpu_id = int(X['resource'][1].split("/")[-1])
+                    else:
+                        gpu_id = None
+                    t = ['WAIT', json_job, method, index, (is_gpu_job, gpu_id), X['output']]
                     is_new = True
                     for t0 in self.task_s:
                         if (t0[1] == t[1]) and (t0[2] == t[2]) and (t0[3] == t[3]):
@@ -47,6 +51,7 @@ class Queue(object):
             for o in output:
                 if not o.status():
                     status = False
+            print ('check status: ', i, task, status)
             if status:
                 self.task_s[i][0] = 'FINISHED'
             else:
@@ -81,14 +86,9 @@ class Queue(object):
                     if task[0] == 'CHECK': continue
                     if task[0] == 'FINISHED': continue
                     #
-                    use_gpu = task[4]
+                    use_gpu, gpu_id = task[4]
                     if use_gpu:
-                        gpu_id_assigned = None
-                        for gpu_id in gpu_status:
-                            if gpu_status[gpu_id]:
-                                gpu_id_assigned = gpu_id
-                                break
-                        if gpu_id_assigned is None:
+                        if not ((gpu_id in gpu_status) and (gpu_status[gpu_id])):
                             continue
                         cmd = self.get_cmd(task, use_gpu, gpu_id=gpu_id)
                         gpu_status[gpu_id] = False
@@ -96,7 +96,6 @@ class Queue(object):
                         if not cpu_status: continue
                         cmd = self.get_cmd(task, use_gpu)
                         cpu_status = False
-                        gpu_id = None
                     #
                     if self.verbose:
                         sys.stdout.write("PROC: %s\n"%cmd)
@@ -125,7 +124,7 @@ class Queue(object):
     def get_cmd(self, task, use_gpu, gpu_id=None):
         wrt = []
         if use_gpu and gpu_id is not None:
-            wrt.append("export CUDA_VISIBLE_DEVICES=%s"%gpu_id)
+            wrt.append("export CUDA_VISIBLE_DEVICES=%d"%gpu_id)
 
         json_job = task[1]
         method = task[2]

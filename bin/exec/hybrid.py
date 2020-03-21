@@ -37,6 +37,7 @@ def run(arg):
         cmd = ['%s/run_hybrid.py'%EXEC_HOME, model_list.short()]
         system(cmd)
     #
+    sel_s = path.Path.glob("hybrid/iter_*/sel.out")
     if len(sel_s) == 0:
         with model_summary.open("wt") as fout:
             fout.write("#")
