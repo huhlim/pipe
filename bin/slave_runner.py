@@ -51,7 +51,6 @@ class Queue(object):
             for o in output:
                 if not o.status():
                     status = False
-            print ('check status: ', i, task, status)
             if status:
                 self.task_s[i][0] = 'FINISHED'
             else:

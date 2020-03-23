@@ -48,9 +48,11 @@ def get_resource_taken():
                 host = task['resource'][1]
                 is_gpu = task['resource'][2]
                 if is_gpu:
-                    if host not in gpu_s:
-                        gpu_s[host] = []
-                    gpu_s[host].append(int(host.split("/")[-1]) )
+                    host_name = host.split("/")[0]
+                    gpu_id = int(host.split("/")[1])
+                    if host_name not in gpu_s:
+                        gpu_s[host_name] = []
+                    gpu_s[host_name].append(gpu_id)
                 else:
                     cpu_s.append(host)
     return cpu_s, gpu_s
