@@ -31,6 +31,7 @@ else:
     CHARMMEXEC_MPI = CHARMMEXEC
     CHARMM_MPI = False
 
+N_MODEL = 5
 MAX_ERROR = 20
 
 TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME

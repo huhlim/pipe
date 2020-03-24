@@ -226,13 +226,44 @@ def main():
             import_module("average").prep(job, '%s.prod_%d'%(job.title, i), [i], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
         if not run(job, arg.wait_after_run):
             return
+    average_out = get_outputs(job, 'average')[:N_MODEL]
 
-    average_out = get_outputs(job, 'average')[:5]
-
-    # qa
-    import_module("qa").prep(job, [out[0] for out in average_out], path.Path("%s/qa.json"%DEFAULT_HOME))
+    # model
+    job.work_home.chdir()
+    model_home = job.work_home.subdir("model", build=True)
+    prep_s = []
+    for i,out in enumerate(average_out):
+        prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+        system(['cp', out[0].short(), prep_fn.short()], verbose=arg.verbose)
+        prep_s.append(prep_fn)
+    #
+    import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):
         return
+    scwrl_out = get_outputs(job, 'scwrl')
+    #
+    import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
+    if not run(job, arg.wait_after_run):
+        return 
+    locPREFMD_out = get_outputs(job, "locPREFMD")[-N_MODEL:]
+    #
+    model_s = []
+    for i,out in enumerate(locPREFMD_out):
+        model_fn = model_home.fn("model_%d.pdb"%(i+1))
+        system(['cp', out[0].short(), model_fn.short()], verbose=arg.verbose)
+        model_s.append(model_fn)
+
+    # qa
+    import_module("qa").prep(job, model_s, path.Path("%s/qa.json"%DEFAULT_HOME))
+    if not run(job, arg.wait_after_run):
+        return
+    qa_out = get_outputs(job, 'qa')
+
+    # final
+    final_home = job.work_home.subdir("final", build=True)
+    for i,out in enumerate(qa_out):
+        pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
+        system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
     #
     job.remove_from_joblist()
 

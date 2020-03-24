@@ -16,11 +16,11 @@ def prep(job, input_pdb):
         return
     #
     for pdb_fn in input_pdb:
-        if not pdb_fn.status(): 
+        out_fn = pdb_fn.dirname().fn("%s.scwrl.pdb"%(pdb_fn.name()))
+        if out_fn.status(): 
             continue
-        run_home = pdb_fn.dirname()
         input_s = [pdb_fn]
-        output_s = ['%s.scwrl.pdb'%pdb_fn.name()]
+        output_s = [out_fn]
         job.add_task(METHOD, input_s, output_s, use_gpu=False, n_proc=1)
     #
     job.to_json()
