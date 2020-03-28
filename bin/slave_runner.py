@@ -57,9 +57,12 @@ class Queue(object):
                 self.task_s[i][0] = 'WAIT'
     def check_resources(self, proc_s):
         cpu_status = True
-        gpu_status = {} ; self.gpu.check()
-        for gpu_id in self.gpu.usable(update=True):
-            gpu_status[gpu_id] = True
+        if self.gpu is not None:
+            gpu_status = {} ; self.gpu.check()
+            for gpu_id in self.gpu.usable(update=True):
+                gpu_status[gpu_id] = True
+        else:
+            gpu_status = {}
         for proc in proc_s:
             _, use_gpu, gpu_id, _ = proc
             if use_gpu:
@@ -148,7 +151,10 @@ def register_host(gpu):
         host_s = {}
     #
     if HOSTNAME not in host_s:
-        host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES)
+        if gpu is None:
+            host_s[HOSTNAME] = (False, [])
+        else:
+            host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES)
         with HOSTs_json.open('wt') as fout:
             fout.write(json.dumps(host_s, indent=2))
     else:
@@ -197,7 +203,7 @@ def main():
         gpu.update()
         gpu = register_host(gpu)
     else:
-        gpu = None
+        gpu = register_host(None)
     #
     Queue(gpu, arg.time_interval, arg.verbose).run()
 
