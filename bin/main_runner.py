@@ -192,7 +192,7 @@ def main():
     import_module("locPREFMD").prep(job, job.init_pdb)
     if not run(job, arg.wait_after_run):
         return 
-    locPREFMD_out = get_outputs(job, "locPREFMD")
+    locPREFMD_out = get_outputs(job, "locPREFMD")[:len(job.init_pdb)]
 
     # define topology
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
