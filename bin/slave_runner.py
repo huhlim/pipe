@@ -81,7 +81,10 @@ class Queue(object):
             resource_available, cpu_status, gpu_status = self.check_resources(proc_s)
             #
             if resource_available:
-                self.update_tasks()
+                try:
+                    self.update_tasks()
+                except:
+                    pass
                 #
                 for task_id,task in enumerate(self.task_s):
                     if task[0] == 'RUNNING': continue
