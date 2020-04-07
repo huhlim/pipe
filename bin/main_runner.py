@@ -164,6 +164,8 @@ def main():
             help='set verbose mode (default=False)')
     arg.add_argument('-w', '--wait', dest='wait_after_run', action='store_true', default=False,\
             help='set running type (default=False)')
+    arg.add_argument('--hybrid', dest='use_hybrid', action='store_true', default=False, \
+            help='use hybrid')
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -176,23 +178,26 @@ def main():
     job = import_module("init").prep(arg)
 
     # hybrid
-    import_module("hybrid").prep(job, job.init_pdb[0])
-    if not run(job, arg.wait_after_run):
-        return 
-    hybrid_out = get_outputs(job, 'hybrid')
-    with hybrid_out[0][0].open() as fp:
-        for line in fp:
-            if line.startswith("#"): continue
-            fn = path.Path(line.strip())
-            job.init_pdb.append(fn)
-    job.init_pdb = job.init_pdb[:5]
-    job.to_json()
+    if arg.use_hybrid:
+        import_module("hybrid").prep(job, job.init_pdb[0])
+        if not run(job, arg.wait_after_run):
+            return 
+        hybrid_out = get_outputs(job, 'hybrid')
+        with hybrid_out[0][0].open() as fp:
+            for line in fp:
+                if line.startswith("#"): continue
+                fn = path.Path(line.strip())
+                job.init_pdb.append(fn)
+        job.init_pdb = job.init_pdb[:5]
+        job.to_json()
+    #
+    n_init = len(job.init_pdb)
 
     # locPREFMD
     import_module("locPREFMD").prep(job, job.init_pdb)
     if not run(job, arg.wait_after_run):
         return 
-    locPREFMD_out = get_outputs(job, "locPREFMD")[:len(job.init_pdb)]
+    locPREFMD_out = get_outputs(job, "locPREFMD")[:n_init]
 
     # define topology
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
@@ -203,7 +208,7 @@ def main():
         return 
     
     # prod
-    for i in range(len(job.init_pdb)):
+    for i in range(n_init):
         import_module("prod").prep(job, i, i, path.Path("%s/prod.json"%DEFAULT_HOME), 5)
     if not run(job, arg.wait_after_run):
         return
@@ -215,14 +220,14 @@ def main():
         return
 
     # average
-    if len(job.init_pdb) == 1:
+    if n_init == 1:
         import_module("average").prep(job, '%s.prod_0'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
         import_module("average").prep(job, '%s.prod_0.cluster'%job.title, [0], path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
         if not run(job, arg.wait_after_run):
             return
     else:
-        import_module("average").prep(job, job.title, [i for i in range(len(job.init_pdb))], path.Path("%s/average.json"%DEFAULT_HOME), rule='casp12')
-        for i in range(len(job.init_pdb)):
+        import_module("average").prep(job, job.title, [i for i in range(n_init)], path.Path("%s/average.json"%DEFAULT_HOME), rule='casp12')
+        for i in range(n_init):
             import_module("average").prep(job, '%s.prod_%d'%(job.title, i), [i], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
         if not run(job, arg.wait_after_run):
             return
@@ -245,7 +250,7 @@ def main():
     import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
     if not run(job, arg.wait_after_run):
         return 
-    locPREFMD_out = get_outputs(job, "locPREFMD")[-N_MODEL:]
+    locPREFMD_out = get_outputs(job, "locPREFMD")[n_init:]
     #
     model_s = []
     for i,out in enumerate(locPREFMD_out):

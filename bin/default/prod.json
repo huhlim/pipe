@@ -28,11 +28,11 @@
   "restart": true,
   "restraint": {
     "mode": "dual.anneal",
-    "Cartesian": [
+    "distance": [
       0.05,
       2.0
     ],
-    "distance": [
+    "Cartesian": [
       0.025,
       4.0
     ]

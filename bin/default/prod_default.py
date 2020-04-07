@@ -38,8 +38,8 @@ options['md']['iter'] = 10
 
 options['restraint'] = {}
 options['restraint']['mode'] = 'dual.anneal'
-options['restraint']['Cartesian'] = [0.05, 2.0]
-options['restraint']['distance'] = [0.025, 4.0]
+options['restraint']['distance'] = [0.05, 2.0]
+options['restraint']['Cartesian'] = [0.025, 4.0]
 
 with open("prod.json", 'wt') as fout:
     fout.write(json.dumps(options, indent=2))
