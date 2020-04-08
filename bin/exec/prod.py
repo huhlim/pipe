@@ -21,7 +21,7 @@ EXEC = '%s/prod_runner.py'%(EXEC_HOME)
 
 def build_restraint_Cartesian(ref):
     calphaIndex = ref.top.select("name CA")
-    return calphaIndex
+    return calphaIndex + 1
 
 def build_restraint_distance(ref, distance_cutoff=10.0, sequence_separation=4):
     calphaIndex = ref.top.select("name CA")
@@ -33,13 +33,14 @@ def build_restraint_distance(ref, distance_cutoff=10.0, sequence_separation=4):
     rsr_s = []
     for i,ca_i in enumerate(calphaIndex):
         chain_i = chainIndex[i]
-        for j,ca_j in enumerate(calphaIndex[i+1:]):
+        for j,ca_j in enumerate(calphaIndex):
+            if j <= i: continue
             chain_j = chainIndex[j]
             if chain_i == chain_j and (j-i < sequence_separation):
                 continue
             d = dist[i,j]
             if d < distance_cutoff:
-                rsr_s.append((ca_i, ca_j, d))
+                rsr_s.append((ca_i+1, ca_j+1, d))
     return rsr_s
 
 def build_restraint(output_prefix, options, verbose):
