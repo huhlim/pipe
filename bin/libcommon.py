@@ -7,6 +7,8 @@ import path
 from string import digits
 import subprocess as sp
 
+assert sys.version_info.major == 3
+
 HOSTNAME=os.getenv('HOSTNAME')
 
 WORK_HOME = os.getenv("PREFMD_HOME")
