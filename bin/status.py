@@ -5,6 +5,7 @@ import sys
 import path
 import json
 import time
+import argparse
 
 from libcommon import *
 
@@ -55,7 +56,7 @@ def get_prod_info(run_home):
         t_curr += iter_simul_time * (len(log_fn_s)-1)
         return t_curr, total_simul_time, speed
 
-def run(job):
+def check_status(job):
     for method in METHODs:
         new_line = False
         #
@@ -114,20 +115,75 @@ def run(job):
             sys.stdout.write("#\n")
 
 def main():
-    json_job_s = sys.argv[1:]
-    if len(json_job_s) == 0:
+    arg = argparse.ArgumentParser(prog='PREFMD.status')
+    sub = arg.add_subparsers(dest='method')
+    #
+    sub_list = sub.add_parser("list")
+    #
+    sub_check = sub.add_parser("check")
+    sub_check.add_argument("json_job_s", nargs='*')
+
+    sub_update = sub.add_parser("update")
+
+    sub_append = sub.add_parser("append")
+    sub_append.add_argument("json_job_s", nargs='+')
+
+    sub_remove = sub.add_parser("remove")
+    sub_remove.add_argument("json_job_s", nargs='+')
+
+    if len(sys.argv) == 1:
+        return arg.print_help()
+    #
+    arg = arg.parse_args()
+    if arg.method == 'list':
         if JOBs_json.status():
             with JOBs_json.open() as fp:
                 json_job_s = [path.Path(fn) for fn in json.load(fp)]
+        for json_job in json_job_s:
+            sys.stdout.write("%s\n"%json_job)
 
-    for json_job_fn in json_job_s:
-        if json_job_fn.endswith(".json"):
-            json_job_fn = path.Path(json_job_fn)
+    elif arg.method == 'check':
+        json_job_s = arg.json_job_s
+        if len(json_job_s) == 0:
+            if JOBs_json.status():
+                with JOBs_json.open() as fp:
+                    json_job_s = [path.Path(fn) for fn in json.load(fp)]
+
+        for json_job_fn in json_job_s:
+            if json_job_fn.endswith(".json"):
+                json_job_fn = path.Path(json_job_fn)
+            else:
+                json_job_fn = path.Dir(json_job_fn).fn("job.json")
+            #
+            job = Job.from_json(json_job_fn)
+            check_status(job)
+
+    elif arg.method == 'update':
+        return
+
+    elif arg.method == 'append':
+        if JOBs_json.status():
+            with JOBs_json.open() as fp:
+                job_s = [fn for fn in json.load(fp)]
         else:
-            json_job_fn = path.Dir(json_job_fn).fn("job.json")
+            job_s = []
+
+        job_s += [path.Path(fn).path() for fn in arg.json_job_s]
         #
-        job = Job.from_json(json_job_fn)
-        run(job)
+        with JOBs_json.open('wt') as fout:
+            fout.write(json.dumps(job_s, indent=2))
+
+    elif arg.method == 'remove':
+        json_job_s = [path.Path(fn) for fn in arg.json_job_s]
+        if JOBs_json.status():
+            with JOBs_json.open() as fp:
+                job_s = []
+                for fn in json.load(fp):
+                    json_job = path.Path(fn)
+                    if json_job not in json_job_s:
+                        job_s.append(fn)
+            with JOBs_json.open('wt') as fout:
+                fout.write(json.dumps(job_s, indent=2))
 
 if __name__ == '__main__':
     main()
