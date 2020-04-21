@@ -144,15 +144,18 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
     return model_s, tm_s
 
 def select_init(hybrid_home, input_pdb, model_s, tm_s):
-    tm_cutoff = max(max(tm_s)-TM_OFFSET, TM_CUTOFF)
-    sorted_index = np.argsort(tm_s)[::-1]
-    init_s = [] ; init_s.append(input_pdb)
-    for i in sorted_index:
-        tm = tm_s[i]
-        model = model_s[i]
-        if tm > tm_cutoff:
-            init_s.append(model)
-    init_s = init_s[:N_HYBRID]
+    if len(model_s) > 0:
+        tm_cutoff = max(max(tm_s)-TM_OFFSET, TM_CUTOFF)
+        sorted_index = np.argsort(tm_s)[::-1]
+        init_s = [] ; init_s.append(input_pdb)
+        for i in sorted_index:
+            tm = tm_s[i]
+            model = model_s[i]
+            if tm > tm_cutoff:
+                init_s.append(model)
+        init_s = init_s[:N_HYBRID]
+    else:
+        init_s = [input_pdb]
     #
     hybrid_home.chdir()
     if len(init_s) < 5:
