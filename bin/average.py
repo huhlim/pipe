@@ -60,10 +60,7 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
         if rule in ['casp12']:
             input_s[5].append(score['output'][1])
     #
-    if rule in ['score', 'casp12']:
-        output_s = [job.average_home.fn("%s.pdb"%output_prefix)]
-    else:
-        output_s = [job.average_home.fn("%s.0000.pdb"%output_prefix)]
+    output_s = [job.average_home.fn("%s.pdb_s"%output_prefix)]
     job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
     #
     job.to_json()

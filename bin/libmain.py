@@ -139,9 +139,20 @@ def run(job, wait_after_run, sleep=30):
             break
     return status
 
-def get_outputs(job, method):
+def get_outputs(job, method, expand=None):
     task_s = job.get_task(method, status='DONE')
     out_s = []
     for index, task in task_s:
-        out_s.append(task['output'])
+        if expand is None:
+            out_s.append(task['output'])
+        else:
+            output_expanded = []
+            for out in task['output']:
+                if out.endswith(expand):
+                    with out.open() as fp:
+                        for line in fp:
+                            output_expanded.append([path.Path(line.strip())])
+                else:
+                    output_expanded.append([out])
+            out_s.extend(output_expanded)
     return out_s

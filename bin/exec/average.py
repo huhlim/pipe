@@ -225,8 +225,14 @@ def main():
     output = run(arg, options)
     #
     os.chdir(cwd)
+    #
+    pdb_s = []
     for prefix, final in output:
         final.save("%s.pdb"%prefix)
+        pdb_s.append(path.Path("%s.pdb"%prefix))
+    with open("%s.pdb_s"%arg.output_prefix, 'wt') as fout:
+        for pdb in pdb_s:
+            fout.write("%s\n"%pdb)
 
 if __name__=='__main__':
     main()
