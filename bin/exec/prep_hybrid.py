@@ -15,7 +15,9 @@ import path
 import libhhsuite
 
 N_PROC = 12
-N_TEMPL = 100 ; N_HYBRID = 10
+N_TEMPL = 100 
+N_HYBRID = 10
+N_HYBRID_MIN = 2
 TM_CUTOFF = 0.5 ; TM_OFFSET = 0.2
 
 VERBOSE=False
@@ -25,9 +27,22 @@ if TBM_EXCLUDE is not None:
         for line in fp:
             EXCLUDE.append(line.strip())
 
-def calc_tm(ref_fn, pdb_s):
+def calc_tmalign(ref_fn, pdb_s):
     cmd = []
     cmd.append("%s/calc_tmalign"%EXEC_HOME)
+    cmd.append('--cpu')
+    cmd.append('%d'%N_PROC)
+    cmd.append('--ref')
+    cmd.append(ref_fn.short())
+    cmd.append("--list")
+    cmd.append(pdb_s)
+    lines = system(cmd, stdout=True, verbose=False).split("\n")[:-1]
+    score = [float(line.strip().split()[1]) for line in lines]
+    return score
+
+def calc_tmscore(ref_fn, pdb_s):
+    cmd = []
+    cmd.append("%s/calc_tmscore"%EXEC_HOME)
     cmd.append('--cpu')
     cmd.append('%d'%N_PROC)
     cmd.append('--ref')
@@ -64,7 +79,7 @@ def run_hhsearch(homolog_home, id, fa_fn, input_pdb):
             for pdb_fn in pdb_fn_s:
                 fout.write(pdb_fn.short() + '\n')
         #
-        tm_s = calc_tm(input_pdb, "pdb_s")
+        tm_s = calc_tmalign(input_pdb, "pdb_s")
         selected = []
         with tm_fn.open("wt") as fout:
             for pdb_fn,tm in zip(pdb_fn_s, tm_s):
@@ -94,6 +109,7 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
         cmd.append("build")
         cmd.append("--include")
         cmd.append("selected")
+        cmd.append("--force")
         cmd.append("--alt")
         cmd.append("3")
         cmd.append("--cpu")
@@ -131,7 +147,7 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
     #
     tm_fn = homolog_home.fn("model.dat")
     if not tm_fn.status():
-        tm_s = calc_tm(input_pdb, "model_s")
+        tm_s = calc_tmscore(input_pdb, "model_s")
         with tm_fn.open("wt") as fout:
             for pdb_fn,tm in zip(model_s, tm_s):
                 fout.write("%6.4f %s\n"%(tm, pdb_fn))
@@ -158,7 +174,7 @@ def select_init(hybrid_home, input_pdb, model_s, tm_s):
         init_s = [input_pdb]
     #
     hybrid_home.chdir()
-    if len(init_s) < 5:
+    if len(init_s) < N_HYBRID_MIN:
         with hybrid_home.fn("DONE").open("wt") as fout:
             fout.write("Failed to detect templates for hybridization\n")
     else:

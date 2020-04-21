@@ -10,7 +10,9 @@ PDBDIR='/blue/pdb'
 from string import ascii_uppercase, ascii_lowercase, digits
 chainID_s = ascii_uppercase+ascii_lowercase+digits
 
-def parse_pdb(pdb_fn, chain_s):
+from seqName import convert_to_stdres_line
+
+def parse_pdb(pdb_fn, chain_s, convert_to_std=False):
     out_s = {}
     for chain in chain_s:
         out_s[chain] = []
@@ -35,6 +37,8 @@ def parse_pdb(pdb_fn, chain_s):
             elif line.startswith("ATOM") or line.startswith("HETA"):
                 chain_id = line[21]
                 if chain_id in chain_s:
+                    if convert_to_std:
+                        line = convert_to_stdres_line(line)
                     out_s[chain_id].append(line)
             elif line.startswith("END"):
                 break
@@ -56,6 +60,9 @@ def main():
     arg.add_argument('-o', '--original', dest='leave_original',\
                      default=False, action='store_true',\
                      help='leave the original PDB file after parsing')
+    arg.add_argument('--std', dest='convert_to_std', \
+                     default=False, action='store_true', \
+                     help='convert to std resname')
     if len(sys.argv) == 1:
         return arg.print_help()
     arg = arg.parse_args()
@@ -65,21 +72,27 @@ def main():
         chain_s = [chain_id for chain_id in pdb_id[4:] if chain_id in chainID_s]
         #
         if arg.mmCIF:
-            sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.cif'%id], stderr=sp.DEVNULL)
+            try:
+                sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.cif'%id], stderr=sp.DEVNULL)
+            except:
+                sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.cif'%id])
             continue
         #
         pdb_fn_local = '%s/pdb%s.ent'%(PDBDIR, id)
         if os.path.exists(pdb_fn_local) and not arg.force_download:
             sp.call("cp %s %s.pdb"%(pdb_fn_local, id), shell=True)
         else:
-            sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.pdb'%id], stderr=sp.DEVNULL)
+            try:
+                sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.pdb'%id], stderr=sp.DEVNULL)
+            except:
+                sp.call(['wget', '-q', 'https://files.rcsb.org/download/%s.pdb'%id])
         #
         if not os.path.exists("%s.pdb"%id):
             sys.stderr.write("Error: failed to get %s\n"%id)
             continue
         #
         if len(chain_s) != 0:
-            parse_pdb('%s.pdb'%id, chain_s)
+            parse_pdb('%s.pdb'%id, chain_s, convert_to_std=arg.convert_to_std)
             if not arg.leave_original:
                 os.remove("%s.pdb"%id)
 
