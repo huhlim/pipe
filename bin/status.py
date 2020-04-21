@@ -115,6 +115,11 @@ def run(job):
 
 def main():
     json_job_s = sys.argv[1:]
+    if len(json_job_s) == 0:
+        if JOBs_json.status():
+            with JOBs_json.open() as fp:
+                json_job_s = [path.Path(fn) for fn in json.load(fp)]
+
     for json_job_fn in json_job_s:
         if json_job_fn.endswith(".json"):
             json_job_fn = path.Path(json_job_fn)
