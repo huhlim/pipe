@@ -11,6 +11,14 @@ from libcommon import *
 METHOD = 'qa'
 EXEC = '%s/local_qa.py'%EXEC_HOME
 
+def get_ssbond(pdb_fn):
+    ssbond = []
+    with pdb_fn.open() as fp:
+        for line in fp:
+            if line.startswith("SSBOND"):
+                ssbond.append(line.rstrip())
+    return ssbond
+
 def prep(job, input_pdb, input_json):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
         return
@@ -51,7 +59,7 @@ def run(job):
         with input_json.open() as fp:
             options = json.load(fp)
         options['ssbond'] = []
-        for line in job.ssbond:
+        for line in get_ssbond(input_pdb):
             chain_1 = line[15]
             chain_2 = line[29]
             if chain_1 == ' ' and chain_2 == ' ':
