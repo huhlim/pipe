@@ -162,7 +162,7 @@ def register_host(gpu):
             fout.write(json.dumps(host_s, indent=2))
     else:
         host = host_s[HOSTNAME]
-        if host[0]:
+        if host[0] and gpu is not None:
             gpu._visible_devices = host[1]
         else:
             gpu = None
