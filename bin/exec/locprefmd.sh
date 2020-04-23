@@ -119,8 +119,8 @@ pwd=`pwd`
 mkdir -p $tmpdir/$tag
 cd $tmpdir/$tag
 
-topfile=/apps/mmtsb/data/charmm/xtra_top_all36_prot.rtf
-parfile=/apps/mmtsb/data/charmm/xtrabonds2cmap_par_all36_prot.prm
+topfile=$MMTSBDIR/data/charmm/xtra_top_all36_prot.rtf
+parfile=$MMTSBDIR/data/charmm/xtrabonds2cmap_par_all36_prot.prm
 ffpar="dielec=rdie,epsilon=4,param=x,xpar=$parfile,xtop=$topfile"
 
 convpdb.pl -cleanaux -nsel protein $pwd/$inp > $tag.protein.pdb
