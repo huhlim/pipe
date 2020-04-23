@@ -120,7 +120,7 @@ def submit(job):
         equil_json = run_home.fn("input.json")
         if not equil_json.status():
             with equil_json.open("wt") as fout:
-                fout.write(json.dumps(options, indent=2))
+                fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd_s = []
         cmd_s.append("cd %s\n"%run_home)
