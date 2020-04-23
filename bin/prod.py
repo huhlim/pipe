@@ -73,9 +73,8 @@ def run(job):
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
         #
         run_json = run_home.fn("input.json")
-        if not run_json.status():
-            with run_json.open("wt") as fout:
-                fout.write(json.dumps(options, indent=2))
+        with run_json.open("wt") as fout:
+            fout.write(json.dumps(options, indent=2))
         #
         cmd = [EXEC, run_name]
         cmd.extend(["--input", run_json.short()])
@@ -120,9 +119,8 @@ def submit(job):
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
         #
         run_json = run_home.fn("input.json")
-        if not run_json.status():
-            with run_json.open("wt") as fout:
-                fout.write(json.dumps(options, indent=2))
+        with run_json.open("wt") as fout:
+            fout.write(json.dumps(options, indent=2))
         #
         cmd_s = []
         cmd_s.append("cd %s\n"%run_home)

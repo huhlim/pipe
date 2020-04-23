@@ -30,6 +30,7 @@ options['md']['solvate'] = 9.0
 options['md']['heat'] = [20000, 50., 25.]   # n_steps, init.T, incr.T
 options['md']['equil'] = [500000]           # total_steps (1 ns)
 options['md']['prod'] = [2, int(5000./options['md']['dyntstep']), 25000]
+options['md']['time_limit'] = 7200.0
 options['md']['force_const'] = 0.0
 
 with open("qa.json", 'wt') as fout:

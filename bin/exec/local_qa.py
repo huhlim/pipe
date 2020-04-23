@@ -27,6 +27,8 @@ from libcommon import *
 from libcustom import *
 from libmd import solvate_pdb, generate_PSF, construct_restraint
 
+SPEED = '%s/check_md_speed.py'%EXEC_HOME
+
 def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
     crd = CharmmCrdFile(crd_fn.short())
@@ -208,14 +210,53 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     restart_state = equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
     #
     dcd_fn_s = prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose)
-    dcd_fn_s = [path.Path('%s.prod.r%d.dcd'%(output_prefix, i)) for i in range(2)]
+    #dcd_fn_s = [path.Path('%s.prod.r%d.dcd'%(output_prefix, i)) for i in range(options['md']['prod'][0])]
     #
     qa = get_error_estimation(output_prefix, solv_fn, dcd_fn_s)
 
+def check_speed(output_prefix, input_json, options, verbose, nonstd):
+    if 'time_limit' not in options['md'] or options['md']['time_limit'] < 0.0:
+        return options
+    #
+    cmd = [SPEED, output_prefix]
+    cmd.extend(["--input", input_json])
+    system(cmd, verbose=verbose)
+    #
+    with open("SPEED") as fp:
+        speed = float(fp.read().strip())    # steps/s
+    #
+    time_limit = options['md']['time_limit']
+    max_steps = time_limit * speed
+    #
+    n_heat_steps = (1+ int((options['md']['dyntemp']-options['md']['heat'][1])/options['md']['heat'][2]))
+    heat_steps = options['md']['heat'][0] * n_heat_steps
+    equil_steps = options['md']['equil'][0]
+    prod_steps = options['md']['prod'][0] * options['md']['prod'][1]
+    needed_steps = equil_steps + prod_steps
+
+    if needed_steps < max_steps:
+        return options
+    #
+    dynoutfrq = options['md']['prod'][2]
+    if equil_steps < 0.4*max_steps:
+        dynsteps = int((max_steps-equil_steps)/dynoutfrq/options['md']['prod'][0]) * dynoutfrq
+        options['md']['prod'][1] = dynsteps
+    else:
+        equil_steps = int(0.4*max_steps/dynoutfrq) * dynoutfrq
+        options['md']['equil'][0] = equil_steps
+        if heat_steps > equil_steps*0.8:
+            options['md']['heat'][0] = int(equil_steps*0.8/n_heat_steps/100)*100
+        #
+        dynsteps = int((max_steps-equil_steps)/dynoutfrq/options['md']['prod'][0]) * dynoutfrq
+        options['md']['prod'][1] = dynsteps
+    #
+    with open(input_json, 'wt') as fout:
+        fout.write(json.dumps(options, indent=2))
+    return options
+
 def main():
-    arg = argparse.ArgumentParser(prog='equil')
+    arg = argparse.ArgumentParser(prog='local_qa')
     arg.add_argument(dest='output_prefix')
-    arg.add_argument(dest='input_pdb')
     arg.add_argument('--input', dest='input_json', required=True)
     arg.add_argument('--non_standard', dest='non_standard', default=False, action='store_true')
     arg.add_argument('-v', '--verbose', default=False, action='store_true')
@@ -227,10 +268,12 @@ def main():
         return
     arg = arg.parse_args()
     #
-    input_pdb = path.Path(arg.input_pdb)
-    #
     with open(arg.input_json) as fp:
         options = json.load(fp)
+    #
+    input_pdb = path.Path(options['input_pdb'])
+    #
+    options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose, arg.non_standard)
     #
     run(input_pdb, arg.output_prefix, options, arg.verbose, arg.non_standard)
 

@@ -18,6 +18,7 @@ from libcommon import *
 import mdtraj
 
 EXEC = '%s/prod_runner.py'%(EXEC_HOME)
+SPEED = '%s/check_md_speed.py'%EXEC_HOME
 
 def build_restraint_Cartesian(ref):
     calphaIndex = ref.top.select("name CA")
@@ -200,6 +201,27 @@ def run(output_prefix, input_json, options, verbose):
     #
     #LOCK.remove()
 
+def check_speed(output_prefix, input_json, options, verbose):
+    if 'time_limit' in options['md'] and options['md']['time_limit'] > 0.0:
+        cmd = [SPEED, output_prefix]
+        cmd.extend(["--input", input_json.short()])
+        system(cmd, verbose=verbose)
+        #
+        with open("SPEED") as fp:
+            speed = float(fp.read().strip())    # steps/s
+        #
+        time_limit = options['md']['time_limit']
+        max_steps = time_limit * speed / options['md']['iter']
+        #
+        if max_steps < options['md']['dynsteps']:
+            dynoutfrq = options['md']['dynoutfrq']
+            dynsteps = int(max_steps/dynoutfrq) *dynoutfrq
+            #
+            options['md']['dynsteps'] = dynsteps
+            with input_json.open("wt") as fout:
+                fout.write(json.dumps(options, indent=2))
+    return options
+
 def main():
     arg = argparse.ArgumentParser(prog='prod')
     arg.add_argument(dest='output_prefix')
@@ -223,6 +245,8 @@ def main():
         options['ff']['toppar']= arg.toppar
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
+    #
+    options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
     #
     run(arg.output_prefix, arg.input_json, options, arg.verbose)
 

@@ -66,19 +66,19 @@ def run(job):
                 line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
             options['ssbond'].append(line)
         #
-        options['input_pdb'] = input_pdb
-        options['input_json'] = input_json
-        #
         run_home.build()
         run_home.chdir()
         #
-        equil_json = run_home.fn("input.json")
-        if not equil_json.status():
-            with equil_json.open("wt") as fout:
+        options['input_pdb'] = input_pdb.short()
+        options['input_json'] = input_json.short()
+        #
+        run_json = run_home.fn("input.json")
+        if not run_json.status():
+            with run_json.open("wt") as fout:
                 fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
-        cmd = [EXEC, input_pdb.name(), input_pdb.short()]
-        cmd.extend(['--input', equil_json.short()])
+        cmd = [EXEC, input_pdb.name()]
+        cmd.extend(['--input', run_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         #
@@ -117,16 +117,16 @@ def submit(job):
         run_home.build()
         run_home.chdir()
         #
-        equil_json = run_home.fn("input.json")
-        if not equil_json.status():
-            with equil_json.open("wt") as fout:
+        run_json = run_home.fn("input.json")
+        if not run_json.status():
+            with run_json.open("wt") as fout:
                 fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd_s = []
         cmd_s.append("cd %s\n"%run_home)
         #
         cmd = [EXEC, input_pdb.name(), input_pdb.short()]
-        cmd.extend(['--input', equil_json.short()])
+        cmd.extend(['--input', run_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         cmd_s.append(" ".join(cmd_s) + '\n')
