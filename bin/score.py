@@ -113,7 +113,7 @@ def submit(job):
             cmd.append("> %s 2> /dev/null"%output_qual.short())
             cmd_s.append(' '.join(cmd)+'\n')
         #
-        job.write_submit_script(METHOD, index, cmd_s, submit=True)
+        job.write_submit_script(METHOD, index, cmd_s)
 
 def status(job):
     pass

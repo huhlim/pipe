@@ -130,7 +130,7 @@ def submit(job):
         if job.keep_tmp: cmd.append('--keep')
         cmd_s.append(" ".join(cmd) + '\n')
         #
-        job.write_submit_script(METHOD, index, cmd_s, submit=True)
+        job.write_submit_script(METHOD, index, cmd_s)
 
 def status(job):
     pass

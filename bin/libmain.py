@@ -3,6 +3,7 @@
 import path
 import json
 import time
+from importlib import import_module
 
 from libgpu import GPU
 from libcommon import *
@@ -21,6 +22,7 @@ def check_status(job):
                 if not output.status():
                     task_done = False
                     break
+            #
             if task_done:
                 updated = True
                 job.update_task_status(method, index, 'DONE')
@@ -116,8 +118,67 @@ def assign_resource(job, updated):
             job.update_task_status(method, index, 'RUN')
     return updated
 
-def submit_task(job):
-    pass
+def get_queue_status():
+    squeue = system(['squeue', '-u', USERNAME], verbose=False, stdout=True)
+    submitted = []
+    for line in squeue.split("\n")[1:]:
+        line = line.strip()
+        if line.startswith("JOBID"): continue
+        x = line.strip().split()
+        submitted.append(x[0])
+    return submitted
+
+def submit_task(job, updated):
+    # check WAIT task_s
+    has_new_job = False
+    for method in job.task:
+        task_s = job.get_task(method, status='WAIT')
+        if len(task_s) > 0:
+            has_new_job = True
+            break
+    if not has_new_job:
+        return updated
+    #
+    # check QUEUE status
+    queue = get_queue_status()
+    if len(queue) >= MAX_SUBMIT:
+        return updated
+    n_submit = MAX_SUBMIT - len(queue)
+    #
+    # assign SUBMIT status
+    for method in job.task:
+        task_s = job.get_task(method, status='SUBMITTED')
+        for index, task in task_s:
+            que_id = task['resource'][1]
+            if que_id in queue: continue    # still in the queue
+            #
+            task_done = True
+            for output in task['output']:
+                if not output.status():
+                    task_done = False
+                    break
+            if not task_done:   # got some error -> need to re-submit
+                job.update_task_status(method, index, 'WAIT')
+                job.update_task_host(method, index, None)
+    #
+    # assign SUBMIT status
+    for method in job.task:
+        task_s = job.get_task(method, status='WAIT')
+        #
+        new_submit = False
+        for index, task in task_s:
+            if n_submit <= 0: continue
+            #
+            updated = True
+            new_submit = True
+            job.update_task_status(method, index, 'SUBMIT')
+            n_submit -= 1
+        #
+        if new_submit:
+            import_module(method).submit(job)
+
+    job.to_json()
+    return updated
 
 def run(job, wait_after_run, sleep=30):
     while True:
@@ -128,7 +189,7 @@ def run(job, wait_after_run, sleep=30):
         #
         if RUNNER_METHOD == 'run':
             updated = assign_resource(job, updated)
-        else:
+        elif RUNNER_METHOD == 'submit':
             updated = submit_task(job, updated)
         #
         if updated: job.to_json()

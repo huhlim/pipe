@@ -24,6 +24,8 @@ HOSTs_json = path.Path("%s/host_s.json"%HOST_HOME)
 RUNNER_METHOD = 'run'
 #RUNNER_METHOD = 'submit'
 
+SUBMIT_TEMPLATE = '%s/SUBMIT_TEMPLATE'%DEFAULT_HOME
+
 CHARMMEXEC = '/home/huhlim/apps/charmm/current/charmm'
 if os.path.exists("/usr/bin/mpirun"):
     MPI_COMMAND = "/usr/bin/mpirun -np 4"
@@ -35,6 +37,9 @@ else:
 
 N_MODEL = 5
 MAX_ERROR = 20
+
+MAX_SUBMIT = 20
+USERNAME = os.getenv("USERNAME")
 
 TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
 HH_sequence_database = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
@@ -98,6 +103,8 @@ class Job(dict):
         if build:
             self.work_home = path.Dir("%s/%s"%(work_dir, title), build=True)
             self.json_job = self.work_home.fn("job.json")
+            if RUNNER_METHOD == 'submit':
+                self.queue_home = self.work_home.subidr("queue", build=True)
         self.task = {}
     def __repr__(self):
         return self.work_home.path()
@@ -188,8 +195,24 @@ class Job(dict):
         self.task[method][index]['resource'][0] = status
     def update_task_host(self, method, index, host):
         self.task[method][index]['resource'][1] = host
-    def write_submit_script(self, method, index, cmd, submit=False):
-        pass
+    def write_submit_script(self, method, index, cmd_s):
+        with open(SUBMIT_TEMPLATE) as fp:
+            que = fp.read()
+        job_name = '%s.%s.%d'%(self.title, method, index)
+        que = que.replace("JOB_NAME", job_name)
+        que = que.replace("JOB_OUTPUT", self.queue_home.fn("%s.log"%(job_name)).path())
+        #
+        que_fn = self.queue_home.fn("%s.sh"%job_name)
+        with que_fn.open("wt") as fout:
+            fout.write(que)
+            fout.writelines(cmd_s)
+        #
+        sbatch = system(['sbatch', que_fn.short()], stdout=True)
+        que_id = sbatch.strip().split()[-1]
+
+        self.update_task_status(method, index, "SUBMITTED")
+        self.update_task_host(method, index, que_id)
+        #
     def append_to_joblist(self):
         if JOBs_json.status():
             with JOBs_json.open() as fp:

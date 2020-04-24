@@ -68,7 +68,7 @@ def submit(job):
         cmd.append("&> /dev/null\n")
         que.append(" ".join(cmd))
     #
-    job.write_submit_script(METHOD, 0, que, submit=True)
+    job.write_submit_script(METHOD, 0, que)
 
 def status(job):
     pass

@@ -62,7 +62,7 @@ def submit(job):
         cmd.append("cd %s\n"%run_home)
         cmd.append("%s %s > %s\n"%(EXEC, input_pdb.short(), output_pdb.short()))
         #
-        job.write_submit_script(METHOD, index, cmd, submit=True)
+        job.write_submit_script(METHOD, index, cmd)
 
 def status(job):
     task_s = job.get_task(METHOD)

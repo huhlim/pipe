@@ -58,7 +58,7 @@ def submit(job):
         cmd.append("cd %s\n"%run_home)
         cmd.append(" ".join([EXEC, title, input_pdb.short()]) + '\n')
         #
-        job.write_submit_script(METHOD, index, cmd, submit=True)
+        job.write_submit_script(METHOD, index, cmd)
 
 def status(job):
     task_s = job.get_task(METHOD)
