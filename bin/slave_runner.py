@@ -161,11 +161,12 @@ def register_host(gpu):
         with HOSTs_json.open('wt') as fout:
             fout.write(json.dumps(host_s, indent=2))
     else:
-        host = host_s[HOSTNAME]
-        if host[0] and gpu is not None:
-            gpu._visible_devices = host[1]
-        else:
-            gpu = None
+        sys.exit("%s is already in the host list\n"%HOSTNAME)
+        #host = host_s[HOSTNAME]
+        #if host[0] and gpu is not None:
+        #    gpu._visible_devices = host[1]
+        #else:
+        #    gpu = None
     return gpu
 
 def unregister_host():
