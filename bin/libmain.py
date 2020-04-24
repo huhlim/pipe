@@ -121,7 +121,7 @@ def assign_resource(job, updated):
 def get_queue_status():
     squeue = system(['squeue', '-u', USERNAME], verbose=False, stdout=True)
     submitted = []
-    for line in squeue.split("\n")[1:]:
+    for line in squeue.split("\n")[1:-1]:
         line = line.strip()
         if line.startswith("JOBID"): continue
         x = line.strip().split()
@@ -129,16 +129,6 @@ def get_queue_status():
     return submitted
 
 def submit_task(job, updated):
-    # check WAIT task_s
-    has_new_job = False
-    for method in job.task:
-        task_s = job.get_task(method, status='WAIT')
-        if len(task_s) > 0:
-            has_new_job = True
-            break
-    if not has_new_job:
-        return updated
-    #
     # check QUEUE status
     queue = get_queue_status()
     if len(queue) >= MAX_SUBMIT:

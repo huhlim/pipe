@@ -21,8 +21,8 @@ HOST_HOME = '%s/hosts'%BIN_HOME
 JOBs_json = path.Path("%s/job_s.json"%HOST_HOME)
 HOSTs_json = path.Path("%s/host_s.json"%HOST_HOME)
 
-RUNNER_METHOD = 'run'
-#RUNNER_METHOD = 'submit'
+#RUNNER_METHOD = 'run'
+RUNNER_METHOD = 'submit'
 
 SUBMIT_TEMPLATE = '%s/SUBMIT_TEMPLATE'%DEFAULT_HOME
 
@@ -38,8 +38,8 @@ else:
 N_MODEL = 5
 MAX_ERROR = 20
 
-MAX_SUBMIT = 20
-USERNAME = os.getenv("USERNAME")
+MAX_SUBMIT = 10000
+USERNAME = "heolim"
 
 TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
 HH_sequence_database = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
@@ -104,7 +104,7 @@ class Job(dict):
             self.work_home = path.Dir("%s/%s"%(work_dir, title), build=True)
             self.json_job = self.work_home.fn("job.json")
             if RUNNER_METHOD == 'submit':
-                self.queue_home = self.work_home.subidr("queue", build=True)
+                self.queue_home = self.work_home.subdir("queue", build=True)
         self.task = {}
     def __repr__(self):
         return self.work_home.path()
@@ -126,6 +126,9 @@ class Job(dict):
         job = cls()
         for key in X:
             job[key] = JSONdeserialize(X[key])
+        #
+        if RUNNER_METHOD == 'submit':
+            job.queue_home = job.work_home.subdir("queue", build=True)
         #
         os.chdir(cwd)
         return job

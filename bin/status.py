@@ -73,6 +73,8 @@ def check_status(job):
                     status = 'WAIT'
                     progress = 0.0
                 else:
+                    if status == 'SUBMITTED':
+                        status = 'RUN'
                     progress = min(1.0, t_curr / t_target) * 100.0
                 if speed > 0.0:
                     t_left = (t_target-t_curr) / speed * 86400.
