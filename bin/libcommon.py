@@ -21,8 +21,8 @@ HOST_HOME = '%s/hosts'%BIN_HOME
 JOBs_json = path.Path("%s/job_s.json"%HOST_HOME)
 HOSTs_json = path.Path("%s/host_s.json"%HOST_HOME)
 
-#RUNNER_METHOD = 'run'
-RUNNER_METHOD = 'submit'
+RUNNER_METHOD = 'run'
+#RUNNER_METHOD = 'submit'
 
 SUBMIT_TEMPLATE = '%s/SUBMIT_TEMPLATE'%DEFAULT_HOME
 

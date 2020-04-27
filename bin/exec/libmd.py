@@ -99,7 +99,7 @@ def generate_PSF(output_prefix, solv_fn, options, verbose):
     return psf_fn, crd_fn
 
 def construct_restraint(psf, pdb, force_const):
-    rsr = CustomExternalForce("k0*dsq ; dsq=((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+    rsr = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
     rsr.addPerParticleParameter("x0")
     rsr.addPerParticleParameter("y0")
     rsr.addPerParticleParameter("z0")
