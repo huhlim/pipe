@@ -366,6 +366,7 @@ def split_model(job, pdb_fn):
     out_fn_s = []
     for split in job.domain_s.get_splitted():
         out_fn = model_home.fn("%s_d%d.pdb"%(job.title, split))
+        out_fn_s.append(out_fn)
         if out_fn.status():
             continue
         mask = np.zeros(l_seq, dtype=bool)

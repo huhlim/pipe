@@ -35,7 +35,7 @@ def get_energy_min(out_fn_s):
     min_fn = path.Path("min.pdb")
     if min_fn.exists():
         min_fn.remove()
-    os.symlink(emin_fn.short(), min_fn.short())
+    system(['cp', emin_fn.short(), min_fn.short()])
     #
     return min_fn
 
