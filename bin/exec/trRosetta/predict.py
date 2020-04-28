@@ -8,7 +8,7 @@ import numpy as np
 import networkx as nx
 
 import path
-from libpdb import Sequence
+from libseq import Sequence
 
 from libcommon import *
 
@@ -29,7 +29,7 @@ class Job(object):
     def __init__(self, run_home, fa_fn):
         self.fa_fn0 = path.Path(fa_fn)
         self.title = path.name(fa_fn)
-        self.run_home = path.Dir("%s/%s"%(run_home, self.title), build=True)
+        self.run_home = path.Dir(run_home, build=True)
         self.domain_s = BreadthFirstSearch()
     def __repr__(self):
         return self.title
@@ -363,6 +363,7 @@ def split_model(job, pdb_fn):
     resNo = np.array([atom.residue.index for atom in pdb0.top.atoms])
     #
     l_seq = len(job.seq0)
+    out_fn_s = []
     for split in job.domain_s.get_splitted():
         out_fn = model_home.fn("%s_d%d.pdb"%(job.title, split))
         if out_fn.status():
@@ -373,28 +374,35 @@ def split_model(job, pdb_fn):
         #
         pdb = pdb0.atom_slice(selected)
         pdb.save(out_fn.short())
+    #
+    with job.fn("model_s").open("wt") as fout:
+        for out in out_fn_s:
+            fout.write("%s\n"%out)
 
 def main():
     if len(sys.argv) == 1:
-        sys.stderr.write("USAGE: %s [TEST] [FA]\n"%__file__)
+        sys.stderr.write("USAGE: %s [FA]\n"%__file__)
         return
     #
-    run_home = sys.argv[1]
-    in_fa = sys.argv[2]
+    run_home = os.getcwd()
+    in_fa = sys.argv[1]
     #
     job = Job(run_home, in_fa)
     if not job.initialize_run():
         return
     #
-    job.trim_artificial_sequence()
-    job.run_psipred()
-    job.read_domain_info()
-    #
-    run(job)
-    pdb_fn = build_model(job)
-    split_model(job, pdb_fn)
-    #
-    job.finalize_run()
+    try:
+        job.trim_artificial_sequence()
+        job.run_psipred()
+        job.read_domain_info()
+        #
+        run(job)
+        pdb_fn = build_model(job)
+        split_model(job, pdb_fn)
+        #
+        job.finalize_run()
+    except:
+        job.LOCK.remove()
 
 if __name__ == '__main__':
     main()

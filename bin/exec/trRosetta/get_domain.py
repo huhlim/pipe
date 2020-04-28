@@ -8,7 +8,7 @@ import networkx as nx
 from scipy.sparse import csgraph
 
 import path
-from libpdb import Sequence
+from libseq import Sequence
 
 from libcommon import *
 

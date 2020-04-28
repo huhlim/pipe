@@ -10,7 +10,7 @@ import path
 from libcommon import *
 from run_trRosetta import read_trRosetta, FEATUREs
 
-PARAM_N_MODEL = 10
+PARAM_N_MODEL = 16
 EXEC = '%s/apps/trRosetta/scripts/trRosetta.py'%(os.getenv("HOME"))
 
 MAX_MEMORY = 32. # GB
