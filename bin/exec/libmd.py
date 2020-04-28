@@ -45,7 +45,7 @@ def solvate_pdb(output_prefix, pdb, options, verbose):
             xyz = np.dot(xyz, q.rotate().T)
         #
         system_size = np.max(xyz, axis=0) - np.min(xyz, axis=0) + 2.0*(options['md']['solvate'] * 0.1)
-        translate = system_size / 2.0
+        translate = (system_size - (np.max(xyz, axis=0) + np.min(xyz, axis=0))) * 0.5
         xyz += translate
         pdb.xyz[0] = xyz
         #

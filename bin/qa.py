@@ -125,7 +125,7 @@ def submit(job):
         cmd_s = []
         cmd_s.append("cd %s\n"%run_home)
         #
-        cmd = [EXEC, input_pdb.name(), input_pdb.short()]
+        cmd = [EXEC, input_pdb.name()]
         cmd.extend(['--input', run_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
