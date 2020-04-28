@@ -2,16 +2,13 @@
 
 import os
 import sys
+import path
 import tempfile
 import importlib
 import numpy as np
 from string import digits
 
-sys.path.insert(0, '../')
 from seqName import to_three_letter
-
-sys.path.insert(0, '../../')
-import path
 
 class Sequence(object):
     def __init__(self, title, chain_id='', res_no=None):

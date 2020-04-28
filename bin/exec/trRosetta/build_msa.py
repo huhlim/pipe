@@ -2,12 +2,10 @@
 
 import os
 import sys
+import path
 import numpy as np
 
 from libtrRosetta import *
-
-sys.path.insert(0, '../../')
-import path
 
 METHODs = ['trRosetta']
 

@@ -3,14 +3,12 @@
 import os
 import sys
 import copy
+import path
 import numpy as np
 from multiprocessing import Pool
 
 from libtrRosetta import *
 from run_trRosetta import read_trRosetta, FEATUREs
-
-sys.path.insert(0, '../../')
-import path
 
 PARAM_N_MODEL = 16
 EXEC = '%s/apps/trRosetta/scripts/trRosetta.py'%(os.getenv("HOME"))

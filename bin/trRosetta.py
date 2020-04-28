@@ -36,7 +36,7 @@ def run(job):
             continue
         #
         run_home.chdir()
-        cmd = [EXEC, title, input_fa.short()]
+        cmd = [EXEC, input_fa.short()]
         system(cmd, verbose=job.verbose)
 
 def submit(job):
@@ -56,7 +56,7 @@ def submit(job):
         #
         cmd = []
         cmd.append("cd %s\n"%run_home)
-        cmd.append(" ".join([EXEC, title, input_fa.short()]) + '\n')
+        cmd.append(" ".join([EXEC, input_fa.short()]) + '\n')
         #
         job.write_submit_script(METHOD, index, cmd)
 

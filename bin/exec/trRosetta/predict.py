@@ -3,6 +3,7 @@
 import os
 import sys
 import copy
+import path
 import mdtraj
 import numpy as np
 import networkx as nx
@@ -22,10 +23,7 @@ from run_trRosetta import run as run_trRosetta
 from get_domain import run as get_domain
 from tbm_to_contact import run as tbm_to_contact
 
-from build_model import run as build_model
-
-sys.path.insert(0, '../../')
-import path
+from build_model import run as build_model 
 
 class Job(object):
     def __init__(self, run_home, fa_fn):
@@ -393,18 +391,18 @@ def main():
     if not job.initialize_run():
         return
     #
-    try:
-        job.trim_artificial_sequence()
-        job.run_psipred()
-        job.read_domain_info()
-        #
-        run(job)
-        pdb_fn = build_model(job)
-        split_model(job, pdb_fn)
-        #
-        job.finalize_run()
-    except:
-        job.LOCK.remove()
+    job.trim_artificial_sequence()
+    job.run_psipred()
+    job.read_domain_info()
+    #
+    run(job)
+    pdb_fn = build_model(job)
+    split_model(job, pdb_fn)
+    #
+    job.finalize_run()
+    #try:
+    #except:
+    #    job.LOCK.remove()
 
 if __name__ == '__main__':
     main()
