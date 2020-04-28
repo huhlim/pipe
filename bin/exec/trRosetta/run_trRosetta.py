@@ -5,9 +5,11 @@ import sys
 import copy
 import numpy as np
 
-import path
-from libcommon import *
+from libtrRosetta import *
 from get_domain import get_soft_domain_boundary
+
+sys.path.insert(0, '../../')
+import path
 
 APP_HOME = "/home/huhlim/apps/trRosetta"
 PARAM_CUTOFF = 0.15

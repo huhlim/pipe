@@ -7,10 +7,9 @@ import mdtraj
 import numpy as np
 import networkx as nx
 
-import path
 from libseq import Sequence
 
-from libcommon import *
+from libtrRosetta import *
 
 from run_tbm import run as run_tbm
 from run_tbm import read_tbm
@@ -24,6 +23,9 @@ from get_domain import run as get_domain
 from tbm_to_contact import run as tbm_to_contact
 
 from build_model import run as build_model
+
+sys.path.insert(0, '../../')
+import path
 
 class Job(object):
     def __init__(self, run_home, fa_fn):

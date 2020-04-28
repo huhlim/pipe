@@ -3,10 +3,12 @@
 import os
 import sys
 import numpy as np
-import path
 import mdtraj
 from itertools import product
 from run_tbm import METHODs
+
+sys.path.insert(0, '../../')
+import path
 
 np.set_printoptions(suppress=True, linewidth=1000, edgeitems=100)
 

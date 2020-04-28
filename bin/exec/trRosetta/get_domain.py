@@ -7,10 +7,12 @@ import numpy as np
 import networkx as nx
 from scipy.sparse import csgraph
 
-import path
 from libseq import Sequence
 
-from libcommon import *
+from libtrRosetta import *
+
+sys.path.insert(0, '../../')
+import path
 
 class SegmentMap(object):
     def __init__(self, ss):

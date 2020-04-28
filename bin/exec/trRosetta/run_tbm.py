@@ -4,8 +4,10 @@ import os
 import sys
 import numpy as np
 
+from libtrRosetta import *
+
+sys.path.insert(0, '../../')
 import path
-from libcommon import *
 
 METHODs = ['blast', 'hhpred', 'hmmer']
 
