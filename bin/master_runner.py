@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import time
+import argparse
 import subprocess as sp
 
 import path
@@ -13,9 +14,11 @@ EXEC = {}
 EXEC['refine'] = '%s/casp14_refine.py'%BIN_HOME
 EXEC['sp'] = '%s/casp14_sp.py'%BIN_HOME
 
-def run():
-    with open("%s/bin/hosts/job_s.json"%PREFMD_HOME) as fp:
+def run(verbose):
+    with open("%s/bin/hosts/job_s.json"%WORK_HOME) as fp:
         job_fn_s = json.load(fp)
+    #
+    sys.stdout.write("TIME: %s\n"%time.ctime())
     #
     proc_s = []
     for job_fn in job_fn_s:
@@ -25,6 +28,7 @@ def run():
         cmd = [EXEC[job.run_type]]
         cmd.append(job_fn.path())
         #
+        sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
         proc_s.append(sp.Popen(cmd))
     #
     while True:
@@ -45,7 +49,7 @@ def main():
     arg = arg.parse_args()
     #
     while True:
-        run()
+        run(arg.verbose)
         time.sleep(arg.time_interval)
 
 if __name__ == '__main__':
