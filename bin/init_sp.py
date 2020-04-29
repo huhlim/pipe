@@ -21,6 +21,7 @@ def prep(arg):
     assert arg.input_fa is not None
     #
     job = Job(arg.work_dir, arg.title, build=True)
+    job.run_type = 'sp'
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep
     #

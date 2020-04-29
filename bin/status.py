@@ -9,8 +9,9 @@ import argparse
 
 from libcommon import *
 
-METHODs = ['hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'average', 'qa']
+METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'average', 'qa']
 INPUTs = {}
+INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
 INPUTs['locPREFMD'] = 0
 INPUTs['equil'] = 0

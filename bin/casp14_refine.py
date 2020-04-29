@@ -34,7 +34,14 @@ def main():
         arg.input_pdb = path.Path(arg.input_pdb)
     #
     # init
-    job = import_module("init_refine").prep(arg)
+    if arg.title.endswith("/job.json"):
+        input_json = path.Path(arg.title)
+        job = Job.from_json(input_json)
+        job.verbose = arg.verbose
+        job.keep_tmp = arg.keep
+        job.append_to_joblist()
+    else:
+        job = import_module("init_refine").prep(arg)
 
     # hybrid
     if arg.use_hybrid:

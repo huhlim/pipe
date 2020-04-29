@@ -21,6 +21,7 @@ def prep(arg):
     assert arg.input_pdb is not None
     #
     job = Job(arg.work_dir, arg.title, build=True)
+    job.run_type = 'refine'
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep
