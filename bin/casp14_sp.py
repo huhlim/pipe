@@ -4,6 +4,7 @@ import os
 import sys
 import path
 import argparse
+import numpy as np
 import subprocess as sp
 from importlib import import_module
 
@@ -11,7 +12,10 @@ from libcommon import *
 from libmain import *
 
 EXEC_REFINE = '%s/casp14_refine.py'%BIN_HOME
+EXEC_PASTE = '%s/trRosetta/paste_domains.py'%EXEC_HOME
+
 N_MODEL_REFINE = 5
+N_MODEL = 5
 
 def run_refine(title, input_pdb, work_home, **kwargs):
     cmd = []
@@ -27,6 +31,7 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--hybrid")
     #
     proc = sp.Popen(cmd)
+    time.sleep(1.0)
     return proc
 
 def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
@@ -49,6 +54,7 @@ def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
     for refine_home in refine_home_s:
         model_home = refine_home.subdir("final")
         model_s = model_home.glob("model_?.pdb")
+        model_s.sort(key=lambda x: int(x.name().split("_")[1]))
         refined.append(model_s)
         if len(model_s) < N_MODEL_REFINE:
             status = False
@@ -59,6 +65,33 @@ def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
         sys.exit("Error: failed to get refined models\n")
 
     return status, refined
+
+def paste_refined(model_home, refined_s, domain_pdb_s, verbose=False):
+    product = import_module("itertools").product
+    #
+    n_model = [np.arange(len(X), dtype=int) for X in refined_s]
+    product_s = [X for X in product(*n_model)]
+    product_s.sort(key=lambda x: sum(x))
+    #
+    prep_s = []
+    for i in range(N_MODEL):
+        prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+        prep_s.append(prep_fn)
+        if prep_fn.status():
+            continue
+        #
+        cmd = [EXEC_PASTE]
+        cmd.append("--init")
+        cmd.extend([fn[0].short() for fn in domain_pdb_s])
+        cmd.append("--refined")
+        for k,refined in zip(product_s[i], refined_s):
+            cmd.append(refined[k].short())
+        cmd.append("--output")
+        cmd.append(prep_fn.short())
+        system(cmd, verbose=verbose)
+        if not prep_fn.status():
+            sys.exit("ERROR: Failed to paste models\n")
+    return prep_s
 
 def main():
     arg = argparse.ArgumentParser(prog='trRosetta+PREFMD')
@@ -123,11 +156,37 @@ def main():
     if not status:
         return
     #
-    # TODO: paste refined models
+    # paste
+    job.work_home.chdir()
+    model_home = job.work_home.subdir("model", build=True)
+    if len(domain_pdb_s) == 1:  # single domain
+        prep_s = []
+        for i in range(N_MODEL):
+            prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+            if not prep_fn.status():
+                system(['cp', refined[0][i].short(), prep_fn.short()], verbose=arg.verbose)
+            prep_s.append(prep_fn)
+    else:
+        prep_s = paste_refined(model_home, refined, domain_pdb_s, verbose=arg.verbose)
     #
-    # locPREFMD
+    import_module("scwrl").prep(job, prep_s)
+    if not run(job, arg.wait_after_run):
+        return
+    scwrl_out = get_outputs(job, 'scwrl')
     #
+    import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
+    if not run(job, arg.wait_after_run):
+        return 
+    locPREFMD_out = get_outputs(job, "locPREFMD")
+
     # final
+    final_home = job.work_home.subdir("final", build=True)
+    for i,out in enumerate(locPREFMD_out):
+        pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
+        if not pdb_fn.status():
+            system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
+    #
+    job.remove_from_joblist()
 
 if __name__ == '__main__':
     try:

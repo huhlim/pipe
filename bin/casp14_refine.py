@@ -105,7 +105,8 @@ def main():
     prep_s = []
     for i,out in enumerate(average_out):
         prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
-        system(['cp', out[0].short(), prep_fn.short()], verbose=arg.verbose)
+        if not prep_fn.status():
+            system(['cp', out[0].short(), prep_fn.short()], verbose=arg.verbose)
         prep_s.append(prep_fn)
     #
     import_module("scwrl").prep(job, prep_s)
@@ -121,7 +122,8 @@ def main():
     model_s = []
     for i,out in enumerate(locPREFMD_out):
         model_fn = model_home.fn("model_%d.pdb"%(i+1))
-        system(['cp', out[0].short(), model_fn.short()], verbose=arg.verbose)
+        if not model_fn.status():
+            system(['cp', out[0].short(), model_fn.short()], verbose=arg.verbose)
         model_s.append(model_fn)
 
     # qa
@@ -134,7 +136,8 @@ def main():
     final_home = job.work_home.subdir("final", build=True)
     for i,out in enumerate(qa_out):
         pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
-        system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
+        if not pdb_fn.status():
+            system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
     #
     job.remove_from_joblist()
 

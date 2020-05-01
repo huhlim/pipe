@@ -29,17 +29,7 @@ def run(verbose):
         cmd.append(job_fn.path())
         #
         sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
-        proc_s.append(sp.Popen(cmd))
-    #
-    while True:
-        status = True
-        for proc in proc_s:
-            if proc.poll() is None:
-                status = False
-                break
-        if status: return
-        #
-        time.sleep(1.0)
+        system(cmd, verbose=False)
 
 def main():
     arg = argparse.ArgumentParser(prog='master_runner')

@@ -22,6 +22,7 @@ def prep(arg):
     #
     job = Job(arg.work_dir, arg.title, build=True)
     job.run_type = 'sp'
+    job.use_hybrid = arg.use_hybrid
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep
     #
