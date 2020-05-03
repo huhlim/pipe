@@ -15,6 +15,7 @@ INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
 INPUTs['locPREFMD'] = 0
 INPUTs['equil'] = 0
+INPUTs['prod'] = 0
 INPUTs['score'] = 0
 INPUTs['average'] = 0
 INPUTs['qa'] = 0
@@ -117,6 +118,58 @@ def check_status(job):
         if new_line:
             sys.stdout.write("#\n")
 
+def check_resource(host_s, json_job_s):
+    resource_s = {}
+    for host in host_s:
+        resource_s[host] = {}
+        resource_s[host]['cpu'] = None
+        if host_s[host][0]:
+            resource_s[host]['gpu'] = {}
+            for gpu_id in host_s[host][1]:
+                resource_s[host]['gpu'][gpu_id] = None
+    #
+    for json_job in json_job_s:
+        if not json_job.status():
+            continue
+        #
+        job = Job.from_json(json_job)
+        for method in job.task:
+            task_s = job.get_task(method, status='RUN')
+            for index, task in task_s:
+                host = task['resource'][1]
+                is_gpu = task['resource'][2]
+                if method != 'average':
+                    input = task['input'][INPUTs[method]].short()
+                else:
+                    input = task['input'][INPUTs[method]]
+                if is_gpu:
+                    host_name = host.split("/")[0]
+                    gpu_id = int(host.split("/")[1])
+                    resource_s[host_name]['gpu'][gpu_id] = (job.title, method, input)
+                else:
+                    resource_s[host]['cpu'] = (job.title, method, input)
+    #
+    for host in sorted(host_s):
+        if 'gpu' not in resource_s[host]: continue
+        #
+        for gpu_id in sorted(resource_s[host]['gpu']):
+            if resource_s[host]['gpu'][gpu_id] is None:
+                wrt = ''
+            else:
+                wrt = '%-10s  %-10s  %s'%resource_s[host]['gpu'][gpu_id]
+            sys.stdout.write("%-10s GPU %d   %s\n"%(host, gpu_id, wrt))
+    #
+    sys.stdout.write("#\n")
+    #
+    for host in sorted(host_s):
+        if resource_s[host]['cpu'] is None:
+            wrt = ''
+        else:
+            wrt = '%-10s  %-10s  %s'%resource_s[host]['cpu']
+        sys.stdout.write("%-10s CPU     %s\n"%(host, wrt))
+
+
+
 def main():
     arg = argparse.ArgumentParser(prog='PREFMD.status')
     sub = arg.add_subparsers(dest='method')
@@ -134,6 +187,8 @@ def main():
     sub_remove = sub.add_parser("remove")
     sub_remove.add_argument("json_job_s", nargs='+')
 
+    sub_resource = sub.add_parser("resource")
+
     if len(sys.argv) == 1:
         return arg.print_help()
     #
@@ -142,6 +197,8 @@ def main():
         if JOBs_json.status():
             with JOBs_json.open() as fp:
                 json_job_s = [path.Path(fn) for fn in json.load(fp)]
+        else:
+            return
         for json_job in json_job_s:
             sys.stdout.write("%s\n"%json_job)
 
@@ -187,6 +244,20 @@ def main():
                         job_s.append(fn)
             with JOBs_json.open('wt') as fout:
                 fout.write(json.dumps(job_s, indent=2))
+
+    elif arg.method == 'resource':
+        if HOSTs_json.status():
+            with HOSTs_json.open() as fp:
+                host_s = json.load(fp)
+        else:
+            return
+        if JOBs_json.status():
+            with JOBs_json.open() as fp:
+                json_job_s = [path.Path(fn) for fn in json.load(fp)]
+        else:
+            json_job_s = []
+        #
+        check_resource(host_s, json_job_s)
 
 if __name__ == '__main__':
     main()
