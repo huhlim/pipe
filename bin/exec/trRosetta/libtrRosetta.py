@@ -29,7 +29,7 @@ def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=No
             return ''
         return out
 
-TBM_EXCLUDE = '%s/exclude.casp13'%WORK_HOME
+#TBM_EXCLUDE = '%s/exclude.casp13'%WORK_HOME
 TBM_EXCLUDE = None
 
 EXEC_PSIPRED = '/home/huhlim/apps/psipred/current/run_psipred'
