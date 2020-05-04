@@ -9,7 +9,7 @@ import argparse
 
 from libcommon import *
 
-METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'average', 'qa']
+METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'average', 'scwrl', 'qa']
 INPUTs = {}
 INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
@@ -19,6 +19,7 @@ INPUTs['prod'] = 0
 INPUTs['score'] = 0
 INPUTs['average'] = 0
 INPUTs['qa'] = 0
+INPUTs['scwrl'] = 0
 
 def get_prod_info(run_home):
     input_json_fn = run_home.fn("input.json")
