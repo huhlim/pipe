@@ -66,7 +66,7 @@ def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
 
     return status, refined
 
-def paste_refined(model_home, refined_s, domain_pdb_s, verbose=False):
+def paste_refined(model_home, framework, refined_s, verbose=False):
     product = import_module("itertools").product
     #
     n_model = [np.arange(len(X), dtype=int) for X in refined_s]
@@ -82,7 +82,7 @@ def paste_refined(model_home, refined_s, domain_pdb_s, verbose=False):
         #
         cmd = [EXEC_PASTE]
         cmd.append("--init")
-        cmd.extend([fn[0].short() for fn in domain_pdb_s])
+        cmd.append(framework.short())
         cmd.append("--refined")
         for k,refined in zip(product_s[i], refined_s):
             cmd.append(refined[k].short())
@@ -130,7 +130,7 @@ def main():
     import_module("trRosetta").prep(job, job.init_fa)
     if not run(job, arg.wait_after_run):
         return 
-    domain_pdb_s = get_outputs(job, 'trRosetta', expand='model_s')#
+    domain_pdb_s, trRosetta_min = get_outputs(job, 'trRosetta', expand='model_s')[0]
 
     # create refine directory
     job.refine_home = job.work_home.subdir("refine", build=True)
@@ -138,8 +138,7 @@ def main():
     if not job.has("refine_s"): # first time 
         refine_proc_s = []
         job.refine_s = []
-        for out in domain_pdb_s:
-            pdb_fn = out[0]
+        for pdb_fn in domain_pdb_s:
             domain_id = pdb_fn.name()
             #
             refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=arg.verbose, \
@@ -159,15 +158,7 @@ def main():
     # paste
     job.work_home.chdir()
     model_home = job.work_home.subdir("model", build=True)
-    if len(domain_pdb_s) == 1:  # single domain
-        prep_s = []
-        for i in range(N_MODEL):
-            prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
-            if not prep_fn.status():
-                system(['cp', refined[0][i].short(), prep_fn.short()], verbose=arg.verbose)
-            prep_s.append(prep_fn)
-    else:
-        prep_s = paste_refined(model_home, refined, domain_pdb_s, verbose=arg.verbose)
+    prep_s = paste_refined(model_home, trRosetta_min, refined, verbose=arg.verbose)
     #
     import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):

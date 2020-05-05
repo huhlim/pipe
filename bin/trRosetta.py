@@ -16,9 +16,11 @@ def prep(job, input_fa):
         return
     #
     job.trRosetta_home = job.work_home.subdir("trRosetta", build=True)
+    #
+    min_pdb = job.trRosetta_home.fn("build/min.pdb")
     out = job.trRosetta_home.fn("model_s")
     #
-    job.add_task(METHOD, [job.title, input_fa, job.trRosetta_home], [out], use_gpu=False, n_proc=48)
+    job.add_task(METHOD, [job.title, input_fa, job.trRosetta_home], [out, min_pdb], use_gpu=False, n_proc=48)
     #
     job.to_json()
 
@@ -32,7 +34,8 @@ def run(job):
         input_fa = task['input'][1]
         run_home = task['input'][2]
         output_list = task['output'][0]
-        if output_list.status():
+        min_pdb = task['output'][1]
+        if min_pdb.status() and output_list.status():
             continue
         #
         run_home.chdir()
@@ -49,7 +52,8 @@ def submit(job):
         input_fa = task['input'][1]
         run_home = task['input'][2]
         output_list = task['output'][0]
-        if output_list.status():
+        min_pdb = task['output'][1]
+        if min_pdb.status() and output_list.status():
             continue
         #
         run_home.chdir()

@@ -8,6 +8,9 @@ import mdtraj
 
 from libtrRosetta import system 
 
+PARAM_BFACTOR_MAX = 99.99
+PARAM_SIGNAL_RESIDUE = 5
+
 def load_pdbs(fn_s):
     pdb_s = []
     for fn in fn_s:
@@ -50,32 +53,80 @@ def run_TMscore(pdb_1, pdb_2):
     r = np.array(r, dtype=float)
     return t,r
 
-def superpose_pdbs(init_s, refined_s):
+def superpose_pdbs(init_pdb, refined_s):
     pdb_s = load_pdbs(refined_s)
     #
-    for i in range(len(init_s)):
-        t,r = run_TMscore(refined_s[i], init_s[i])
+    for i in range(len(refined_s)):
+        t,r = run_TMscore(refined_s[i], init_pdb)
         pdb_s[i].xyz[0] = pdb_s[i].xyz[0].dot(r.T) + t
     return pdb_s
 
-def paste_domains(refined_s, pdb_s):
-    n_domain = len(pdb_s)
+def paste_domains(init_pdb, refined_s, pdb_s):
+    n_domain0 = len(pdb_s)
+    pdb0 = mdtraj.load(init_pdb)
+    residue_all = np.unique([r.resSeq for r in pdb0.top.residues])
+    residue_all = np.sort(residue_all)
     #
     residue_s = []; xyz_s = []
     for pdb in pdb_s:
         residue_s.append([r.resSeq for r in pdb.top.residues])
         ca = pdb.atom_slice(pdb.top.select("name CA"))
         xyz_s.append(ca.xyz[0])
-    residue_all, is_linker = np.unique(np.concatenate(residue_s), return_counts=True)
-    sortedIndex = np.argsort(residue_all)
-    residue_all = residue_all[sortedIndex]
-    is_linker = (is_linker[sortedIndex] > 1)
     #
-    domain = np.zeros(residue_all.shape[0], dtype=int)
+    bfac_s = []
+    for refined in refined_s:
+        bfac_s.append(read_bfactors(refined))
+    #
+    domain = np.zeros_like(residue_all, dtype=int) - 1
     for i,residue in enumerate(residue_s):
         for resNo in residue:
             domain[residue_all==resNo] = i
-    domain[is_linker] = -1
+    # residues which were not subjected to refine has -1.
+    #
+    if domain[0] == -1: # N-ter
+        for i,resNo in enumerate(residue_all):
+            if domain[i] == -1:
+                resNo_nter = resNo
+            else:
+                break
+        resNo_nter += PARAM_SIGNAL_RESIDUE
+        #
+        pdb = pdb0.atom_slice(pdb0.top.select("resid <= %d"%resNo_nter))
+        pdb_s.append(pdb)
+        #
+        residue_s.append([r.resSeq for r in pdb.top.residues])
+        ca = pdb.atom_slice(pdb.top.select("name CA"))
+        xyz_s.append(ca.xyz[0])
+        domain[residue_all <= resNo_nter] = len(residue_s)-1
+        #
+        bfac = {}
+        for res in pdb.top.residues:
+            bfac[res.resSeq] = np.ones(res.n_atoms) * PARAM_BFACTOR_MAX
+        bfac_s.append(bfac)
+
+    #
+    if domain[-1] == -1: # C-ter
+        for i,resNo in enumerate(residue_all[::-1]):
+            if domain[-i-1] == -1:
+                resNo_cter = resNo
+            else:
+                break
+        resNo_cter -= PARAM_SIGNAL_RESIDUE
+        #
+        pdb = pdb0.atom_slice(pdb0.top.select("resid >= %d"%resNo_cter))
+        pdb_s.append(pdb)
+        #
+        residue_s.append([r.resSeq for r in pdb.top.residues])
+        ca = pdb.atom_slice(pdb.top.select("name CA"))
+        xyz_s.append(ca.xyz[0])
+        domain[residue_all >= resNo_nter] = len(residue_s)-1
+        #
+        bfac = {}
+        for res in pdb.top.residues:
+            bfac[res.resSeq] = np.ones(res.n_atoms) * PARAM_BFACTOR_MAX
+        bfac_s.append(bfac)
+    #
+    n_domain = len(pdb_s)
     #
     for i in range(n_domain-1):
         for j in range(i+1, n_domain):
@@ -113,10 +164,6 @@ def paste_domains(refined_s, pdb_s):
                     else:
                         domain[residue_all==resNo] = np.random.choice([I,J])
     #
-    bfac_s = []
-    for refined in refined_s:
-        bfac_s.append(read_bfactors(refined))
-    #
     xyz = [] ; bfac = []
     top = mdtraj.Topology()
     chain = top.add_chain()
@@ -138,7 +185,7 @@ def paste_domains(refined_s, pdb_s):
 
 def main():
     arg = argparse.ArgumentParser(prog='average')
-    arg.add_argument('--init', dest='init_pdbs', nargs='*', required=True)
+    arg.add_argument('--init', dest='init_pdb', required=True)
     arg.add_argument('--refined', dest='refined_pdbs', nargs='*', required=True)
     arg.add_argument('--output', dest='output_fn', required=True)
     #
@@ -147,11 +194,8 @@ def main():
         return
     arg = arg.parse_args()
     #
-    if len(arg.init_pdbs) != len(arg.refined_pdbs):
-        sys.exit("ERROR: Number of init and refined must be identical.\n")
-    #
-    pdb_s = superpose_pdbs(arg.init_pdbs, arg.refined_pdbs)
-    out = paste_domains(arg.refined_pdbs, pdb_s)
+    pdb_s = superpose_pdbs(arg.init_pdb, arg.refined_pdbs)
+    out = paste_domains(arg.init_pdb, arg.refined_pdbs, pdb_s)
     out.save(arg.output_fn, bfactors=out.bfac)
 
 if __name__ == '__main__':

@@ -105,7 +105,10 @@ def main():
             import_module("average").prep(job, '%s.prod_%d'%(job.title, i), [i], path.Path("%s/average.json"%DEFAULT_HOME), rule='score')
         if not run(job, arg.wait_after_run):
             return
-    average_out = get_outputs(job, 'average', expand='pdb_s')[:N_MODEL]
+    average_out = []
+    for output in get_outputs(job, 'average', expand='pdb_s'):
+        average_out.extend(output[0])
+    average_out = average_out[:N_MODEL]
 
     # model
     job.work_home.chdir()

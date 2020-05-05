@@ -201,9 +201,11 @@ def get_outputs(job, method, expand=None):
             for out in task['output']:
                 if out.endswith(expand):
                     with out.open() as fp:
+                        _out = []
                         for line in fp:
-                            output_expanded.append([path.Path(line.strip())])
+                            _out.append(path.Path(line.strip()))
+                        output_expanded.append(_out)
                 else:
-                    output_expanded.append([out])
-            out_s.extend(output_expanded)
+                    output_expanded.append(out)
+            out_s.append(output_expanded)
     return out_s
