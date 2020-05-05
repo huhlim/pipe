@@ -35,20 +35,20 @@ class Job(object):
         return self.title
     def initialize_run(self, forced=False):
         self.DONE = self.fn("DONE")
-        self.LOCK = self.fn("LOCK")
+        #self.LOCK = self.fn("LOCK")
         #
         if not forced:
             if self.DONE.status(): return False
-            if self.LOCK.status(): return False
+            #if self.LOCK.status(): return False
         #
-        with self.LOCK.open('wt') as fout:
-            fout.write("#")
+        #with self.LOCK.open('wt') as fout:
+        #    fout.write("#")
         self.DOMAIN = self.fn("domain_s")
         return True
     def finalize_run(self):
         with self.DONE.open('wt') as fout:
             fout.write("#")
-        self.LOCK.remove()
+        #self.LOCK.remove()
     def fn(self, X=None, suffix=None):
         if X is not None:
             return self.run_home.fn(X)
