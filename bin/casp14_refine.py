@@ -25,6 +25,8 @@ def main():
             help='set running type (default=False)')
     arg.add_argument('--hybrid', dest='use_hybrid', action='store_true', default=False, \
             help='use hybrid')
+    arg.add_argument('--extensive', dest='use_extensive', action='store_true', default=False, \
+            help='use extensive sampling')
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -74,8 +76,14 @@ def main():
         return 
     
     # prod
+    if arg.use_extensive:
+        prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
+        n_traj = 10
+    else:
+        prod_input = path.Path("%s/prod.json"%DEFAULT_HOME)
+        n_traj = 5
     for i in range(n_init):
-        import_module("prod").prep(job, i, i, path.Path("%s/prod.json"%DEFAULT_HOME), 5)
+        import_module("prod").prep(job, i, i, prod_input, n_traj)
     if not run(job, arg.wait_after_run):
         return
     prod_out = get_outputs(job, 'prod')
