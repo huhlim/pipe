@@ -93,6 +93,32 @@ def paste_refined(model_home, framework, refined_s, verbose=False):
             sys.exit("ERROR: Failed to paste models\n")
     return prep_s
 
+def update_bfactor(out_fn, model_fn, bfac_fn):
+    bfac_s = {}
+    with bfac_fn.open() as fp:
+        for line in fp:
+            if not line.startswith("ATOM") and not line.startswith("HETATM"):
+                continue
+            atmName = line[12:16].strip()
+            if atmName != 'CA':
+                continue
+            resNo = int(line[22:26])
+            bfac = float(line[60:66])
+            bfac_s[resNo] = bfac
+    #
+    wrt = []
+    with model_fn.open() as fp:
+        for line in fp:
+            if not line.startswith("ATOM") and not line.startswith("HETATM"):
+                wrt.append(line)
+                continue
+            resNo = int(line[22:26])
+            bfac = bfac_s[resNo]
+            wrt.append('%s%6.2f\n'%(line[:60], bfac))
+    #
+    with out_fn.open('wt') as fout:
+        fout.writelines(wrt)
+
 def main():
     arg = argparse.ArgumentParser(prog='trRosetta+PREFMD')
     arg.add_argument(dest='title', help='Job title')
@@ -117,7 +143,7 @@ def main():
         arg.input_fa = path.Path(arg.input_fa)
     #
     # init
-    if arg.title.endswith("/job.json"):
+    if arg.title.endswith("job.json"):
         input_json = path.Path(arg.title)
         job = Job.from_json(input_json)
         job.verbose = arg.verbose
@@ -175,7 +201,7 @@ def main():
     for i,out in enumerate(locPREFMD_out):
         pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
         if not pdb_fn.status():
-            system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
+            update_bfactor(pdb_fn, out[0], prep_s[i])
     #
     job.remove_from_joblist()
 
