@@ -169,7 +169,42 @@ def check_resource(host_s, json_job_s):
             wrt = '%-10s  %-10s  %s'%resource_s[host]['cpu']
         sys.stdout.write("%-10s CPU     %s\n"%(host, wrt))
 
-
+def remove_from_slaves(json_job_s):
+    task_by_host = {}
+    #
+    for json_job in json_job_s:
+        job = Job.from_json(json_job)
+        for method in job.task:
+            task_s = job.get_task(method)
+            for index, task in task_s:
+                if task['resource'][1] is None:
+                    continue
+                host = task['resource'][1].split("/")[0]
+                if host not in task_by_host:
+                    task_by_host[host] = []
+                task_by_host[host].append((json_job, method, index))
+    #
+    for host in task_by_host:
+        host_json = path.Path("%s/%s.json"%(HOST_HOME, host))
+        if not host_json.status(): continue
+        #
+        task_s = []
+        with host_json.open('r') as fp:
+            for task in json.load(fp):
+                X = task.split()
+                #
+                status = X[0]
+                if status in ['FINISHED']:
+                    continue
+                #
+                key = (path.Path(X[2]), X[3], int(X[4]))
+                if key in task_by_host[host]:
+                    X[1] = 'TERMINATE'
+                    task_s.append(" ".join(X))
+                else:
+                    task_s.append(task)
+        with host_json.open("wt") as fout:
+            fout.write(json.dumps(task_s, indent=2))
 
 def main():
     arg = argparse.ArgumentParser(prog='PREFMD.status')
@@ -236,6 +271,9 @@ def main():
 
     elif arg.method == 'remove':
         json_job_s = [path.Path(fn) for fn in arg.json_job_s]
+        #
+        remove_from_slaves(json_job_s)
+        #
         if JOBs_json.status():
             with JOBs_json.open() as fp:
                 job_s = []

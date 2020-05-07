@@ -189,19 +189,6 @@ class Queue(object):
                         proc = sp.Popen(cmd)
                     if self.verbose:
                         sys.stdout.write("PROC: %s\n"%cmd)
-                    #if use_gpu:
-                    #    if gpu_id not in gpu_status: continue
-                    #    if not gpu_status[gpu_id]: continue
-                    #    cmd = self.get_cmd(task, use_gpu, gpu_id=gpu_id)
-                    #    gpu_status[gpu_id] = False
-                    #else:
-                    #    if not cpu_status: continue
-                    #    cmd = self.get_cmd(task, use_gpu)
-                    #    cpu_status = False
-                    #
-                    #if self.verbose:
-                    #    sys.stdout.write("PROC: %s\n"%cmd)
-                    #proc = sp.Popen(cmd, shell=True)
                     time.sleep(1.)
                     #
                     if proc.poll() is None:
@@ -240,13 +227,6 @@ class Queue(object):
 
     def get_cmd(self, task):
         return ["%s/%s.py"%(BIN_HOME, task.method), 'run', task.json_job.short()]
-    #def get_cmd(self, task, use_gpu, gpu_id=None):
-        #wrt = []
-        #if use_gpu and gpu_id is not None:
-        #    wrt.append("export CUDA_VISIBLE_DEVICES=%d"%gpu_id)
-        #wrt.append("%s/%s.py run %s"%(BIN_HOME, task.method, task.json_job.short()))
-        #wrt = ' ; '.join(wrt)
-        #return wrt
     def check_proc_status(self, proc_s):
         status = [] ; proc_running = []
         for proc in proc_s:
