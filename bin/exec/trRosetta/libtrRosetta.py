@@ -1,33 +1,13 @@
 #!/usr/bin/env python
 
 import sys
+import signal
 import subprocess as sp
 
 WORK_HOME = "/home/huhlim/work/prot.str/contact/pred/trRosetta_tbm"
 
 VERBOSE = True
 PARAM_N_PROC = 16
-
-def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
-    if type(cmd) == type(""):
-        cmd = cmd.strip().split()
-    if verbose and VERBOSE:
-        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
-    #
-    if (not stdout) and (outfile is None) and (errfile is None):
-        sp.call(cmd, stdin=stdin)
-    else:
-        if redirect:
-            errfile = sp.STDOUT
-        try:
-            out = sp.check_output(cmd, stdin=stdin, stderr=errfile)
-            if sys.version_info.major == 3:
-                out = out.decode("utf8")
-            if outfile is not None:
-                outfile.write(out)
-        except sp.CalledProcessError:
-            return ''
-        return out
 
 #TBM_EXCLUDE = '%s/exclude.casp13'%WORK_HOME
 TBM_EXCLUDE = None
@@ -41,3 +21,47 @@ PARAM_DOMAIN_BOUNDARY = 7
 PARAM_DOMAIN_MIN_SEG = 10
 PARAM_DOMAIN_MIN_RES = 30
 PARAM_TBM_DOMAIN = 90.0
+
+class GracefulExit(Exception):
+    pass
+def listen_signal():
+    def gracefulExit(*arg):
+        raise GracefulExit()
+    signal.signal(signal.SIGTERM, gracefulExit)
+
+def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
+    if type(cmd) == type(""):
+        cmd = cmd.strip().split()
+    if verbose:
+        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
+    #
+    if stdout or (outfile is not None):
+        STDOUT = sp.PIPE
+    else:
+        STDOUT = None
+    if errfile is None:
+        STDERR = None
+    elif errfile == '/dev/null':
+        STDERR = sp.DEVNULL
+    elif redirect:
+        STDERR = sp.STDOUT
+    else:
+        STDERR = errfile
+    #
+    listen_signal()
+    #
+    try:
+        proc = sp.Popen(cmd, stdin=stdin, stdout=STDOUT, stderr=STDERR)
+        proc.wait()
+    except GracefulExit:
+        proc.terminate()
+        sys.exit()
+    except KeyboardInterrupt:
+        proc.terminate()
+        sys.exit()
+    #
+    if STDOUT is not None:
+        out = proc.stdout.read().decode("utf8")
+        if outfile is not None:
+            outfile.write(out)
+        return out

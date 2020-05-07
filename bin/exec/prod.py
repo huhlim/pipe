@@ -247,13 +247,8 @@ def main():
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
     #
-    listen_signal()
-    try:
-        options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
-        run(arg.output_prefix, arg.input_json, options, arg.verbose)
-    except GracefulExit:
-        print ("TERMINATING...")
-        sys.exit()
+    options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
+    run(arg.output_prefix, arg.input_json, options, arg.verbose)
 
 if __name__=='__main__':
     main()

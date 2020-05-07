@@ -93,29 +93,6 @@ def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=No
             outfile.write(out)
         return out
 
-#def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
-#    if type(cmd) == type(""):
-#        cmd = cmd.strip().split()
-#    if verbose:
-#        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
-#    #
-#    if (not stdout) and (outfile is None) and (errfile is None):
-#        sp.call(cmd, stdin=stdin)
-#    else:
-#        if errfile == '/dev/null':
-#            errfile = sp.DEVNULL
-#        if redirect:
-#            errfile = sp.STDOUT
-#        try:
-#            out = sp.check_output(cmd, stdin=stdin, stderr=errfile)
-#            if sys.version_info.major == 3:
-#                out = out.decode("utf8")
-#            if outfile is not None:
-#                outfile.write(out)
-#        except sp.CalledProcessError:
-#            return ''
-#        return out
-
 def JSONserialize(X):
     if isinstance(X, path.Dir):
         return 'Dir %s'%X.short()
