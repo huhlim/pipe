@@ -37,11 +37,10 @@ def prep_init_models(init_s):
 
 def build_frag(fa_fn, n_proc):
     if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
-        with open(os.devnull, 'wt') as ferr:
-            cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
-            cmd.extend(['-cpus', '%d'%n_proc])
-            cmd.append(fa_fn.short())
-            system(cmd, errfile=ferr)
+        cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
+        cmd.extend(['-cpus', '%d'%n_proc])
+        cmd.append(fa_fn.short())
+        system(cmd, errfile='/dev/null')
     if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
         return False
     if not os.path.exists("t000_.3mers"):

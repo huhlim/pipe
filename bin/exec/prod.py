@@ -161,6 +161,7 @@ def run(output_prefix, input_json, options, verbose):
         restart_fn = path.Path(options['input']['restart'])
     else:
         restart_fn = None
+
     while (k_iter < options['md']['iter']):
         out_dcd_fn = run_home.fn("%s.%d.dcd"%(output_prefix, k_iter))
         out_chk_fn = run_home.fn("%s.%d.restart.pkl"%(output_prefix, k_iter))
@@ -246,9 +247,13 @@ def main():
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
     #
-    options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
-    #
-    run(arg.output_prefix, arg.input_json, options, arg.verbose)
+    listen_signal()
+    try:
+        options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
+        run(arg.output_prefix, arg.input_json, options, arg.verbose)
+    except GracefulExit:
+        print ("TERMINATING...")
+        sys.exit()
 
 if __name__=='__main__':
     main()

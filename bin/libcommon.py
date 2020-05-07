@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import path
+import signal
 from string import digits
 import subprocess as sp
 
@@ -45,28 +46,75 @@ TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
 HH_sequence_database = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
 HH_pdb70_database = "/green/s2/huhlim/work/database/hhsuite/pdb70/current/pdb70"
 
+class GracefulExit(Exception):
+    pass
+def listen_signal():
+    def gracefulExit(*arg):
+        raise GracefulExit()
+    signal.signal(signal.SIGTERM, gracefulExit)
+
 def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
     if type(cmd) == type(""):
         cmd = cmd.strip().split()
     if verbose:
         sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
     #
-    if (not stdout) and (outfile is None) and (errfile is None):
-        sp.call(cmd, stdin=stdin)
+    if stdout or (outfile is not None):
+        STDOUT = sp.PIPE
     else:
-        if errfile == '/dev/null':
-            errfile = sp.DEVNULL
-        if redirect:
-            errfile = sp.STDOUT
-        try:
-            out = sp.check_output(cmd, stdin=stdin, stderr=errfile)
-            if sys.version_info.major == 3:
-                out = out.decode("utf8")
-            if outfile is not None:
-                outfile.write(out)
-        except sp.CalledProcessError:
-            return ''
+        STDOUT = None
+    if errfile is None:
+        STDERR = None
+    elif errfile == '/dev/null':
+        STDERR = sp.DEVNULL
+    elif redirect:
+        STDERR = sp.STDOUT
+    else:
+        STDERR = errfile
+    #
+    listen_signal()
+    #
+    try:
+        proc = sp.Popen(cmd, stdin=stdin, stdout=STDOUT, stderr=STDERR)
+        print (proc.pid, ' '.join(cmd))
+        proc.wait()
+    except GracefulExit:
+        print ("killing... %d"%proc.pid)
+        proc.terminate()
+        sys.exit()
+    except KeyboardInterrupt:
+        print ("killing... %d"%proc.pid)
+        proc.terminate()
+        sys.exit()
+    #
+    if STDOUT is not None:
+        out = proc.stdout.read().decode("utf8")
+        if outfile is not None:
+            outfile.write(out)
         return out
+
+#def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
+#    if type(cmd) == type(""):
+#        cmd = cmd.strip().split()
+#    if verbose:
+#        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
+#    #
+#    if (not stdout) and (outfile is None) and (errfile is None):
+#        sp.call(cmd, stdin=stdin)
+#    else:
+#        if errfile == '/dev/null':
+#            errfile = sp.DEVNULL
+#        if redirect:
+#            errfile = sp.STDOUT
+#        try:
+#            out = sp.check_output(cmd, stdin=stdin, stderr=errfile)
+#            if sys.version_info.major == 3:
+#                out = out.decode("utf8")
+#            if outfile is not None:
+#                outfile.write(out)
+#        except sp.CalledProcessError:
+#            return ''
+#        return out
 
 def JSONserialize(X):
     if isinstance(X, path.Dir):
