@@ -150,6 +150,9 @@ def prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose):
     dcd_fn_s = []
     for i in range(n_prod):
         dcd_fn = path.Path('%s.prod.r%d.dcd'%(output_prefix, i))
+        if dcd_fn.status():
+            dcd_fn_s.append(dcd_fn)
+            continue
         #
         integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
                                         options['md']['langfbeta']/picosecond, \
@@ -164,7 +167,11 @@ def prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose):
             simulation.reporters.append(mdtraj.reporters.DCDReporter(dcd_fn.short(), dynoutfrq, atomSubset=proteinIndex))
         else:
             simulation.reporters.append(DCDReporter(dcd_fn.short(), dynoutfrq))
-        simulation.step(n_step)
+
+        try:
+            simulation.step(n_step)
+        except:
+            pass
         #
         simulation = None
         dcd_fn_s.append(dcd_fn)
@@ -177,13 +184,14 @@ def get_error_estimation(output_prefix, pdb_fn, dcd_fn_s):
     is_protein = (proteinIndex.shape[0] > 0)
     if is_protein:
         pdb = pdb.atom_slice(proteinIndex)
+    calphaIndex = pdb.top.select("name CA")
     #
     rmsf_s = []
     for dcd_fn in dcd_fn_s:
         traj = mdtraj.load(dcd_fn.short(), top=pdb)
-        traj.superpose(pdb, atom_indices=pdb.top.select("name CA"))
+        traj.superpose(pdb, atom_indices=calphaIndex)
         #
-        xyz = traj.xyz
+        xyz = traj.xyz[:,calphaIndex]
         #
         rmsf = []
         for i in range(xyz.shape[1]):
@@ -193,8 +201,13 @@ def get_error_estimation(output_prefix, pdb_fn, dcd_fn_s):
     rmsf_s = np.array(rmsf_s)
     qa = np.mean(rmsf_s, axis=0)
     #
+    bfactor = []
+    for i,residue in enumerate(pdb.top.residues):
+        bfactor.append(np.ones(residue.n_atoms)*qa[i])
+    bfactor = np.concatenate(bfactor)
+    #
     out_fn = path.Path("%s.qa.pdb"%output_prefix)
-    pdb.save(out_fn.short(), bfactors=qa)
+    pdb.save(out_fn.short(), bfactors=bfactor)
     return out_fn
 
 def run(input_pdb, output_prefix, options, verbose, nonstd):
@@ -210,7 +223,6 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     restart_state = equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
     #
     dcd_fn_s = prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose)
-    #dcd_fn_s = [path.Path('%s.prod.r%d.dcd'%(output_prefix, i)) for i in range(options['md']['prod'][0])]
     #
     qa = get_error_estimation(output_prefix, solv_fn, dcd_fn_s)
 

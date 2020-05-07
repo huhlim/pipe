@@ -36,7 +36,7 @@ def main():
         arg.input_pdb = path.Path(arg.input_pdb)
     #
     # init
-    if arg.title.endswith("/job.json"):
+    if arg.title.endswith("job.json"):
         input_json = path.Path(arg.title)
         job = Job.from_json(input_json)
         job.verbose = arg.verbose
