@@ -206,6 +206,40 @@ def remove_from_slaves(json_job_s):
         with host_json.open("wt") as fout:
             fout.write(json.dumps(task_s, indent=2))
 
+def reallocate_task(json_job, method, index, resource):
+    job = Job.from_json(json_job)
+    task = job.get_task(method)[index][1]
+    if task['resource'][0] == 'DONE':
+        return
+    #
+    key0 = (json_job, method, index)
+    if task['resource'][1] is not None:
+        host = task['resource'][1].split("/")[0]
+        host_json = path.Path("%s/%s.json"%(HOST_HOME, host))
+        if host_json.status():
+            task_s = []
+            with host_json.open('r') as fp:
+                for task in json.load(fp):
+                    X = task.split()
+                    #
+                    status = X[0]
+                    if status in ['FINISHED']:
+                        continue
+                    #
+                    key = (path.Path(X[2]), X[3], int(X[4]))
+                    if key == key0:
+                        X[1] = 'TERMINATE'
+                        task_s.append(" ".join(X))
+                    else:
+                        task_s.append(task)
+            with host_json.open("wt") as fout:
+                fout.write(json.dumps(task_s, indent=2))
+    #
+    job.update_task_host(method, index, resource)
+    job.update_task_status(method, index, "RUN")
+    #
+    job.to_json()
+
 def main():
     arg = argparse.ArgumentParser(prog='PREFMD.status')
     sub = arg.add_subparsers(dest='method')
@@ -215,6 +249,8 @@ def main():
     sub_check = sub.add_parser("check")
     sub_check.add_argument("json_job_s", nargs='*')
 
+    sub_resource = sub.add_parser("resource")
+
     sub_update = sub.add_parser("update")
 
     sub_append = sub.add_parser("append")
@@ -223,12 +259,16 @@ def main():
     sub_remove = sub.add_parser("remove")
     sub_remove.add_argument("json_job_s", nargs='+')
 
-    sub_resource = sub.add_parser("resource")
+    sub_remove = sub.add_parser("reallocate")
+    sub_remove.add_argument("json_job")
+    sub_remove.add_argument("method_type")
+    sub_remove.add_argument("index", type=int)
+    sub_remove.add_argument("resource")
 
     if len(sys.argv) == 1:
         return arg.print_help()
-    #
     arg = arg.parse_args()
+    #
     if arg.method == 'list':
         if JOBs_json.status():
             with JOBs_json.open() as fp:
@@ -283,6 +323,10 @@ def main():
                         job_s.append(fn)
             with JOBs_json.open('wt') as fout:
                 fout.write(json.dumps(job_s, indent=2))
+
+    elif arg.method == 'reallocate':
+        json_job = path.Path(arg.json_job)
+        reallocate_task(json_job, arg.method_type, arg.index, arg.resource)
 
     elif arg.method == 'resource':
         if HOSTs_json.status():
