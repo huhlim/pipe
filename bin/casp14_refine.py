@@ -117,7 +117,7 @@ def main():
     for i,out in enumerate(average_out):
         prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
         if not prep_fn.status():
-            system(['cp', out[0].short(), prep_fn.short()], verbose=arg.verbose)
+            system(['cp', out.short(), prep_fn.short()], verbose=arg.verbose)
         prep_s.append(prep_fn)
     #
     import_module("scwrl").prep(job, prep_s)

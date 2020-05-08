@@ -106,7 +106,7 @@ def check_status(job):
                 if method != 'average':
                     input = task['input'][INPUTs[method]].short()
                 else:
-                    input = task['input'][INPUTs[method]]
+                    input = task['output'][INPUTs[method]].short()
                 #
                 wrt = []
                 wrt.append("%-10s"%job.title)

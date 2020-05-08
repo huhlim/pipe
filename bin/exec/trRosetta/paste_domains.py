@@ -91,7 +91,7 @@ def paste_domains(init_pdb, refined_s, pdb_s):
                 break
         resNo_nter += PARAM_SIGNAL_RESIDUE
         #
-        pdb = pdb0.atom_slice(pdb0.top.select("resid <= %d"%resNo_nter))
+        pdb = pdb0.atom_slice(pdb0.top.select("resSeq <= %d"%resNo_nter))
         pdb_s.append(pdb)
         #
         residue_s.append([r.resSeq for r in pdb.top.residues])
@@ -113,13 +113,13 @@ def paste_domains(init_pdb, refined_s, pdb_s):
                 break
         resNo_cter -= PARAM_SIGNAL_RESIDUE
         #
-        pdb = pdb0.atom_slice(pdb0.top.select("resid >= %d"%resNo_cter))
+        pdb = pdb0.atom_slice(pdb0.top.select("resSeq >= %d"%resNo_cter))
         pdb_s.append(pdb)
         #
         residue_s.append([r.resSeq for r in pdb.top.residues])
         ca = pdb.atom_slice(pdb.top.select("name CA"))
         xyz_s.append(ca.xyz[0])
-        domain[residue_all >= resNo_nter] = len(residue_s)-1
+        domain[residue_all >= resNo_cter] = len(residue_s)-1
         #
         bfac = {}
         for res in pdb.top.residues:
