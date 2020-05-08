@@ -124,7 +124,7 @@ def main():
     cmd.append("-niter")
     cmd.append("10")
     with open("iter_hybrid.log", 'wt') as fout:
-        system(cmd, outfile=fout, errfile=sp.STDOUT, verbose=True)
+        system(cmd, outfile=fout, errfile=fout, verbose=True)
 
 if __name__ == '__main__':
     main()

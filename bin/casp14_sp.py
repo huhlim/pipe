@@ -161,14 +161,20 @@ def main():
     # create refine directory
     job.refine_home = job.work_home.subdir("refine", build=True)
     #
-    if not job.has("refine_s"): # first time 
+    has_refine = job.has("refine_s")
+    if has_refine:
+        for refine_home in job.refine_s:
+            if not refine_home.fn("job.json").status():
+                has_refine = False ; break
+    #
+    if not has_refine:
         refine_proc_s = []
         job.refine_s = []
         for pdb_fn in domain_pdb_s:
             domain_id = pdb_fn.name()
             #
             refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=arg.verbose, \
-                                     use_hybrid=arg.use_hybrid, wait_after_run=arg.wait_after_run)
+                                     use_hybrid=job.use_hybrid, wait_after_run=arg.wait_after_run)
             refine_home = job.refine_home.subdir(domain_id)
             #
             refine_proc_s.append(refine_proc)

@@ -23,6 +23,7 @@ def prep(arg):
     job = Job(arg.work_dir, arg.title, build=True)
     job.run_type = 'refine'
     job.use_hybrid = arg.use_hybrid
+    job.use_extensive = arg.use_extensive
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep

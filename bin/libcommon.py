@@ -53,7 +53,7 @@ def listen_signal():
         raise GracefulExit()
     signal.signal(signal.SIGTERM, gracefulExit)
 
-def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
+def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None):
     if type(cmd) == type(""):
         cmd = cmd.strip().split()
     if verbose:
@@ -67,28 +67,23 @@ def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=No
         STDERR = None
     elif errfile == '/dev/null':
         STDERR = sp.DEVNULL
-    elif redirect:
-        STDERR = sp.STDOUT
     else:
         STDERR = errfile
     #
     listen_signal()
     #
+    proc_output = None
     try:
         proc = sp.Popen(cmd, stdin=stdin, stdout=STDOUT, stderr=STDERR)
-        print (proc.pid, ' '.join(cmd))
-        proc.wait()
-    except GracefulExit:
-        print ("killing... %d"%proc.pid)
-        proc.terminate()
-        sys.exit()
-    except KeyboardInterrupt:
-        print ("killing... %d"%proc.pid)
+        #print (proc.pid, ' '.join(cmd))
+        proc_output = proc.communicate()
+    except (GracefulExit, KeyboardInterrupt) as error:
+        #print ("killing... %d"%proc.pid)
         proc.terminate()
         sys.exit()
     #
-    if STDOUT is not None:
-        out = proc.stdout.read().decode("utf8")
+    if (proc_output is not None) and (STDOUT is not None):
+        out = proc_output[0].decode("utf8")
         if outfile is not None:
             outfile.write(out)
         return out

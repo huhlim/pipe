@@ -46,7 +46,7 @@ def main():
         job = import_module("init_refine").prep(arg)
 
     # hybrid
-    if arg.use_hybrid:
+    if job.use_hybrid:
         import_module("hybrid").prep(job, job.init_pdb[0])
         if not run(job, arg.wait_after_run):
             return 
@@ -76,7 +76,7 @@ def main():
         return 
     
     # prod
-    if arg.use_extensive:
+    if job.use_extensive:
         prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
         n_traj = 10
     else:
