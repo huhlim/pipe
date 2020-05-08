@@ -1,3 +1,4 @@
 DATABASES
 PASS
 web
+bin/hosts/*.json
