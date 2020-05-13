@@ -237,7 +237,7 @@ class Queue(object):
                 proc_running.append(proc)
         return status, proc_running
 
-def register_host(gpu):
+def register_host(gpu, exclude_s):
     host_json = path.Path("%s/%s.json"%(HOST_HOME, HOSTNAME))
     #
     if HOSTs_json.status():
@@ -248,9 +248,9 @@ def register_host(gpu):
     #
     if HOSTNAME not in host_s:
         if gpu is None:
-            host_s[HOSTNAME] = (False, [])
+            host_s[HOSTNAME] = (False, [], exclude_s)
         else:
-            host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES)
+            host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES, exclude_s)
         with HOSTs_json.open('wt') as fout:
             fout.write(json.dumps(host_s, indent=2))
     else:
@@ -275,6 +275,7 @@ def main():
     arg.add_argument('--gpu', dest='use_gpu', action='store_true', default=False)
     arg.add_argument('--interval', dest='time_interval', default=60, type=int)
     arg.add_argument('--verbose', dest='verbose', action='store_true', default=False)
+    arg.add_argument('--exclude', dest='exclude_s', nargs='*', default=[])
     #
     arg = arg.parse_args()
     #
@@ -282,9 +283,9 @@ def main():
         gpu = GPU()
         gpu.check()
         gpu.update()
-        host_json, gpu = register_host(gpu)
+        host_json, gpu = register_host(gpu, exclude_s)
     else:
-        host_json, gpu = register_host(None)
+        host_json, gpu = register_host(None, exclude_s)
     #
     Queue(host_json, gpu, arg.time_interval, arg.verbose).run()
     unregister_host()

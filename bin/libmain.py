@@ -84,34 +84,53 @@ def assign_resource(job, updated):
     gpu_s = []
     for host in host_s:
         if host not in cpu_taken:
-            cpu_s.append(host)
+            if len(host_s[host]) > 2:
+                cpu_s.append((host, host_s[host][2]))
+            else:
+                cpu_s.append((host, []))
         if not host_s[host][0]:
             continue
+        #
         gpu = gpu_host_s[host]
         usable = gpu.usable(update=True)
         if host in gpu_taken:
             usable = [x for x in usable if x not in gpu_taken[host]]
         if len(usable) >= 0:
             for gpu_id in usable:
-                gpu_s.append('%s/%d'%(host, gpu_id))
+                if len(host_s[host]) > 2:
+                    gpu_s.append(('%s/%d'%(host, gpu_id), host_s[host][2]))
+                else:
+                    gpu_s.append(('%s/%d'%(host, gpu_id), []))
+    #
     cpu_status = [True for _ in cpu_s]
     gpu_status = [True for _ in gpu_s]
     #
     for method in job.task:
         task_s = job.get_task(method, status='WAIT')
+        if len(task_s) == 0: continue
+        #
+        if task['resource'][2]:
+            gpu_status_method = [(status and (method not in gpu[1])) \
+                                    for status,gpu in zip(gpu_status, gpu_s)]
+        else:
+            cpu_status_method = [(status and (method not in cpu[1])) \
+                                    for status,cpu in zip(cpu_status, cpu_s)]
+        #
         for index, task in task_s:
             if task['resource'][2]: # is GPU job
-                if True not in gpu_status:
+                if True not in gpu_status_method:
                     continue
-                i = gpu_status.index(True)
-                host = gpu_s[i]
+                i = gpu_status_method.index(True)
+                host = gpu_s[i][0]
                 gpu_status[i] = False
+                gpu_status_method[i] = False
             else:
-                if True not in cpu_status:
+                if True not in cpu_status_method:
                     continue
-                i = cpu_status.index(True)
-                host = cpu_s[i]
+                i = cpu_status_method.index(True)
+                host = cpu_s[i][0]
                 cpu_status[i] = False
+                cpu_status_method[i] = False
             #
             updated = True
             job.update_task_host(method, index, host)
