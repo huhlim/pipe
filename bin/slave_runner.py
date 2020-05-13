@@ -188,7 +188,7 @@ class Queue(object):
                         cpu_status = False
                         proc = sp.Popen(cmd)
                     if self.verbose:
-                        sys.stdout.write("PROC: %s\n"%cmd)
+                        sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
                     time.sleep(1.)
                     #
                     if proc.poll() is None:
