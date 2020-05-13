@@ -109,12 +109,10 @@ def assign_resource(job, updated):
         task_s = job.get_task(method, status='WAIT')
         if len(task_s) == 0: continue
         #
-        if task['resource'][2]:
-            gpu_status_method = [(status and (method not in gpu[1])) \
-                                    for status,gpu in zip(gpu_status, gpu_s)]
-        else:
-            cpu_status_method = [(status and (method not in cpu[1])) \
-                                    for status,cpu in zip(cpu_status, cpu_s)]
+        gpu_status_method = [(status and (method not in gpu[1])) \
+                                for status,gpu in zip(gpu_status, gpu_s)]
+        cpu_status_method = [(status and (method not in cpu[1])) \
+                                for status,cpu in zip(cpu_status, cpu_s)]
         #
         for index, task in task_s:
             if task['resource'][2]: # is GPU job
