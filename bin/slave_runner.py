@@ -283,9 +283,9 @@ def main():
         gpu = GPU()
         gpu.check()
         gpu.update()
-        host_json, gpu = register_host(gpu, exclude_s)
+        host_json, gpu = register_host(gpu, arg.exclude_s)
     else:
-        host_json, gpu = register_host(None, exclude_s)
+        host_json, gpu = register_host(None, arg.exclude_s)
     #
     Queue(host_json, gpu, arg.time_interval, arg.verbose).run()
     unregister_host()
