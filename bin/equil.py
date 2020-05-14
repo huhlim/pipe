@@ -24,17 +24,16 @@ def prep(job, equil_index, input_pdb, input_json):
         run_home = job.equil_home.subdir("%d"%equil_index)
         #
         input_s = [run_home, fn, input_json]
-        output_s = [run_home.fn(X) for X in ['%s.psf'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]]
+        output_s = [run_home.fn(X) for X in OUTs]
         status = True
         for output in output_s:
             if not output.status():
                 status = False ; break
+        #
         if status: 
             job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
-            equil_index += 1
-            continue
-
-        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
+        else:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
