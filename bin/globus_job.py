@@ -98,14 +98,18 @@ def get_job_file_list(job):
     #
     if job.run_type == 'refine':
         output_s.extend(job.init_home.glob("*"))
-    elif job.run_type == 'refine_test':
-        output_s.extend(job.init_home.glob("*"))
     elif job.run_type == 'sp':
         output_s.append(job.init_fa)
     #
     for method in job.task:
         out_s = get_outputs(job, method)
         output_s.extend(flatten_list(out_s))
+    #
+    if job.run_type == 'sp' and job.has("refine_s"):
+        for refine_home in job.refine_s:
+            refine_json_job = refine_home.fn("job.json")
+            refine_job = Job.from_json(refine_json_job)
+            output_s.extend(get_job_file_list(refine_job))
     return output_s
 
 def set_remote_path(remote, title):
