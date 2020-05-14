@@ -220,6 +220,7 @@ def get_outputs(job, method, expand=None):
                     with out.open() as fp:
                         _out = []
                         for line in fp:
+                            if line.startswith("#"): continue
                             _out.append(path.Path(line.strip()))
                         output_expanded.append(_out)
                 else:
