@@ -15,7 +15,7 @@ def prep(job, equil_index, input_pdb, input_json):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
         return
     #
-    OUTs = ['%s.psf'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
+    OUTs = ['%s.psf'%job.title, '%s.orient.pdb'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
     #
     job.equil_home = job.work_home.subdir("equil", build=True)
     job.equil_home.chdir()
