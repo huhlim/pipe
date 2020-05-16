@@ -222,13 +222,16 @@ def reallocate_task(json_job, method, index, resource):
                 for task in json.load(fp):
                     X = task.split()
                     #
-                    status = X[0]
+                    status = X[1]
                     if status in ['FINISHED']:
                         continue
                     #
                     key = (path.Path(X[2]), X[3], int(X[4]))
                     if key == key0:
-                        X[1] = 'TERMINATE'
+                        if status == 'WAIT':
+                            X[1] = 'FINISHED'
+                        else:
+                            X[1] = 'TERMINATE'
                         task_s.append(" ".join(X))
                     else:
                         task_s.append(task)
