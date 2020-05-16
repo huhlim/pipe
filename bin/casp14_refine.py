@@ -50,12 +50,8 @@ def main():
         import_module("hybrid").prep(job, job.init_pdb[0])
         if not run(job, arg.wait_after_run):
             return 
-        hybrid_out = get_outputs(job, 'hybrid')
-        with hybrid_out[0][0].open() as fp:
-            for line in fp:
-                if line.startswith("#"): continue
-                fn = path.Path(line.strip())
-                job.init_pdb.append(fn)
+        hybrid_out = get_outputs(job, 'hybrid', expand='model_s')
+        job.init_pdb.extend(hybrid_out[0][0])
         job.init_pdb = job.init_pdb[:5]
         job.to_json()
     #
