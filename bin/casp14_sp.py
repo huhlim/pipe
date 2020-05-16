@@ -31,7 +31,7 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--hybrid")
     #
     proc = sp.Popen(cmd)
-    time.sleep(1.0)
+    time.sleep(60)
     return proc
 
 def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
