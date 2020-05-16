@@ -190,9 +190,8 @@ def submit_task(job, updated):
 def run(job, wait_after_run, sleep=30):
     while True:
         updated, status = check_status(job)
-        if status:
-            if updated: job.to_json()
-            break
+        if updated: job.to_json()
+        if status: break
         #
         if RUNNER_METHOD == 'run':
             updated = assign_resource(job, updated)

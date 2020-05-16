@@ -60,7 +60,7 @@ def submit_to_db(form):
         result_s = cursor.fetchall()
         #
         is_new = True
-        job_id = -1
+        job_id = 0
         n_running = 0
         for result in result_s:
             if result['target_id'] == target_id and result['sequence'] == sequence and result['email'] == email:
