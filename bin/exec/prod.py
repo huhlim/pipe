@@ -20,6 +20,8 @@ import mdtraj
 EXEC = '%s/prod_runner.py'%(EXEC_HOME)
 SPEED = '%s/check_md_speed.py'%EXEC_HOME
 
+SPEED_SCALE = 0.85  # slow-down because of restraints
+
 def build_restraint_Cartesian(ref):
     calphaIndex = ref.top.select("name CA")
     return calphaIndex + 1
@@ -210,6 +212,7 @@ def check_speed(output_prefix, input_json, options, verbose):
         #
         with open("SPEED") as fp:
             speed = float(fp.read().strip())    # steps/s
+            speed *= SPEED_SCALE
         #
         time_limit = options['md']['time_limit']
         max_steps = time_limit * speed / options['md']['iter']

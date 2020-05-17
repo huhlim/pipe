@@ -76,6 +76,14 @@ def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, ver
             restart_state = pickle.load(fp)
         simulation.context.setState(restart_state)
     #
+    out_dcd_fn = 'out.dcd'
+    out_log_fn = 'out.log'
+    #
+    simulation.reporters.append(DCDReporter(out_dcd_fn, options['md']['dynoutfrq']))
+    simulation.reporters.append(StateDataReporter(out_log_fn, options['md']['dynoutfrq'], \
+        step=True, time=True, kineticEnergy=True, potentialEnergy=True, temperature=True, progress=True, \
+        remainingTime=True, speed=True, volume=True, totalSteps=options['md']['dynsteps'], separator='\t'))
+    #
     t0 = time.time()
     simulation.step(steps)
     t1 = time.time()
