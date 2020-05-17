@@ -34,7 +34,7 @@ def run(arg):
     #
     sel_s = path.Path.glob("hybrid/iter_*/sel.out")
     if len(sel_s) < 10:
-        cmd = ['%s/run_hybrid.py'%EXEC_HOME, model_list.short()]
+        cmd = ['%s/run_hybrid.py'%EXEC_HOME, model_list.short(), '%d'%arg.n_proc]
         system(cmd)
     #
     sel_s = path.Path.glob("hybrid/iter_*/sel.out")
@@ -67,6 +67,7 @@ def main():
     arg = argparse.ArgumentParser(prog='hybrid')
     arg.add_argument(dest='output_prefix')
     arg.add_argument(dest='init_pdb')
+    arg.add_argument('-j', '--cpu', dest='n_proc', type=int)
     #
     if len(sys.argv) == 1:
         arg.print_help()

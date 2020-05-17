@@ -17,7 +17,22 @@ EXEC_PASTE = '%s/trRosetta/paste_domains.py'%EXEC_HOME
 N_MODEL_REFINE = 5
 N_MODEL = 5
 
+PARAM_HYBRID_REFINE_MAX_RES = 300
+
 def run_refine(title, input_pdb, work_home, **kwargs):
+    def get_num_residues(pdb_fn):
+        n_res = 0
+        with pdb_fn.open() as fp:
+            for line in fp:
+                if not line.startswith("ATOM"):
+                    continue
+                atmName = line[12:16].strip()
+                if atmName == 'CA':
+                    n_res += 1
+        return n_res
+    #
+    n_residue = get_num_residues(input_pdb)
+    #
     cmd = []
     cmd.append(EXEC_REFINE)
     cmd.append(title)
@@ -27,7 +42,7 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--verbose")
     if kwargs.get("wait_after_run", False):
         cmd.append("--wait")
-    if kwargs.get("use_hybrid", False):
+    if kwargs.get("use_hybrid", False) and (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
         cmd.append("--hybrid")
     #
     proc = sp.Popen(cmd)

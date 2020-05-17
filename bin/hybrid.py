@@ -18,7 +18,7 @@ def prep(job, input_pdb):
     job.hybrid_home = job.work_home.subdir("hybrid", build=True)
     out = job.hybrid_home.fn("model_s")
     #
-    job.add_task(METHOD, [job.title, input_pdb, job.hybrid_home], [out], use_gpu=False, n_proc=48)
+    job.add_task(METHOD, [job.title, input_pdb, job.hybrid_home], [out], use_gpu=False, n_proc=40)
     #
     job.to_json()
 
@@ -34,9 +34,10 @@ def run(job):
         output_list = task['output'][0]
         if output_list.status():
             continue
+        n_proc = task['resource'][3]
         #
         run_home.chdir()
-        cmd = [EXEC, title, input_pdb.short()]
+        cmd = [EXEC, title, input_pdb.short(), '-j', '%d'%n_proc]
         system(cmd, verbose=job.verbose)
 
 def submit(job):
@@ -51,12 +52,13 @@ def submit(job):
         output_list = task['output'][0]
         if output_list.status():
             continue
+        n_proc = task['resource'][3]
         #
         run_home.chdir()
         #
         cmd = []
         cmd.append("cd %s\n"%run_home)
-        cmd.append(" ".join([EXEC, title, input_pdb.short()]) + '\n')
+        cmd.append(" ".join([EXEC, title, input_pdb.short(), '-j', '%d'%n_proc]) + '\n')
         #
         job.write_submit_script(METHOD, index, cmd)
 
