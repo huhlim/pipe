@@ -9,7 +9,8 @@ import argparse
 from libcommon import *
 
 METHOD = 'equil'
-EXEC = '%s/equil.py'%EXEC_HOME
+EXEC_SOLUBLE = '%s/equil.py'%EXEC_HOME
+EXEC_MEMBRANE = '%s/equil_membrane.py'%EXEC_HOME
 
 def prep(job, equil_index, input_pdb, input_json):
     if len(job.get_task(METHOD, not_status='DONE')) > 0:
@@ -38,6 +39,33 @@ def prep(job, equil_index, input_pdb, input_json):
     #
     job.to_json()
 
+def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json):
+    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+        return
+    #
+    OUTs = ['%s.psf'%job.title, '%s.orient.pdb'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
+    #
+    job.equil_home = job.work_home.subdir("equil", build=True)
+    job.equil_home.chdir()
+    #
+    for pdb_fn, psf_fn, crd_fn in zip(input_pdb, input_psf, input_crd):
+        run_home = job.equil_home.subdir("%d"%equil_index)
+        #
+        input_s = [run_home, pdb_fn, psf_fn, crd_fn, input_json]
+        output_s = [run_home.fn(X) for X in OUTs]
+        status = True
+        for output in output_s:
+            if not output.status():
+                status = False ; break
+        #
+        if status: 
+            job.add_task(METHOD, input_s, output_s, "MEMBRANE", use_gpu=True, n_proc=12, status='DONE')
+        else:
+            job.add_task(METHOD, input_s, output_s, "MEMBRANE", use_gpu=True, n_proc=12)
+        equil_index += 1
+    #
+    job.to_json()
+
 def run(job):
     task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
@@ -47,9 +75,19 @@ def run(job):
     #
     for index,task in task_s:
         if task['resource'][1].split("/")[1] != gpu_id: continue
+        #
         run_home = task['input'][0]
         input_pdb  = task['input'][1]
-        input_json = task['input'][2]
+        input_json = task['input'][-1]
+        #
+        if 'MEMBRANE' in task['etc']:
+            is_membrane = True
+            EXEC = EXEC_MEMBRANE
+            input_psf = task['input'][2]
+            input_crd = task['input'][3]
+        else:
+            is_membrane = False
+            EXEC = EXEC_SOLUBLE
         #
         output_s = task['output']
         status = True
@@ -79,7 +117,10 @@ def run(job):
             with equil_json.open("wt") as fout:
                 fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
-        cmd = [EXEC, job.title, input_pdb.short()]
+        if not is_membrane:
+            cmd = [EXEC, job.title, input_pdb.short()]
+        else:
+            cmd = [EXEC, job.title, input_pdb.short(), input_psf.short(), input_crd.short()]
         cmd.extend(['--input', equil_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
@@ -95,6 +136,15 @@ def submit(job):
         run_home = task['input'][0]
         input_pdb  = task['input'][1]
         input_json = task['input'][2]
+        #
+        if 'MEMBRANE' in task['etc']:
+            is_membrane = True
+            EXEC = EXEC_MEMBRANE
+            input_psf = task['input'][2]
+            input_crd = task['input'][3]
+        else:
+            is_membrane = False
+            EXEC = EXEC_SOLUBLE
         #
         output_s = task['output']
         status = True
@@ -123,7 +173,10 @@ def submit(job):
         #
         cmd_s = []
         cmd_s.append("cd %s\n"%run_home)
-        cmd = [EXEC, job.title, input_pdb.short()]
+        if not is_membrane:
+            cmd = [EXEC, job.title, input_pdb.short()]
+        else:
+            cmd = [EXEC, job.title, input_pdb.short(), input_psf.short(), input_crd.short()]
         cmd.extend(['--input', equil_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')

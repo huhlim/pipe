@@ -182,6 +182,8 @@ def run(output_prefix, input_json, options, verbose):
         if restart_fn is not None:
             cmd.extend(['--restart', restart_fn.short()])
         cmd.extend(['--log', run_home.fn("%s.%d.log"%(output_prefix, k_iter)).short()])
+        if 'use_hmr' in options['ff'] and options['ff']['use_hmr']:
+            cmd.append("--hmr")
         #
         with open("%s.err"%output_prefix, 'wt') as ferr:
             system(cmd, errfile=ferr, verbose=verbose)
@@ -249,7 +251,7 @@ def main():
         options['ff']['toppar']= arg.toppar
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
-    #
+
     options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
     run(arg.output_prefix, arg.input_json, options, arg.verbose)
 

@@ -32,11 +32,20 @@ def run(arg, options):
     ff = CharmmParameterSet(*options['ff']['toppar'])
     platform = Platform.getPlatformByName(options['openmm']['platform'])
     #
-    sys = psf.createSystem(ff, \
-                           nonbondedMethod=PME, \
-                           switchDistance=0.8*nanometers, \
-                           nonbondedCutoff=1.0*nanometers, \
-                           constraints=HBonds)
+    if arg.use_hmr:
+        sys = psf.createSystem(ff, \
+                               nonbondedMethod=PME, \
+                               switchDistance=0.8*nanometers, \
+                               nonbondedCutoff=1.0*nanometers, \
+                               hydrogenMass=3.008*amu, \
+                               constraints=HBonds)
+    else:
+        sys = psf.createSystem(ff, \
+                               nonbondedMethod=PME, \
+                               switchDistance=0.8*nanometers, \
+                               nonbondedCutoff=1.0*nanometers, \
+                               constraints=HBonds)
+
     if arg.rsr_fn is not None:
         ref_fn, custom_rsr = read_custom_restraint(arg.rsr_fn)
         ref = mdtraj.load(ref_fn)
@@ -98,6 +107,7 @@ def main():
     arg.add_argument('--log', dest='out_log_fn')
     arg.add_argument('--custom', dest='rsr_fn')
     arg.add_argument('--restart', dest='restart_fn')
+    arg.add_argument('--hmr', dest='use_hmr', default=False, action='store_true')
     #
     if len(sys.argv) == 1:
         arg.print_help()

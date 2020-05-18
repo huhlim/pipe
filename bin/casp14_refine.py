@@ -67,19 +67,31 @@ def main():
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
 
     # equil
-    import_module("equil").prep(job, 0, [out[0] for out in locPREFMD_out], path.Path("%s/equil.json"%(DEFAULT_HOME)))
+    if not job.has("is_membrane_protein"):
+        import_module("equil").prep(job, 0, [out[0] for out in locPREFMD_out], \
+                                                path.Path("%s/equil.json"%(DEFAULT_HOME)))
+    else:
+        import_module("equil").prep_membrane(job, 0, \
+                                            job.membrane_pdb, job.membrane_psf, job.membrane_crd, \
+                                            path.Path("%s/equil_membrane.json"%(DEFAULT_HOME)))
     if not run(job, arg.wait_after_run):
         return 
     
     # prod
-    if job.use_extensive:
-        prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
-        n_traj = 10
+    if not job.has("is_membrane_protein"):
+        if job.use_extensive:
+            prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
+            n_traj = 10
+        else:
+            prod_input = path.Path("%s/prod.json"%DEFAULT_HOME)
+            n_traj = 5
+        for i in range(n_init):
+            import_module("prod").prep(job, i, i, prod_input, n_traj)
     else:
-        prod_input = path.Path("%s/prod.json"%DEFAULT_HOME)
+        prod_input = path.Path("%s/prod_membrane.json"%DEFAULT_HOME)
         n_traj = 5
-    for i in range(n_init):
-        import_module("prod").prep(job, i, i, prod_input, n_traj)
+        for i in range(n_init):
+            import_module("prod").prep(job, i, i, prod_input, n_traj)
     if not run(job, arg.wait_after_run):
         return
     prod_out = get_outputs(job, 'prod')

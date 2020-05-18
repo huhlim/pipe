@@ -33,6 +33,8 @@ class Task(object):
             wrt.append("CPU  ")
         return ' '.join(wrt)
     def __eq__(self, othr):
+        if self.status == 'KILLED' or othr.status == 'KILLED':
+            return False
         if self.json_job != othr.json_job:
             return False
         elif self.method != othr.method:
@@ -126,7 +128,7 @@ class Queue(object):
         if self.host_json.status():
             comm_s = self.from_json()
             for task in self.task_s:
-                if task.status in ['FINISHED']:
+                if task.status in ['FINISHED', 'KILLED']:
                     continue
                 if task not in comm_s:
                     continue
@@ -221,7 +223,7 @@ class Queue(object):
                     proc_s.append((proc, task))
             for task in self.task_s:
                 if task.status == 'TERMINATE':
-                    task.update_status("FINISHED")
+                    task.update_status("KILLED")
             #
             self.wait()
 

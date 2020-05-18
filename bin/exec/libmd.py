@@ -120,3 +120,29 @@ def construct_restraint(psf, pdb, force_const):
         param.append(force_const * mass * kilocalories_per_mole/angstroms**2)
         rsr.addParticle(calphaIndex[k], param)
     return rsr
+
+def construct_membrane_restraint(psf, pdb, force_const):
+    rsr = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
+    rsr.addPerParticleParameter("x0")
+    rsr.addPerParticleParameter("y0")
+    rsr.addPerParticleParameter("z0")
+    rsr.addPerParticleParameter('k0')
+    #
+    heavyIndex = []
+    for i,atom in enumerate(psf.topology.atoms()):
+        #if atom.element.mass > 4.0*amu:
+        if atom.name == 'P':
+            heavyIndex.append(i)
+    #
+    k = -1
+    for i,atom in enumerate(pdb.top.atoms):
+        #if atom.element.mass < 4.0:
+        if atom.name != 'P':
+            continue
+        #
+        k += 1
+        mass = atom.element.mass
+        param = pdb.xyz[0,i].tolist()
+        param.append(force_const * mass * kilocalories_per_mole/angstroms**2)
+        rsr.addParticle(heavyIndex[k], param)
+    return rsr
