@@ -1,0 +1,78 @@
+{
+  "ff": {
+    "use_modified_CMAP": false,
+    "toppar": [
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_all36_prot.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_all36m_prot.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_all36_na.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_all36_na.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_all36_carb.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_all36_carb.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_all36_lipid.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_all36_lipid.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_all36_cgenff.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_all36_cgenff.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/top_interface.rtf",
+      "/home/huhlim/work/ff/c36m.charmm_gui/par_interface.prm",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_nano_lig.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_nanolig_patch.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_synthetic_polymer.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_synthetic_polymer_patch.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_polymer_solvent.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_water_ions.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_dum_noble_gases.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_ions_won.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_arg0.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_c36m_d_aminoacids.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_fluoro_alkanes.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_heme.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_na_combined.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_retinol.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_prot_modify_res.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_na_nad_ppi.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_na_rna_modified.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_bacterial.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_cardiolipin.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_cholesterol.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_dag.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_inositol.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_lps.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_miscellaneous.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_model.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_prot.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_sphingo.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_yeast.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_hmmm.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_detergent.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_lipid_ether.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_carb_glycolipid.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_carb_glycopeptide.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_carb_imlab.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_label_spin.str",
+      "/home/huhlim/work/ff/c36m.charmm_gui/toppar_all36_label_fluorophore.str"
+    ],
+    "cgenff": [
+      "/home/huhlim/work/ff/cgenff/top_all36_cgenff.rtf",
+      "/home/huhlim/work/ff/cgenff/par_all36_cgenff.prm"
+    ]
+  },
+  "openmm": {
+    "platform": "CUDA"
+  },
+  "md": {
+    "dyntstep": 0.002,
+    "dyntemp": 360.0,
+    "lang": true,
+    "langfbeta": 0.01,
+    "ion_conc": 0.0,
+    "solvate": 9.0,
+    "heat": [
+      20000,
+      50.0,
+      25.0
+    ],
+    "equil": [
+      500000
+    ]
+  }
+}
