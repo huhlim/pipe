@@ -22,7 +22,7 @@ class Task(object):
         self.output = output
     def __repr__(self):
         wrt = []
-        wrt.append("%d"%self.id)    # THIS NUMBER... do I need to keep?
+        wrt.append("%d"%self.id)
         wrt.append(self.status)
         wrt.append(self.json_job.path())
         wrt.append(self.method)
@@ -119,7 +119,7 @@ class Queue(object):
             else:
                 task.update_status("WAIT")
         #
-        if len(self.task_s) > 2:
+        if len(self.task_s) > 100:
             task_s = []
             for task in self.task_s:
                 if task.status not in ['FINISHED', 'KILLED']:
