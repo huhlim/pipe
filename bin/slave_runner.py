@@ -116,6 +116,14 @@ class Queue(object):
                 task.update_status("FINISHED")
             else:
                 task.update_status("WAIT")
+        #
+        if len(self.task_s) > 200:
+            task_s = []
+            for task in self.task_s:
+                if task.status not in ['FINISHED', 'KILLED']:
+                    task_s.append(task)
+            self.task_s = task_s
+
     def from_json(self):
         task_s = []
         with self.host_json.open("r") as fp:
