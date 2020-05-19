@@ -25,6 +25,8 @@ def prep(arg):
     job.use_hybrid = arg.use_hybrid
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep
+    if arg.is_membrane_protein:
+        job.is_membrane_protein = True
     #
     out = job.work_home.fn("%s.fa"%job.title)
     if not out.status():

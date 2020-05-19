@@ -62,23 +62,23 @@ class Task(object):
             gpu = (True, int(X[5].split("/")[1]))
         else:
             gpu = (False, None)
-        task = cls(int(X[0]), path.Path(X[2]), X[3], int(X[4]), gpu, None)
-        task.update_status(X[1])
-        if task in prev_s:
-            prev = prev_s[prev_s.index(task)]
-            task.output = prev.output
-            return task
+        curr = cls(int(X[0]), path.Path(X[2]), X[3], int(X[4]), gpu, None)
+        curr.update_status(X[1])
+        if curr in prev_s:
+            prev = prev_s[prev_s.index(curr)]
+            curr.output = prev.output
+            return curr
         #
-        job = Job.from_json(task.json_job)
-        task_s = job.get_task(task.method, host=HOSTNAME, status='RUN')
+        job = Job.from_json(curr.json_job)
+        task_s = job.get_task(curr.method, host=HOSTNAME, status='RUN')
         for index,task in task_s:
-            if index == task.index:
-                task.output = task['output']
+            if index == curr.index:
+                curr.output = task['output']
                 break
-        if task.output is None:
-            sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%task)
+        if curr.output is None:
+            sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%curr)
             return None
-        return task
+        return curr
 
 class Queue(object):
     def __init__(self, host_json, gpu, time_interval, verbose):
@@ -133,7 +133,7 @@ class Queue(object):
                 if task not in comm_s:
                     continue
                 comm = comm_s[comm_s.index(task)]
-                if comm.status in ['TERMINATE']:
+                if comm.status in ['TERMINATE']:    # getting TERM signal
                     task.update_status(comm.status)
 
         with self.host_json.open("wt") as fout:
@@ -172,7 +172,7 @@ class Queue(object):
                     pass
                 #
                 for task in self.task_s:
-                    if task.status in ['RUNNING', 'CHECK', 'FINISHED']:
+                    if task.status in ['RUNNING', 'CHECK', 'FINISHED', 'KILLED']:
                         continue
                     #
                     cmd = self.get_cmd(task)

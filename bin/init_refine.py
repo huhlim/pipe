@@ -24,6 +24,8 @@ def prep(arg):
     job.run_type = 'refine'
     job.use_hybrid = arg.use_hybrid
     job.use_extensive = arg.use_extensive
+    if arg.is_membrane_protein:
+        job.is_membrane_protein = True
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep

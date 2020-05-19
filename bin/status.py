@@ -193,8 +193,9 @@ def remove_from_slaves(json_job_s):
             for task in json.load(fp):
                 X = task.split()
                 #
-                status = X[0]
-                if status in ['FINISHED']:
+                status = X[1]
+                if status in ['FINISHED', 'KILLED']:
+                    task_s.append(task)
                     continue
                 #
                 key = (path.Path(X[2]), X[3], int(X[4]))
@@ -223,7 +224,8 @@ def reallocate_task(json_job, method, index, resource):
                     X = task.split()
                     #
                     status = X[1]
-                    if status in ['FINISHED']:
+                    if status in ['FINISHED', 'KILLED']:
+                        task_s.append(task)
                         continue
                     #
                     key = (path.Path(X[2]), X[3], int(X[4]))

@@ -11,9 +11,7 @@ from libcommon import *
 def main():
     arg = argparse.ArgumentParser(prog='set_membrane_protein')
     arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
-    arg.add_argument('--pdb', dest='pdb_fn', nargs='*')
-    arg.add_argument('--psf', dest='psf_fn', nargs='*')
-    arg.add_argument('--crd', dest='crd_fn', nargs='*')
+    arg.add_argument('--unset', dest='unset_membrane_protein', default=False, action='store_true')
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -27,10 +25,11 @@ def main():
     #
     job = Job.from_json(arg.json_job)
     #
-    job.is_membrane_protein = True
-    job.membrane_pdb = [path.Path(fn) for fn in arg.pdb_fn]
-    job.membrane_psf = [path.Path(fn) for fn in arg.psf_fn]
-    job.membrane_crd = [path.Path(fn) for fn in arg.crd_fn]
+    if arg.unset_membrane_protein:
+        if job.has("is_membrane_protein"):
+            del job.is_membrane_protein
+    else:
+        job.is_membrane_protein = True
     #
     job.to_json()
 

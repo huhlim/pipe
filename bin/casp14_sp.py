@@ -42,6 +42,8 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--verbose")
     if kwargs.get("wait_after_run", False):
         cmd.append("--wait")
+    if kwargs.get("is_membrane_protein", False):
+        cmd.append("--membrane")
     if kwargs.get("use_hybrid", False) and (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
         cmd.append("--hybrid")
     #
@@ -149,6 +151,7 @@ def main():
             help='set running type (default=False)')
     arg.add_argument('--hybrid', dest='use_hybrid', action='store_true', default=False, \
             help='use hybrid')
+    arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -189,7 +192,9 @@ def main():
             domain_id = pdb_fn.name()
             #
             refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=arg.verbose, \
-                                     use_hybrid=job.use_hybrid, wait_after_run=arg.wait_after_run)
+                                     use_hybrid=job.use_hybrid, \
+                                     is_membrane_protein=job.has("is_membrane_protein"), \
+                                     wait_after_run=arg.wait_after_run)
             refine_home = job.refine_home.subdir(domain_id)
             #
             refine_proc_s.append(refine_proc)
