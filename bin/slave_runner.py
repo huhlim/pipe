@@ -22,7 +22,7 @@ class Task(object):
         self.output = output
     def __repr__(self):
         wrt = []
-        wrt.append("%d"%self.id)
+        wrt.append("%d"%self.id)    # THIS NUMBER... do I need to keep?
         wrt.append(self.status)
         wrt.append(self.json_job.path())
         wrt.append(self.method)
@@ -76,7 +76,7 @@ class Task(object):
                 curr.output = task['output']
                 break
         if curr.output is None:
-            sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%curr)
+            #sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%curr)
             return None
         return curr
 
@@ -87,6 +87,7 @@ class Queue(object):
         self.gpu = gpu
         self.time_interval = time_interval
         self.verbose = verbose
+        self.task_no = 0
     def wait(self):
         time.sleep(self.time_interval)
     def update_tasks(self):
@@ -106,10 +107,11 @@ class Queue(object):
                         gpu_id = int(X['resource'][1].split("/")[-1])
                     else:
                         gpu_id = None
-                    t = Task(len(self.task_s), \
+                    t = Task(self.task_no, \
                             json_job, method, index, (is_gpu_job, gpu_id), X['output'])
                     if t not in self.task_s:
                         self.task_s.append(t)
+                        self.task_no += 1
         for i,task in enumerate(self.task_s):
             if task.status != 'CHECK': continue
             if task.check_output():
@@ -117,7 +119,7 @@ class Queue(object):
             else:
                 task.update_status("WAIT")
         #
-        if len(self.task_s) > 200:
+        if len(self.task_s) > 2:
             task_s = []
             for task in self.task_s:
                 if task.status not in ['FINISHED', 'KILLED']:
