@@ -73,7 +73,7 @@ options['md']['lang'] = True
 options['md']['langfbeta'] = 0.01
 options['md']['ion_conc'] = 0.
 options['md']['solvate'] = 9.0
-options['md']['heat'] = [20000, 50., 25.]   # n_steps, init.T, incr.T
+options['md']['heat'] = [10000, 50., 25.]   # n_steps, init.T, incr.T
 options['md']['equil'] = [500000]           # total_steps (1 ns)
 
 with open("equil_membrane.json", 'wt') as fout:

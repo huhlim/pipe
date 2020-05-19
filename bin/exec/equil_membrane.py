@@ -30,8 +30,9 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
     crd = CharmmCrdFile(crd_fn.short())
     crd.positions += options['translate']*nanometer
     #
-    box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
-    boxsize = np.max(box, 0) - np.min(box, 0)
+    box = pdb.atom_slice(pdb.top.select("resname HOH")).xyz[0]
+    #box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
+    boxsize = np.max(box, 0) - np.min(box, 0) + 0.2
     psf.setBox(*boxsize)
     #
     ff = CharmmParameterSet(*options['ff']['toppar'])
