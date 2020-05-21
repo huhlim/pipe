@@ -26,6 +26,8 @@ def prep(arg):
     job.use_extensive = arg.use_extensive
     if arg.is_membrane_protein:
         job.is_membrane_protein = True
+    if arg.has_ligand:
+        job.has_ligand = True
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep

@@ -104,6 +104,10 @@ def main():
         if not get_membrane_topology(job, n_init, arg.wait_after_run):
             sys.stderr.write("waiting for CHARMM-GUI membrane topology... \n")
             return
+    if job.has("has_ligand"):
+        if not get_ligand_info(job, arg.wait_after_run):
+            sys.stderr.write("waiting for ligand info... \n")
+            return
 
     # equil
     if not job.has("is_membrane_protein"):
