@@ -15,6 +15,8 @@ from simtk.openmm import *
 from simtk.openmm.app import *
 
 from libcustom import *
+from libmd import construct_ligand_restraint
+from libligand import read_ligand_json, get_ligand_restratint
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -29,7 +31,12 @@ def run(arg, options):
     psf = CharmmPsfFile(options['input']['psf'])
     psf.setBox(*box)
     #
-    ff = CharmmParameterSet(*options['ff']['toppar'])
+    ff_file_s = options['ff']['toppar']
+    if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
+        ff_file_s.extend(options['ff']['cgenff'])
+        ff_file_s.extend([fn.short() for fn in options['ligand']['str_fn_s']])
+
+    ff = CharmmParameterSet(*ff_file_s)
     platform = Platform.getPlatformByName(options['openmm']['platform'])
     #
     if arg.use_hmr:
@@ -52,6 +59,11 @@ def run(arg, options):
         rsr_s = construct_custom_restraint(ref, custom_rsr)
         for rsr in rsr_s:
             sys.addForce(rsr)
+    #
+    if 'ligand' in options:
+        ligand_restraint = get_ligand_restratint(pdb, options['input']['psf'], options['ligand'])
+        ligand_restraints = construct_ligand_restraint(ligand_restraint)
+        sys.addForce(ligand_restraints)
     #
     integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
                                     options['md']['langfbeta']/picosecond, \
@@ -115,6 +127,9 @@ def main():
     arg = arg.parse_args()
     with open(arg.input_json) as fp:
         options = json.load(fp)
+    #
+    if 'ligand_json' in options:
+        options['ligand'] = read_ligand_json(options['ligand_json'])
 
     run(arg, options)
 

@@ -127,8 +127,6 @@ def run(job):
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         #
-        print (" ".join(cmd))
-        sys.exit()
         system(cmd, verbose=job.verbose)
 
 def submit(job):

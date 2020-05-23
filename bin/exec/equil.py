@@ -146,7 +146,8 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     #
     if 'ligand' in options:
         init_pdb = path.Path("%s.init.pdb"%output_prefix)
-        ligand_restraint_pairs = add_ligand(options['ligand'], input_pdb, init_pdb)
+        add_ligand(options['ligand'], input_pdb, init_pdb)
+        update_ligand_name(init_pdb, options['ligand']['ligand_s'])
     else:
         init_pdb = input_pdb.short()
     #
@@ -161,7 +162,7 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     tempfile_s.append(crd_fn)
 
     if 'ligand' in options:
-        ligand_restraint = get_ligand_restratint(ligand_restraint_pairs, psf_fn)
+        ligand_restraint = get_ligand_restratint(pdb, psf_fn, options['ligand'])
         options['ff']['ligand'] = ligand_restraint
     #
     equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)

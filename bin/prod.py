@@ -71,6 +71,8 @@ def run(job):
         options['input']['n_atom'] = job.n_atom
         if options['restart']:
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
+        if job.has("has_ligand"):
+            options['ligand_json'] = job.ligand_json.short()
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:
@@ -117,6 +119,8 @@ def submit(job):
         options['input']['n_atom'] = job.n_atom
         if options['restart']:
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
+        if job.has("has_ligand"):
+            options['ligand_json'] = job.ligand_json.short()
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:

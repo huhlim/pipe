@@ -17,6 +17,9 @@ PARAM_DIST_BSITE = 0.5 # nm
 PARAM_DIST_ALIGN = 0.8 # nm
 
 def read_ligand_json(fn):
+    if isinstance(fn, str):
+        fn = path.Path(fn)
+    #
     cwd = os.getcwd()
     work_home = fn.dirname()
     work_home.chdir()
@@ -309,21 +312,6 @@ def add_ligand(info, pdb_fn, out_fn):
     #
     pdb = mdtraj.Trajectory(xyz, top)
     pdb.save(out_fn.short())
-    #
-    update_ligand_name(out_fn, info['ligand_s'])
-    #
-    calphaIndex = pdb.top.select("name CA")
-    restraint_pair = []
-    for geom in info['bsite_geometry']:
-        resIndex, atmName, ligIndex, ligAtmName, d = geom
-        #
-        residue = pdb.top.atom(calphaIndex[resIndex]).residue
-        lig = ligand.top.residue(ligIndex)
-        #
-        pair = [(residue.segment_id, residue.resSeq, atmName),\
-                (lig.segment_id, lig.resSeq, ligAtmName), d]
-        restraint_pair.append(pair)
-    return restraint_pair
 
 def update_ligand_name(pdb_fn, ligand_s):
     het_s = {het[:3].strip(): het.strip() for het in ligand_s if len(het.strip()) > 3}
@@ -348,7 +336,7 @@ def update_ligand_name(pdb_fn, ligand_s):
     with pdb_fn.open('wt') as fout:
         fout.writelines(wrt)
 
-def get_ligand_restratint(pair_s, psf_fn):
+def get_ligand_restratint(pdb, psf_fn, info):
     def read_psf(psf_fn):
         psf = {}
         with psf_fn.open() as fp:
@@ -372,12 +360,27 @@ def get_ligand_restratint(pair_s, psf_fn):
                 psf[segName][(resNo, atmName)] = i_atm
         return psf
     #
+    ligandAtom = np.array([atom.residue.segment_id == 'LIG' for atom in pdb.top.atoms], dtype=bool)
+    ligand = pdb.atom_slice(np.where(ligandAtom)[0])
+    #
+    calphaIndex = pdb.top.select("name CA")
+    restraint_pair = []
+    for geom in info['bsite_geometry']:
+        resIndex, atmName, ligIndex, ligAtmName, d = geom
+        #
+        residue = pdb.top.atom(calphaIndex[resIndex]).residue
+        lig = ligand.top.residue(ligIndex)
+        #
+        pair = [(residue.segment_id, residue.resSeq, atmName),\
+                (lig.segment_id, lig.resSeq, ligAtmName), d]
+        restraint_pair.append(pair)
+    #
     psf = read_psf(psf_fn)
     #
     FMT = 'bond 2 2  %6d %6d     %8.5f %6.3f\n'
     #
     restraint_s = []
-    for prot, lig, d in pair_s:
+    for prot, lig, d in restraint_pair:
         i_atm = psf[prot[0]][prot[1:]] - 1
         i_lig = psf[lig[0]][lig[1:]] - 1
         #

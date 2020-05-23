@@ -62,6 +62,7 @@ def main():
     arg.add_argument('--extensive', dest='use_extensive', action='store_true', default=False, \
             help='use extensive sampling')
     arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
+    arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()

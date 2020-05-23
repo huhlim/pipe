@@ -27,7 +27,8 @@ import path
 from libcommon import *
 
 from libcustom import *
-from libmd import solvate_pdb, generate_PSF, construct_restraint
+from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint
+from libligand import read_ligand_json, get_ligand_restratint
 
 def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
@@ -43,7 +44,12 @@ def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, ver
         boxsize = pdb.unitcell_lengths[0]
     psf.setBox(*boxsize)
     #
-    ff = CharmmParameterSet(*options['ff']['toppar'])
+    ff_file_s = options['ff']['toppar']
+    if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
+        ff_file_s.extend(options['ff']['cgenff'])
+        ff_file_s.extend([fn.short() for fn in options['ligand']['str_fn_s']])
+
+    ff = CharmmParameterSet(*ff_file_s)
     platform = Platform.getPlatformByName(options['openmm']['platform'])
     #
     sys = psf.createSystem(ff, \
@@ -59,6 +65,10 @@ def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, ver
         custom_s = construct_custom_restraint(pdb, custom_restraints[1])
         for custom in custom_s:
             sys.addForce(custom)
+    #
+    if 'ligand' in options['ff']:
+        ligand_restraints = construct_ligand_restraint(options['ff']['ligand'])
+        sys.addForce(ligand_restraints)
     #
     steps = 25000
     temp = 10
@@ -101,6 +111,11 @@ def run(output_prefix, options, verbose, nonstd):
         psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, verbose)
         restart_fn = None
     #
+    if 'ligand' in options:
+        pdb = mdtraj.load(solv_fn.short())
+        ligand_restraint = get_ligand_restratint(pdb, psf_fn, options['ligand'])
+        options['ff']['ligand'] = ligand_restraint
+    #
     speed = check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, verbose)
     #
     os.chdir(cwd)
@@ -126,6 +141,9 @@ def main():
                 options['input'][keyword] = path.Path(options['input'][keyword])
         elif 'input_pdb' in options:
             options['input_pdb'] = path.Path(options['input_pdb'])
+    #
+    if 'ligand_json' in options:
+        options['ligand'] = read_ligand_json(path.Path(options['ligand_json']))
     #
     run(arg.output_prefix, options, arg.verbose, arg.non_standard)
 
