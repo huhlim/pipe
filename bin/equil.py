@@ -59,9 +59,9 @@ def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json)
                 status = False ; break
         #
         if status: 
-            job.add_task(METHOD, input_s, output_s, "MEMBRANE", use_gpu=True, n_proc=12, status='DONE')
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
         else:
-            job.add_task(METHOD, input_s, output_s, "MEMBRANE", use_gpu=True, n_proc=12)
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
@@ -80,7 +80,7 @@ def run(job):
         input_pdb  = task['input'][1]
         input_json = task['input'][-1]
         #
-        if 'MEMBRANE' in task['etc']:
+        if job.has("is_membrane_protein"):
             is_membrane = True
             EXEC = EXEC_MEMBRANE
             input_psf = task['input'][2]
@@ -108,6 +108,8 @@ def run(job):
         #
         options['input_pdb'] = input_pdb
         options['input_json'] = input_json
+        if job.has("has_ligand"):
+            options['ligand_json'] = job.ligand_json
         #
         run_home.build()
         run_home.chdir()
@@ -125,6 +127,8 @@ def run(job):
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         #
+        print (" ".join(cmd))
+        sys.exit()
         system(cmd, verbose=job.verbose)
 
 def submit(job):
@@ -162,6 +166,11 @@ def submit(job):
             if chain_1 == ' ' and chain_2 == ' ':
                 line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
             options['ssbond'].append(line)
+        #
+        options['input_pdb'] = input_pdb
+        options['input_json'] = input_json
+        if job.has("has_ligand"):
+            options['ligand_json'] = job.ligand_json
         #
         run_home.build()
         run_home.chdir()

@@ -81,7 +81,8 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
     segNo = 0 ; resNo_prev = None
     for i,chain in enumerate(top.chains):
         for residue in chain.residues:
-            residue.segment_id='P%03d'%segNo
+            if residue.segment_id == '':
+                residue.segment_id='P%03d'%segNo
             #
             chain_break = False
             for atom in residue.atoms:

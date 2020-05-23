@@ -2,10 +2,12 @@
 
 import os
 import sys
+import json
 import path
 import mdtraj
 import numpy as np
 from itertools import product
+from mdtraj.core.element import hydrogen
 
 from libcommon import *
 
@@ -14,8 +16,24 @@ PARAM_DIST_COORD = 0.3 # nm
 PARAM_DIST_BSITE = 0.5 # nm
 PARAM_DIST_ALIGN = 0.8 # nm
 
+def read_ligand_json(fn):
+    cwd = os.getcwd()
+    work_home = fn.dirname()
+    work_home.chdir()
+    #
+    with fn.open() as fp:
+        info = json.load(fp)
+        for key in info:
+            info[key] = JSONdeserialize(info[key])
+    #
+    os.chdir(cwd)
+    return info
+
 def get_ligand_info(job, wait_after_run, sleep=30):
     ligand_home = job.work_home.subdir("ligand", build=True)
+    job.ligand_json = ligand_home.fn("ligand.json")
+    if job.ligand_json.status():
+        return True
     #
     with open("%s/STDRES"%DEFAULT_HOME) as fp:
         STDRES = []
@@ -36,8 +54,10 @@ def get_ligand_info(job, wait_after_run, sleep=30):
         ligand_pdb_fn = pdb_fn[0]
         #
         ligand_s = read_ligand_pdb(ligand_pdb_fn, STDRES, METALs)
-        for ligName, is_metal in ligand_s:
+        for ligName in ligand_s:
+            is_metal = ligand_s[ligName]
             if is_metal: continue
+            #
             str_fn = ligand_home.fn("%s.str"%ligName)
             if not str_fn.status():
                 status = False ; break
@@ -49,26 +69,34 @@ def get_ligand_info(job, wait_after_run, sleep=30):
         else:
             break
     #
-    set_bsite(job, ligand_pdb_fn)
+    if not status: return status
     #
-    if status: 
-        job.ligand_pdb_fn = ligand_pdb_fn
-        job.ligand_s = ligand_s
-        job.str_fn_s = str_fn_s
-        job.to_json()
+    info = {}
+    #
+    info['pdb_fn'] = ligand_pdb_fn
+    info['ligand_s'] = ligand_s # as dict
+    info['str_fn_s'] = str_fn_s
+    #
+    set_bsite(info, job.top_fn, ligand_pdb_fn)
+    #
+    cwd = os.getcwd()
+    ligand_home.chdir()
+    with job.ligand_json.open("wt") as fout:
+        fout.write(json.dumps(info, indent=2, default=JSONserialize))
+    os.chdir(cwd)
+
     return status
 
 def read_ligand_pdb(fn, STDRES, METALs):
-    ligand_s = []
+    ligand_s = {}
     with fn.open() as fp:
         for line in fp:
             if (not line.startswith("ATOM")) and (not line.startswith("HETATM")):
                 continue
             resName = line[17:21].strip()
             if resName not in STDRES:
-                ligand = (resName, resName in METALs)
-                if ligand not in ligand_s:
-                    ligand_s.append(ligand)
+                if resName not in ligand_s:
+                    ligand_s[resName] = (resName in METALs)
     return ligand_s
 
 def get_aligned_residues(ref, pdb):
@@ -81,7 +109,8 @@ def get_aligned_residues(ref, pdb):
 
 def get_bsite_geometry(dist_s, atomIndex, cbIndex, caIndex):
     d_sc = dist_s[atomIndex]
-    d_cb = dist_s[cbIndex]
+    if cbIndex.shape[0] != 0:
+        d_cb = dist_s[cbIndex]
     d_ca = dist_s[caIndex]
     #
     geom_sc = []
@@ -103,7 +132,7 @@ def get_bsite_geometry(dist_s, atomIndex, cbIndex, caIndex):
         geom_cb = None
     return geom_sc, geom_cb, geom_ca
 
-def set_bsite(job, ligand_pdb_fn):
+def set_bsite(info, top_fn, ligand_pdb_fn):
     ligand_pdb = mdtraj.load(ligand_pdb_fn.short())
     ligand_pdb = ligand_pdb.atom_slice(ligand_pdb.top.select("element != H"))
     #
@@ -133,7 +162,7 @@ def set_bsite(job, ligand_pdb_fn):
     alignCalphaIndex = ligand_pdb.top.select("name CA")[alignResidue_s]
     alignCa_s = ligand_pdb.xyz[0,alignCalphaIndex]
     #
-    top = mdtraj.load(job.top_fn.short())
+    top = mdtraj.load(top_fn.short())
     topCalphaIndex = top.top.select("name CA")
     topCa_s = top.xyz[0,topCalphaIndex]
     #
@@ -141,7 +170,7 @@ def set_bsite(job, ligand_pdb_fn):
     bsiteAlignedCalphaIndex = topCalphaIndex[bsiteAligned[bsiteAligned != -1]]
     bsiteAlignedResidue_s = [top.top.atom(i_atm).residue for i_atm in bsiteAlignedCalphaIndex]
     #
-    job.bsite_geometry = [] ; j = -1
+    info['bsite_geometry'] = [] ; j = -1
     for i,align in enumerate(bsiteAligned):
         if align == -1: continue
         j += 1
@@ -160,40 +189,120 @@ def set_bsite(job, ligand_pdb_fn):
                 geom = bsiteGeom_s[i][2]
         #
         for i_prot, i_lig, d in geom:
-            protResidue = bsiteAlignedResidue_s[j].index
-            protAtomName = protein.top.atom(i_prot).name
+            protResidueIndex = bsiteAlignedResidue_s[j].index
+            protAtmName = protein.top.atom(i_prot).name
             ligAtom = ligand.top.atom(i_lig)
             ligResidueIndex = ligandResidueNumber_s.index(ligAtom.residue.index)
-            ligAtomName = ligAtom.residue.name
-            job.bsite_geometry.append((protResidue, protAtomName, ligResidueIndex, ligAtomName, float(d)))
+            ligAtmName = ligAtom.name
+            info['bsite_geometry'].append((protResidueIndex, protAtmName, ligResidueIndex, ligAtmName, float(d)))
     #
     alignAligned = get_aligned_residues(alignCa_s, topCa_s)
     alignAlignedCalphaIndex = topCalphaIndex[alignAligned[alignAligned != -1]]
     alignAlignedResidue_s = [top.top.atom(i_atm).residue for i_atm in alignAlignedCalphaIndex]
     #
-    job.bsite_align = [[], []] ; j = -1
+    info['bsite_align'] = [[], []] ; j = -1
     for i,align in enumerate(alignAligned):
         if align == -1: continue
         j += 1
         #
         alignResidueIndex = ligand_pdb.top.residue(alignResidue_s[i]).index
         alignAlignedResidueIndex = alignAlignedResidue_s[j].index
-        job.bsite_align[0].append(alignResidueIndex)
-        job.bsite_align[1].append(alignAlignedResidueIndex)
+        info['bsite_align'][0].append(alignResidueIndex)
+        info['bsite_align'][1].append(alignAlignedResidueIndex)
 
-def add_ligand(out_fn, job, pdb_fn):
-    ligand_pdb = mdtraj.load(job.ligand_pdb_fn.short())
+def add_missing_hydrogen(ligand, str_fn_s):
+    def read_str(str_fn):
+        atom_s = []
+        bond_s = {}
+        with str_fn.open() as fp:
+            for line in fp:
+                if line.startswith("ATOM "):
+                    atom_s.append(line.strip().split()[1])
+                elif line.startswith("BOND "):
+                    x = line.strip().split()
+                    if x[1] not in bond_s:
+                        bond_s[x[1]] = []
+                    bond_s[x[1]].append(x[2])
+                    if x[2] not in bond_s:
+                        bond_s[x[2]] = []
+                    bond_s[x[2]].append(x[1])
+        return atom_s, bond_s
+    #
+    str_s = {}
+    for str_fn in str_fn_s:
+        ligName = str_fn.name()
+        str_s[ligName] = read_str(str_fn)
+    #
+    xyz = []
+    for residue in ligand.top.residues:
+        resName = residue.name
+        if resName not in str_s: 
+            for atom in residue.atoms:
+                xyz.append(ligand.xyz[0,atom.index])
+            continue
+        #
+        atom_s = str_s[resName][0]
+        status = [False for _ in atom_s]
+        for atom in residue.atoms:
+            if atom.name in atom_s:
+                status[atom_s.index(atom.name)] = True
+                xyz.append(ligand.xyz[0,atom.index])
+        #
+        for atmName,placed in zip(atom_s, status):
+            if placed: continue
+            #
+            if not atmName.startswith("H"):
+                sys.exit("ERROR: missing heavy atom (%s) in the input ligand (%s).\n"%(atmName, resName))
+            bonded_atmName = str_s[resName][1][atmName][0]
+            bonded_atom = [atom for atom in residue.atoms_by_name(bonded_atmName)][0]
+            r0 = ligand.xyz[0,bonded_atom.index]
+            dr = 2.0 * np.random.random(3) - 1.0
+            dr /= np.sqrt(np.sum(dr**2))    # unit-vec
+            r = r0 + dr * 0.1
+            #
+            xyz.append(r)
+            atom = ligand.top.add_atom(atmName, hydrogen, residue)
+        #
+        for atmName in str_s[resName][1]:
+            curr_atom = [atom for atom in residue.atoms_by_name(atmName)][0]
+            for bonded_atmName in str_s[resName][1][atmName]:
+                bonded_atom = [atom for atom in residue.atoms_by_name(bonded_atmName)][0]
+                if curr_atom.index < bonded_atom.index:
+                    ligand.top.add_bond(curr_atom, bonded_atom)
+    #
+    xyz = np.array(xyz)
+    new = mdtraj.Trajectory(xyz[None,:], ligand.top)
+    return new
+
+def add_ligand(info, pdb_fn, out_fn):
+    ligand_pdb = mdtraj.load(info['pdb_fn'].short())
     calphaIndex = ligand_pdb.top.select("name CA")
-    ligand_align = calphaIndex[job.bsite_align[0]]
+    ligand_align = calphaIndex[info['bsite_align'][0]]
     #
     target_pdb = mdtraj.load(pdb_fn.short())
     calphaIndex = target_pdb.top.select("name CA")
-    target_align = calphaIndex[job.bsite_align[1]]
+    target_align = calphaIndex[info['bsite_align'][1]]
     #
     ligand_pdb.superpose(target_pdb, atom_indices=ligand_align, ref_atom_indices=target_align)
     ligand = ligand_pdb.atom_slice(ligand_pdb.top.select("not protein"))
+    #
+    ligand = add_missing_hydrogen(ligand, info['str_fn_s'])
+    #
     for i,residue in enumerate(ligand.top.residues):
         residue.resSeq = i+1
+        residue.segment_id = 'LIG'
+    #
+    segNo = 0 ; resNo_prev = None
+    for i,chain in enumerate(target_pdb.top.chains):
+        for residue in chain.residues:
+            residue.segment_id='P%03d'%segNo
+            #
+            chain_break = False
+            for atom in residue.atoms:
+                if atom.name in ['OXT', 'OT2', 'OT1']:
+                    chain_break = True
+            if chain_break:
+                segNo += 1
     #
     top = target_pdb.top.join(ligand.top)
     xyz = np.concatenate([target_pdb.xyz[0], ligand.xyz[0]])[None,:]
@@ -201,12 +310,28 @@ def add_ligand(out_fn, job, pdb_fn):
     pdb = mdtraj.Trajectory(xyz, top)
     pdb.save(out_fn.short())
     #
-    het_s = {het[0][:3].strip(): het[0].strip() for het in job.ligand_s if len(het[0].strip()) > 3}
+    update_ligand_name(out_fn, info['ligand_s'])
+    #
+    calphaIndex = pdb.top.select("name CA")
+    restraint_pair = []
+    for geom in info['bsite_geometry']:
+        resIndex, atmName, ligIndex, ligAtmName, d = geom
+        #
+        residue = pdb.top.atom(calphaIndex[resIndex]).residue
+        lig = ligand.top.residue(ligIndex)
+        #
+        pair = [(residue.segment_id, residue.resSeq, atmName),\
+                (lig.segment_id, lig.resSeq, ligAtmName), d]
+        restraint_pair.append(pair)
+    return restraint_pair
+
+def update_ligand_name(pdb_fn, ligand_s):
+    het_s = {het[:3].strip(): het.strip() for het in ligand_s if len(het.strip()) > 3}
     if len(het_s) == 0:
         return
     #
     wrt = []
-    with out_fn.open() as fp:
+    with pdb_fn.open() as fp:
         for line in fp:
             if (not line.startswith("ATOM")) and (not line.startswith("HETATM")):
                 wrt.append(line)
@@ -220,6 +345,44 @@ def add_ligand(out_fn, job, pdb_fn):
             resName = het_s[resName3]
             line = '%s%4s%s'%(line[:17], resName, line[21:])
             wrt.append(line)
-    with out_fn.open('wt') as fout:
+    with pdb_fn.open('wt') as fout:
         fout.writelines(wrt)
+
+def get_ligand_restratint(pair_s, psf_fn):
+    def read_psf(psf_fn):
+        psf = {}
+        with psf_fn.open() as fp:
+            read = False
+            for line in fp:
+                if '!NATOM' in line:
+                    read = True ; continue
+                elif line.strip() == '':
+                    read = False
+                if not read: continue
+                #
+                x = line.strip().split()
+                i_atm = int(x[0])
+                segName = x[1]
+                resNo = int(x[2])
+                resName = x[3]
+                atmName = x[4]
+                #
+                if segName not in psf:
+                    psf[segName] = {}
+                psf[segName][(resNo, atmName)] = i_atm
+        return psf
+    #
+    psf = read_psf(psf_fn)
+    #
+    FMT = 'bond 2 2  %6d %6d     %8.5f %6.3f\n'
+    #
+    restraint_s = []
+    for prot, lig, d in pair_s:
+        i_atm = psf[prot[0]][prot[1:]] - 1
+        i_lig = psf[lig[0]][lig[1:]] - 1
+        #
+        force_const = 10.0 / (1.0 + max(0.0, (10*(d-PARAM_DIST_COORD))**2))
+        restraint = (i_atm, i_lig,  force_const, d)
+        restraint_s.append(restraint)
+    return restraint_s
 

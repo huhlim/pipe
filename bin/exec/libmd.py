@@ -94,6 +94,9 @@ def generate_PSF(output_prefix, solv_fn, options, verbose):
     cmd.extend(['-crd', crd_fn.short()])
     cmd.append("--toppar")
     cmd.extend(options['ff']['toppar'])
+    if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
+        cmd.extend(options['ff']['cgenff'])
+        cmd.extend([fn.short() for fn in options['ligand']['str_fn_s']])
     system(cmd, verbose=verbose)
     #
     return psf_fn, crd_fn
@@ -146,3 +149,13 @@ def construct_membrane_restraint(psf, pdb, force_const):
         param.append(force_const * mass * kilocalories_per_mole/angstroms**2)
         rsr.addParticle(heavyIndex[k], param)
     return rsr
+
+def construct_ligand_restraint(pair_s):
+    bond = CustomBondForce("k * (r-r0)^2")
+    bond.addPerBondParameter('k')
+    bond.addPerBondParameter('r0')
+    #
+    for pair in pair_s:
+        bond.addBond(pair[0], pair[1], \
+                (pair[2]*kilocalories_per_mole/angstroms**2, pair[3]*nanometers))
+    return bond

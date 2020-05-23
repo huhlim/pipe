@@ -21,9 +21,10 @@ sys.path.insert(0, '%s/bin'%WORK_HOME)
 
 import path
 from libcommon import *
+from libligand import read_ligand_json, add_ligand, update_ligand_name, get_ligand_restratint
 
 from libcustom import *
-from libmd import solvate_pdb, generate_PSF, construct_restraint
+from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint
 
 def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
@@ -35,7 +36,12 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     boxsize = np.max(box, 0) - np.min(box, 0)
     psf.setBox(*boxsize)
     #
-    ff = CharmmParameterSet(*options['ff']['toppar'])
+    ff_file_s = options['ff']['toppar']
+    if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
+        ff_file_s.extend(options['ff']['cgenff'])
+        ff_file_s.extend([fn.short() for fn in options['ligand']['str_fn_s']])
+
+    ff = CharmmParameterSet(*ff_file_s)
     platform = Platform.getPlatformByName(options['openmm']['platform'])
     #
     sys = psf.createSystem(ff, \
@@ -51,6 +57,10 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         custom_s = construct_custom_restraint(pdb, custom_restraints[1])
         for custom in custom_s:
             sys.addForce(custom)
+    #
+    if 'ligand' in options['ff']:
+        ligand_restraints = construct_ligand_restraint(options['ff']['ligand'])
+        sys.addForce(ligand_restraints)
     #
     steps_left = options['md']['equil'][0]
     steps_heat = options['md']['heat'][0]
@@ -134,14 +144,29 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
 def run(input_pdb, output_prefix, options, verbose, nonstd):
     tempfile_s = []
     #
-    pdb = mdtraj.load(input_pdb.short())
+    if 'ligand' in options:
+        init_pdb = path.Path("%s.init.pdb"%output_prefix)
+        ligand_restraint_pairs = add_ligand(options['ligand'], input_pdb, init_pdb)
+    else:
+        init_pdb = input_pdb.short()
+    #
+    pdb = mdtraj.load(init_pdb.short())
     orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
+    if 'ligand' in options:
+        update_ligand_name(orient_fn, options['ligand']['ligand_s'])
+        update_ligand_name(solv_fn, options['ligand']['ligand_s'])
     tempfile_s.extend([orient_fn, solv_fn])
     #
     psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, verbose)
     tempfile_s.append(crd_fn)
+
+    if 'ligand' in options:
+        ligand_restraint = get_ligand_restratint(ligand_restraint_pairs, psf_fn)
+        options['ff']['ligand'] = ligand_restraint
     #
     equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
+    if 'ligand' in options:
+        update_ligand_name(solv_fn, options['ligand']['ligand_s'])
 
 def main():
     arg = argparse.ArgumentParser(prog='equil')
@@ -165,6 +190,11 @@ def main():
     #
     with open(arg.input_json) as fp:
         options = json.load(fp)
+        for key in options:
+            options[key] = JSONdeserialize(options[key])
+    if 'ligand_json' in options:
+        options['ligand'] = read_ligand_json(options['ligand_json'])
+    #
     if arg.toppar is not None:
         options['ff']['toppar']= arg.toppar
     if arg.custom_file is not None:
