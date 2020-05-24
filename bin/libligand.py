@@ -360,6 +360,9 @@ def get_ligand_restratint(pdb, psf_fn, info):
                 psf[segName][(resNo, atmName)] = i_atm
         return psf
     #
+    if isinstance(psf_fn, str):
+        psf_fn = path.Path(psf_fn)
+    #
     ligandAtom = np.array([atom.residue.segment_id == 'LIG' for atom in pdb.top.atoms], dtype=bool)
     ligand = pdb.atom_slice(np.where(ligandAtom)[0])
     #

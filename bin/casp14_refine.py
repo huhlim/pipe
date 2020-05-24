@@ -9,6 +9,7 @@ from importlib import import_module
 
 from libcommon import *
 from libmain import *
+from libligand import get_ligand_info
 
 def get_membrane_topology(job, n_init, wait_after_run, sleep=30):
     membrane_home = job.work_home.subdir("membrane", build=True)

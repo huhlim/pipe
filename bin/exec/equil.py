@@ -149,7 +149,7 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
         add_ligand(options['ligand'], input_pdb, init_pdb)
         update_ligand_name(init_pdb, options['ligand']['ligand_s'])
     else:
-        init_pdb = input_pdb.short()
+        init_pdb = input_pdb
     #
     pdb = mdtraj.load(init_pdb.short())
     orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
