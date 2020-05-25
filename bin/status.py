@@ -150,7 +150,12 @@ def check_resource(host_s, json_job_s):
                 else:
                     resource_s[host]['cpu'] = (job.title, method, input)
     #
-    for host in sorted(host_s):
+    host_list = []
+    host_list.extend(sorted([h for h in host_s if h.startswith("green")], \
+            reverse=True, key=lambda x: int(x[5:])))
+    host_list.extend([h for h in host_s if not h.startswith("green")])
+    #
+    for host in host_list:
         if 'gpu' not in resource_s[host]: continue
         #
         for gpu_id in sorted(resource_s[host]['gpu']):

@@ -82,7 +82,12 @@ def assign_resource(job, updated):
     #
     cpu_s = []
     gpu_s = []
-    for host in host_s:
+    host_list = []
+    host_list.extend(sorted([h for h in host_s if h.startswith("green")], \
+            reverse=True, key=lambda x: int(x[5:])))
+    host_list.extend([h for h in host_s if not h.startswith("green")])
+    #for host in host_s:
+    for host in host_list:
         if host not in cpu_taken:
             if len(host_s[host]) > 2:
                 cpu_s.append((host, host_s[host][2]))
