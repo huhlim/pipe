@@ -13,6 +13,7 @@ from libcommon import *
 EXEC = {}
 EXEC['refine'] = '%s/casp14_refine.py'%BIN_HOME
 EXEC['sp'] = '%s/casp14_sp.py'%BIN_HOME
+EXEC['meta'] = '%s/casp14_meta.py'%BIN_HOME
 
 def run(verbose):
     with open("%s/bin/hosts/job_s.json"%WORK_HOME) as fp:
@@ -25,6 +26,8 @@ def run(verbose):
         job_fn = path.Path(job_fn)
         job = Job.from_json(job_fn)
         #
+        if job.run_type not in EXEC:
+            continue
         cmd = [EXEC[job.run_type]]
         cmd.append(job_fn.path())
         #
