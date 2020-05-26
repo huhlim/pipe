@@ -87,7 +87,8 @@ def run_hhsearch(homolog_home, id, fa_fn, input_pdb):
                 fout.write(" %6.4f"%tm)
                 fout.write("\n")
                 if tm > TM_CUTOFF:
-                    selected.append(pdb_fn.name())
+                    if pdb_fn.name() not in selected:
+                        selected.append(pdb_fn.name())
                 pdb_fn.remove()
         with homolog_home.fn("selected").open("wt") as fout:
             for pdb_id in selected:
@@ -134,7 +135,8 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
                     cmd.append(m.short())
                     with out_fn.open("wt") as fout:
                         system(cmd, outfile=fout, verbose=False, stdout=True, errfile='/dev/null')
-                model_s.append(out_fn)
+                if out_fn not in model_s:
+                    model_s.append(out_fn)
 
         with model_fn.open("wt") as fout:
             for model in model_s:
