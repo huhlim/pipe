@@ -9,7 +9,7 @@ import argparse
 
 from libcommon import *
 
-METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'average', 'scwrl', 'qa']
+METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'calc_rmsd', 'average', 'scwrl', 'qa']
 INPUTs = {}
 INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
@@ -17,6 +17,7 @@ INPUTs['locPREFMD'] = 0
 INPUTs['equil'] = 0
 INPUTs['prod'] = 0
 INPUTs['score'] = 0
+INPUTs['calc_rmsd'] = 0
 INPUTs['average'] = 0
 INPUTs['qa'] = 0
 INPUTs['scwrl'] = 0

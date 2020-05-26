@@ -175,7 +175,6 @@ class Job(dict):
                 return (not False in status)
             else:
                 return X == Y
-
         #
         prev_exists = False
         for prev in self.task[method]:
