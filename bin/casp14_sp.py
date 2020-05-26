@@ -30,6 +30,19 @@ def run_refine(title, input_pdb, work_home, **kwargs):
                 if atmName == 'CA':
                     n_res += 1
         return n_res
+    def is_continuous_domain(pdb_fn):
+        R = []
+        with pdb_fn.open() as fp:
+            for line in fp:
+                if not line.startswith("ATOM"):
+                    continue
+                atmName = line[12:16].strip()
+                if atmName == 'CA':
+                    R.append([line[30:38], line[38:46], line[46:54]])
+        R = np.array(R, dtype=float)
+        b = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
+        b_max = np.max(b)
+        return b_max < 5.0
     #
     n_residue = get_num_residues(input_pdb)
     #
@@ -44,7 +57,11 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--wait")
     if kwargs.get("is_membrane_protein", False):
         cmd.append("--membrane")
-    if kwargs.get("use_hybrid", False) and (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
+    if kwargs.get("has_ligand", False):
+        cmd.append("--ligand")
+    if kwargs.get("use_hybrid", False) and \
+            is_continuous_domain(input_pdb) and \
+            (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
         cmd.append("--hybrid")
     #
     proc = sp.Popen(cmd)
@@ -152,6 +169,7 @@ def main():
     arg.add_argument('--hybrid', dest='use_hybrid', action='store_true', default=False, \
             help='use hybrid')
     arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
+    arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -194,6 +212,7 @@ def main():
             refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=arg.verbose, \
                                      use_hybrid=job.use_hybrid, \
                                      is_membrane_protein=job.has("is_membrane_protein"), \
+                                     has_ligand=job.has("has_ligand"), \
                                      wait_after_run=arg.wait_after_run)
             refine_home = job.refine_home.subdir(domain_id)
             #

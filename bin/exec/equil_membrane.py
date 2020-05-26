@@ -32,7 +32,7 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
     #
     box = pdb.atom_slice(pdb.top.select("resname HOH")).xyz[0]
     #box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
-    boxsize = np.max(box, 0) - np.min(box, 0) + 0.2
+    boxsize = np.max(box, 0) - np.min(box, 0) + 0.3
     psf.setBox(*boxsize)
     #
     ff = CharmmParameterSet(*options['ff']['toppar'])
@@ -67,7 +67,12 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
         simulation = Simulation(psf.topology, sys, integrator, platform)
         simulation.context.setPositions(crd.positions)
         if i == 0:
+            state = simulation.context.getState(getEnergy=True)
+            print (state.getPotentialEnergy())
+
             simulation.minimizeEnergy(maxIterations=500)
+            state = simulation.context.getState(getEnergy=True)
+            print (state.getPotentialEnergy())
             simulation.context.setVelocitiesToTemperature(temp*kelvin)
         else:
             with open(chk_fn, 'rb') as fp:

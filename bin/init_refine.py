@@ -20,9 +20,26 @@ def prep(arg):
     #
     assert arg.input_pdb is not None
     #
+    def is_continuous_domain(pdb_fn):
+        R = []
+        with pdb_fn.open() as fp:
+            for line in fp:
+                if not line.startswith("ATOM"):
+                    continue
+                atmName = line[12:16].strip()
+                if atmName == 'CA':
+                    R.append([line[30:38], line[38:46], line[46:54]])
+        R = np.array(R, dtype=float)
+        b = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
+        b_max = np.max(b)
+        return b_max < 5.0
+    #
     job = Job(arg.work_dir, arg.title, build=True)
     job.run_type = 'refine'
-    job.use_hybrid = arg.use_hybrid
+    if arg.use_hybrid:
+        job.use_hybrid = is_continuous_domain(arg.input_pdb)
+    else:
+        job.use_hybrid = arg.use_hybrid
     job.use_extensive = arg.use_extensive
     if arg.is_membrane_protein:
         job.is_membrane_protein = True

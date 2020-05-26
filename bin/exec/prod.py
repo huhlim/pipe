@@ -164,6 +164,12 @@ def run(output_prefix, input_json, options, verbose):
     else:
         restart_fn = None
 
+    n_frame_per_iter = int(options['md']['dynsteps'] / options['md']['dynoutfrq'])
+    if 'n_atom' in options['input']:
+        dcdOut_topology = init_pdb.atom_slice(np.arange(options['input']['n_atom']))
+    else:
+        dcdOut_topology = init_pdb
+
     while (k_iter < options['md']['iter']):
         out_dcd_fn = run_home.fn("%s.%d.dcd"%(output_prefix, k_iter))
         out_chk_fn = run_home.fn("%s.%d.restart.pkl"%(output_prefix, k_iter))
@@ -171,6 +177,8 @@ def run(output_prefix, input_json, options, verbose):
             k_iter += 1
             out_dcd_fn_s.append(out_dcd_fn)
             continue
+        elif out_dcd_fn.status(size=1000) and (not out_chk_fn.status(size=1000)):
+            out_dcd_fn.remove()
         #
         cmd = [EXEC]
         cmd.extend(['--input', input_json.short()])
@@ -188,7 +196,13 @@ def run(output_prefix, input_json, options, verbose):
         with open("%s.err"%output_prefix, 'wt') as ferr:
             system(cmd, errfile=ferr, verbose=verbose)
         #
-        if out_chk_fn.status(size=1000):
+        try:
+            n_frame = mdtraj.load(out_dcd_fn.short(), top=dcdOut_topology, atom_indices=[0]).n_frames
+        except:
+            n_frame = 0
+        n_frame_status = (n_frame == n_frame_per_iter)
+        #
+        if out_chk_fn.status(size=1000) and n_frame_status:
             k_iter += 1
             out_dcd_fn_s.append(out_dcd_fn)
             restart_fn = out_chk_fn
