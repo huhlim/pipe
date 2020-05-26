@@ -15,6 +15,7 @@ PARAM_N_MODEL = 5
 PARAM_CASP_EMAIL = 'models@predictioncenter.org'
 PARAM_MY_EMAIL = 'huhlim@gmail.com'
 TARBALL_HOME = '%s/servers'%WORK_HOME
+RAPTORX_SHARED = '/home/huhlim/Dropbox/CASP14-RaptorX-Results'
 
 SERVER_NAME = 'FEIG-S'
 
@@ -217,7 +218,7 @@ def get_tarball(target_s):
         #
         submit_time = target['submit_time']
         #
-        for tarball_days,tarball_type in zip([7, 9], ['stage2.3D', '3D']):
+        for tarball_days,tarball_type in zip([5, 7, 9], ['stage1.3D', 'stage2.3D', '3D']):
             tarball_time = submit_time + datetime.timedelta(days=tarball_days)
             tarball_time = tarball_time.replace(hour=15, minute=0, second=0, microsecond=0)
             if now < tarball_time:
@@ -239,3 +240,76 @@ def get_tarball(target_s):
             sp.call(['tar', 'xzf', tgz_fn, '-C', '..'])
     #
     os.chdir(cwd)
+
+def get_raptorX(target_s):
+    def parse_model(fn):
+        model_s = [] ; model = None
+        with open(fn) as fp:
+            for line in fp:
+                if line.startswith("MODEL"):
+                    model = [] ; model_s.append(model)
+                elif line.startswith("END"):
+                    model.append(line)
+                    model = None
+                elif model is not None:
+                    model.append(line)
+        return model_s
+
+    cwd = os.getcwd()
+    #
+    for target in target_s:
+        if target['target_type'] not in ['HUMAN', 'SERVER']:
+            continue
+        #
+        run_home = '%s/%s.raptorX'%(TARBALL_HOME, target['target_id'])
+        if os.path.exists("%s/model_1.pdb"%(run_home)):
+            continue
+        #
+        pdb_fn = '%s/%s-RaptorX-CASP14.pdb'%(RAPTORX_SHARED, target['target_id'])
+        if not os.path.exists(pdb_fn):
+            continue
+        if not os.path.exists(run_home):
+            os.mkdir(run_home)
+        #
+        model_s = parse_model(pdb_fn)
+        for i,model in enumerate(model_s):
+            with open("%s/model_%d.pdb"%(run_home, i+1), 'wt') as fout:
+                fout.writelines(model)
+    #
+    os.chdir(cwd)
+
+def share_raptorX(target_s):
+    def merge_model(fn_s):
+        model_s = []
+        for fn in fn_s:
+            with open(fn) as fp:
+                for line in fp:
+                    model_s.append(line)
+            model_s.append("\n")
+        return model_s
+
+    cwd = os.getcwd()
+    #
+    for target in target_s:
+        if target['target_type'] not in ['HUMAN', 'SERVER']:
+            continue
+        #
+        out_fn = '%s/%s-RaptorX-refined.pdb'%(RAPTORX_SHARED, target['target_id'])
+        if os.path.exists(out_fn):
+            continue
+        #
+        refine_home = '%s/FEIG-R1/%s'%(WORK_HOME, target['target_id'])
+        fn_s = []
+        for i in range(PARAM_N_MODEL):
+            fn = '%s/submit/model_%d.pdb'%(refine_home, i+1)
+            if os.path.exists(fn):
+                fn_s.append(fn)
+        if len(fn_s) != PARAM_N_MODEL:
+            continue
+        #
+        model_s = merge_model(fn_s)
+        with open(out_fn, 'wt') as fout:
+            fout.writelines(model_s)
+    #
+    os.chdir(cwd)
+

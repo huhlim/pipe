@@ -95,12 +95,12 @@ def update_target(target, predictor):
         send_prediction(predictor, target['target_id'], model_no, out_fn, mail_to=target['email'])
     #
     # send RR
-    if target['target_id'].startswith("T") and predictor == SERVER_NAME and True:
-        npz_fn = '%s/trRosetta/%s.trRosetta.npz'%(run_home, target['target_id'])
-        out_fn = '%s/%s.rr'%(submit_home, target['target_id'])
-        with open(out_fn, 'wt') as fout:
-            fout.writelines(write_in_RR_format(predictor, target['target_id'], npz_fn))
-        send_prediction(predictor, target['target_id'], 0, out_fn, mail_to=target['email'])
+    #if target['target_id'].startswith("T") and predictor == SERVER_NAME and True:
+    #    npz_fn = '%s/trRosetta/%s.trRosetta.npz'%(run_home, target['target_id'])
+    #    out_fn = '%s/%s.rr'%(submit_home, target['target_id'])
+    #    with open(out_fn, 'wt') as fout:
+    #        fout.writelines(write_in_RR_format(predictor, target['target_id'], npz_fn))
+    #    send_prediction(predictor, target['target_id'], 0, out_fn, mail_to=target['email'])
 
     return True
 
@@ -133,7 +133,13 @@ def run_human(target_s):
             #
             status_name = 'status_%s'%(meta.split("-")[1])
             if target[status_name] is None:
-                pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
+                if META_s[meta] == 'RaptorX_TS1':
+                    pdb_fn = '%s/%s.raptorX/model_1.pdb'%(TARBALL_HOME, target['target_id'])
+                    if not os.path.exists(pdb_fn):
+                        pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
+                else:
+                    pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
+                #pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
                 if os.path.exists(pdb_fn):
                     initialize_human_target(target, meta, pdb_fn)
                     sys.stdout.write("Running %s %s\n"%(meta, target['target_id']))
@@ -152,6 +158,8 @@ def run():
     db, target_s = get_from_db()
     #
     get_tarball(target_s)
+    get_raptorX(target_s)
+    share_raptorX(target_s)
     #
     run_server(target_s)
     run_human(target_s)
@@ -161,6 +169,7 @@ def run():
 def main():
     while True:
         try:
+            sys.stdout.write("TIME: %s\n"%time.ctime())
             run()
         except Exception as error:
             print (error)
