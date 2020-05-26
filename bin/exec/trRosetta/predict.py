@@ -25,6 +25,8 @@ from tbm_to_contact import run as tbm_to_contact
 
 from build_model import run as build_model 
 
+from plot_contact import run as plot_contact
+
 class Job(object):
     def __init__(self, run_home, fa_fn):
         self.fa_fn0 = path.Path(fa_fn)
@@ -379,6 +381,7 @@ def split_model(job, pdb_fn):
     with job.fn("model_s").open("wt") as fout:
         for out in out_fn_s:
             fout.write("%s\n"%out)
+    return out_fn_s
 
 def main():
     if len(sys.argv) == 1:
@@ -397,8 +400,12 @@ def main():
     job.read_domain_info()
     #
     run(job)
+    #
     pdb_fn = build_model(job)
-    split_model(job, pdb_fn)
+    splitted = split_model(job, pdb_fn)
+    #
+    plot_contact(job.trRosetta_fn, job.fn("%s.trRosetta.png"%job.title), [pdb_fn])
+    plot_contact(job.trRosetta_fn, None, splitted)
     #
     job.finalize_run()
     #try:
