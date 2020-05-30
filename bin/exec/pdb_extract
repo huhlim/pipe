@@ -4,6 +4,7 @@ import os
 import sys
 import mdtraj
 import argparse
+import numpy as np
 
 def main():
     arg = argparse.ArgumentParser(prog='extract_pdb')
@@ -12,6 +13,7 @@ def main():
     arg.add_argument('--dir', dest='out_dir', default='.')
     arg.add_argument('--name', dest='out_prefix', default='sample')
     arg.add_argument('--select', dest='selection', default=None)
+    arg.add_argument('--topIndex', dest='topIndex_fn', default=None)
     arg.add_argument('--stride', dest='stride', default=None, type=int)
     arg.add_argument('--frame', dest='frame', default=None, type=int, nargs='*')
     arg.add_argument('--structured', dest='structured', default=False, action='store_true')
@@ -23,6 +25,9 @@ def main():
     arg = arg.parse_args()
     #
     top = mdtraj.load(arg.ref_fn)
+    if arg.topIndex_fn is not None:
+        topIndex = np.load(arg.topIndex_fn)['select']
+        top = top.atom_slice(topIndex)
     if arg.selection is None:
         atomIndex = None
     else:
