@@ -9,13 +9,13 @@ from tempfile import mkdtemp
 AAs = ('ALA','CYS','ASP','GLU','PHE','GLY','HIS','HIP','HID','HIE','HSE','HSD','HSP','ILE','LYS','LEU',\
        'MET','ASN','PRO','GLN','ARG','SER','THR','VAL','TRP','TYR')
 WATERs = ('TIP')
-resName_update = {"HIS":"HSD"}
 atmName_update = {"O":" OT1", "OXT":" OT2"}
 
 def read_pdb(fn):
     segName_s = []
     seg_s = {}
     disu_s = []
+    his_s = {}
     with open(fn) as fp:
         for line in fp:
             if (not line.startswith("ATOM")) and (not line.startswith("HETA")):
@@ -37,9 +37,15 @@ def read_pdb(fn):
                     seg_s[segName] = [1, []]
             resName = line[17:20].strip()
             atmName = line[12:16].strip()
-            if resName in resName_update:
-                resName_new = resName_update[resName]
-                line = line[:17] + resName_new + line[20:]
+            if resName in ['HIS']:
+                if atmName == 'HD1':    # HSD
+                    resNo = line[22:26]
+                    his_s[(segName, resNo)] = 'HSD'
+                elif atmName == 'HE2':  # HSE
+                    resNo = line[22:26]
+                    his_s[(segName, resNo)] = 'HSE'
+                #resName_new = resName_update[resName]
+                #line = line[:17] + resName_new + line[20:]
             if atmName in atmName_update:
                 atmName_new = atmName_update[atmName]
                 line = line[:12] + atmName_new + line[16:]
@@ -47,6 +53,19 @@ def read_pdb(fn):
                 line = 'ATOM  %s'%line[6:]
 
             seg_s[segName][1].append(line)
+    #
+    for segName in seg_s:
+        if seg_s[segName][0] != 0: continue
+        for i,line in enumerate(seg_s[segName][1]):
+            resName = line[17:20].strip()
+            if resName != 'HIS': continue
+            resNo = line[22:26]
+            if (segName, resNo) in his_s:
+                hisName = his_s[(segName, resNo)]
+            else:
+                hisName = 'HSD'
+            line = line[:17] + hisName + line[20:]
+            seg_s[segName][1][i] = line
     #
     def find_seg(cys, seg_s):
         seg = None

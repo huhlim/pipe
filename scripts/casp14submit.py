@@ -38,10 +38,10 @@ def print_body(form, status):
 
 def submit_to_db(form):
     target_id = form.getvalue("TARGET")
-    if target_id[:2] not in ['R0','R1','T0','T1','T9']:
+    email = form.getvalue("EMAIL")
+    if target_id[:2] not in ['R0','R1','T0','T1','T9'] and email != 'huhlim@gmail.com':
         return 1
     #
-    email = form.getvalue("EMAIL")
     # assume that there will be only one protein in the SEQUENCE
     sequence = []
     for line in form.getvalue("SEQUENCE").split("\n"):

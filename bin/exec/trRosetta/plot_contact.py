@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from importlib import import_module
 
 font={"size": 14}
 matplotlib.rc("font", **font)
@@ -104,15 +105,16 @@ def run(npz_fn, png_fn0, pdb_fn_s):
         plt.close("all")
 
 def main():
-    npz_fn = sys.argv[1]
+    path = import_module("path")
+    npz_fn = path.Path(sys.argv[1])
     #
     png_fn = None
     pdb_fn_s = []
     for arg in sys.argv[2:]:
         if arg.endswith(".png"):
-            png_fn = arg
+            png_fn = path.Path(arg)
         else:
-            pdb_fn_s.append(arg)
+            pdb_fn_s.append(path.Path(arg))
     #
     run(npz_fn, png_fn, pdb_fn_s)
 

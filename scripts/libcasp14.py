@@ -2,6 +2,7 @@
 
 import os
 import sys
+import glob
 import datetime
 import pymysql
 import requests
@@ -200,6 +201,8 @@ def parse_target_list(target_s):
             continue
         if target['target_id'] in target_type_s:
             target['target_type'] = target_type_s[target['target_id']]
+        elif target['email'] == PARAM_MY_EMAIL:
+            target['target_type'] = 'Private'
         else:
             target['target_type'] = "CASP13"
         target['updated'].append("target_type")
@@ -238,6 +241,12 @@ def get_tarball(target_s):
             #
             os.chdir(run_home)
             sp.call(['tar', 'xzf', tgz_fn, '-C', '..'])
+            #
+            for fn in glob.glob("*_TS1"):
+                if fn.startswith("server"):
+                    continue
+                if not os.path.exists("%s.pdb"%fn):
+                    os.symlink(fn, '%s.pdb'%fn)
     #
     os.chdir(cwd)
 

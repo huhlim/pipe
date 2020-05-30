@@ -180,6 +180,9 @@ def run(output_prefix, input_json, options, verbose):
         elif out_dcd_fn.status(size=1000) and (not out_chk_fn.status(size=1000)):
             out_dcd_fn.remove()
         #
+        if k_iter > 0:
+            restart_fn = run_home.fn("%s.%d.restart.pkl"%(output_prefix, k_iter-1))
+        #
         cmd = [EXEC]
         cmd.extend(['--input', input_json.short()])
         cmd.extend(['--pdb', init_pdb_fn.short()])

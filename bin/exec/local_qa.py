@@ -112,9 +112,9 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                                         getEnergy=True, \
                                         enforcePeriodicBox=True)
 
-    return state
+    return state, crd
 
-def prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose):
+def prod_md(output_prefix, solv_fn, psf_fn, crd, restart_state, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
     box = restart_state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer)
     boxsize = np.diag(box)
@@ -159,7 +159,8 @@ def prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose):
                                         options['md']['dyntstep']*picosecond)
         #
         simulation = Simulation(psf.topology, sys, integrator, platform)
-        simulation.context.setPositions(pdb.openmm_positions(0))
+        #simulation.context.setPositions(pdb.openmm_positions(0))
+        simulation.context.setPositions(crd.positions)
         simulation.context.setState(restart_state)
         simulation.context.setTime(0.0)
         #
@@ -189,6 +190,8 @@ def get_error_estimation(output_prefix, pdb_fn, dcd_fn_s):
     rmsf_s = []
     for dcd_fn in dcd_fn_s:
         traj = mdtraj.load(dcd_fn.short(), top=pdb)
+        if len(traj) < 2:
+            continue
         traj.superpose(pdb, atom_indices=calphaIndex)
         #
         xyz = traj.xyz[:,calphaIndex]
@@ -220,9 +223,9 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, verbose)
     tempfile_s.append(crd_fn)
     #
-    restart_state = equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
+    restart_state, crd = equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
     #
-    dcd_fn_s = prod_md(output_prefix, solv_fn, psf_fn, restart_state, options, verbose)
+    dcd_fn_s = prod_md(output_prefix, solv_fn, psf_fn, crd, restart_state, options, verbose)
     #
     qa = get_error_estimation(output_prefix, solv_fn, dcd_fn_s)
 

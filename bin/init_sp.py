@@ -27,6 +27,8 @@ def prep(arg):
     job.keep_tmp = arg.keep
     if arg.is_membrane_protein:
         job.is_membrane_protein = True
+    if arg.is_oligomer:
+        job.is_oligomer = True
     #
     out = job.work_home.fn("%s.fa"%job.title)
     if not out.status():

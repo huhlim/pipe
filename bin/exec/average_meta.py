@@ -88,11 +88,7 @@ def run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options):
     #
     final = mdtraj.load(pdb_fn)
     final = final.atom_slice(final.top.select("protein"))
-    #
-    output = avrg
-    output.xyz = final.xyz
-    #
-    return output
+    return final
 
 def read_score(fn, score_fn='RWplus'):
     index = ['RWplus', 'dDFIRE', 'DFIRE'].index(score_fn)
@@ -112,16 +108,35 @@ def read_qual(fn):
             rmsd.append(line.strip().split()[0])    # INDEX needed
     return np.array(rmsd, dtype=float)
 
-def get_input_structures(arg, options):
-    top = mdtraj.load(arg.top_pdb.short())
+def read_traj_s(arg, options):
+    top_s = [] ; top_fn_s = [] ; topIndex_s = []
+    for top_fn,topIndex_fn in zip(options['input']['top_fn'], options['input']['topIndex']):
+        if top_fn not in top_fn_s:
+            top_fn_s.append(top_fn)
+            #
+            topIndex = np.load(topIndex_fn.short())
+            topIndex_s.append(topIndex)
+            top_s.append(mdtraj.load(top_fn.short(), atom_indices=topIndex['select']))
+    #
+    top0 = top_s[0]
     #
     traj_s = []
+    for i,traj_fn in enumerate(arg.input_dcd_s):
+        top_fn = options['input']['top_fn'][i]
+        metaIndex = top_fn_s.index(top_fn)
+        top = top_s[metaIndex]
+        #
+        traj = mdtraj.load(traj_fn.short(), top=top)
+        traj_s.append(mdtraj.Trajectory(traj.xyz[:,topIndex_s[metaIndex]['index']], top0.topology))
+    return top0, traj_s
+
+def get_input_structures(arg, options):
+    top0, traj_s = read_traj_s(arg, options)
+    #
     score_s = []
     rmsd_s = []
     for i,traj_fn in enumerate(arg.input_dcd_s):
-        traj = mdtraj.load(traj_fn.short(), top=top)
-        traj_s.append(traj)
-        n_frame = len(traj)
+        n_frame = len(traj_s[i])
         #
         if options['rule'][0] in ['score', 'casp12']:
             score = read_score(arg.input_score_s[i], score_fn=options['rule'][1][0])
@@ -134,7 +149,7 @@ def get_input_structures(arg, options):
             rmsd_s.append(rmsd)
     #
     traj_s = mdtraj.join(traj_s, check_topology=False)
-    traj_s.superpose(top, atom_indices=top.topology.select("name CA"))
+    traj_s.superpose(top0, atom_indices=top0.topology.select("name CA"))
     #
     if options['rule'][0] == 'score':
         score_s = np.concatenate(score_s)
@@ -162,7 +177,7 @@ def get_input_structures(arg, options):
             radius = max(0.0, radius-0.05)
             angle1 += 0.1
     #
-    avrg = copy.deepcopy(top)
+    avrg = copy.deepcopy(top0)
     avrg.xyz = np.mean(traj_s[frame].xyz, 0)
     #
     rmsd = mdtraj.rmsd(traj_s[frame], avrg)
@@ -173,18 +188,10 @@ def get_input_structures(arg, options):
 
 def run(arg, options):
     if options['rule'][0] == 'cluster':
-        top = mdtraj.load(arg.top_pdb.short())
-        #
-        frame_s = []
-        for dcd_fn in arg.input_dcd_s:
-            frame = mdtraj.load(dcd_fn.short(), top=top)
-            frame_s.append(frame)
+        frame_s = read_traj_s(arg, options)[1]
         frame_s = mdtraj.join(frame_s, check_topology=False)
-        #
         cluster_s = import_module("libcluster").get_clusters(frame_s, \
                 rmsd_cutoff=options['rule'][1][0], subsample=options['rule'][1][1])
-        frame_s = None # to free memory
-        #
         final_s = []
         for i in range(min(options['rule'][1][2], len(cluster_s))):
             output_prefix = '%s.%04d'%(arg.output_prefix, i)
@@ -207,9 +214,8 @@ def run(arg, options):
 def main():
     arg = argparse.ArgumentParser(prog='average')
     arg.add_argument(dest='output_prefix')
-    arg.add_argument(dest='top_pdb')
     arg.add_argument('--input', dest='input_json', required=True)
-    arg.add_argument('--dcd', dest='input_dcd_s', nargs='*', default=None, required=True)
+    arg.add_argument('--dcd', dest='input_dcd_s', nargs='*', default=None)
     arg.add_argument('--score', dest='input_score_s', nargs='*', default=None)
     arg.add_argument('--qual', dest='input_qual_s', nargs='*', default=None)
     #
@@ -217,7 +223,6 @@ def main():
         arg.print_help()
         return
     arg = arg.parse_args()
-    arg.top_pdb = path.Path(arg.top_pdb)
     if arg.input_dcd_s is not None:
         arg.input_dcd_s = [path.Path(fn) for fn in arg.input_dcd_s]
     if arg.input_score_s is not None:
@@ -227,6 +232,16 @@ def main():
     #
     with open(arg.input_json) as fp:
         options = json.load(fp)
+    #
+    if 'input' in options:
+        for fn_type in options['input']:
+            options['input'][fn_type] = [path.Path(fn) for fn in options['input'][fn_type]]
+        if 'dcd_fn' in options['input']:
+            arg.input_dcd_s = options['input']['dcd_fn']
+        if 'score_fn' in options['input']:
+            arg.input_score_s = options['input']['score_fn']
+        if 'qual_fn' in options['input']:
+            arg.input_qual_s = options['input']['qual_fn']
     #
     cwd = os.getcwd()
     tmpdir = TemporaryDirectory(prefix='avrg.')

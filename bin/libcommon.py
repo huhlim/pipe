@@ -176,21 +176,41 @@ class Job(dict):
             else:
                 return X == Y
         #
-        prev_exists = False
+        # PREVIOUS VERSION
+        ##
+        #prev_exists = False
+        #for prev in self.task[method]:
+        #    input_status = True
+        #    for i in range(len(prev['input'])):
+        #        if not is_same(prev['input'][i], input_arg[i]):
+        #            input_status = False ; break
+        #    if input_status:
+        #        prev_exists = True
+        #    #
+        #    output_status = True
+        #    for i in range(len(prev['output'])):
+        #        if not is_same(prev['output'][i], output_arg[i]):
+        #            output_status = False ; break
+        #    if output_status:
+        #        prev['resource'][0] = 'DONE'
+        #if prev_exists: return
+        #
+        # find there is an identical (both input&output) task exists
         for prev in self.task[method]:
             input_status = True
             for i in range(len(prev['input'])):
                 if not is_same(prev['input'][i], input_arg[i]):
                     input_status = False ; break
-            if input_status:
-                prev_exists = True
+            if not input_status: continue
+            #
             output_status = True
             for i in range(len(prev['output'])):
                 if not is_same(prev['output'][i], output_arg[i]):
                     output_status = False ; break
-            if output_status:
-                prev['resource'][0] = 'DONE'
-        if prev_exists: return
+            if not output_status: continue
+            #
+            # return as an identical prev task found
+            return
         #
         # status allocated_resource use_gpu n_proc
         self.task[method].append({\

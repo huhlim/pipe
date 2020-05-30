@@ -8,15 +8,7 @@ import argparse
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-def get_clusters(top_pdb, dcd_fn_s, rmsd_cutoff=2.0, subsample=0):
-    top = mdtraj.load(top_pdb.short())
-    #
-    frame_s = []
-    for dcd_fn in dcd_fn_s:
-        frame = mdtraj.load(dcd_fn.short(), top=top)
-        frame_s.append(frame)
-    frame_s = mdtraj.join(frame_s, check_topology=False)
-    #
+def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0):
     if subsample > 0:
         subsampled = np.zeros(len(frame_s), dtype=bool)
         subsampled[::subsample] = True
@@ -64,20 +56,20 @@ def get_clusters(top_pdb, dcd_fn_s, rmsd_cutoff=2.0, subsample=0):
     cluster_s.sort(key=lambda x: x[0], reverse=True)
     return cluster_s
 
-def main():
-    arg = argparse.ArgumentParser(prog='cluster_models')
-    arg.add_argument(dest='output_prefix')
-    arg.add_argument(dest='init_pdb')
-    arg.add_argument('--dcd', dest='dcd_fn_s', required=True, nargs='*')
-    arg.add_argument('--rmsd', dest='rmsd_cutoff', type=float, default=2.0)
-    arg.add_argument('--subsample', dest='subsample', type=int, default=0)
-    #
-    if len(sys.argv) == 1:
-        arg.print_help()
-        return
-    arg = arg.parse_args()
-    #
-    run(arg)
-
-if __name__ == '__main__':
-    main()
+#def main():
+#    arg = argparse.ArgumentParser(prog='cluster_models')
+#    arg.add_argument(dest='output_prefix')
+#    arg.add_argument(dest='init_pdb')
+#    arg.add_argument('--dcd', dest='dcd_fn_s', required=True, nargs='*')
+#    arg.add_argument('--rmsd', dest='rmsd_cutoff', type=float, default=2.0)
+#    arg.add_argument('--subsample', dest='subsample', type=int, default=0)
+#    #
+#    if len(sys.argv) == 1:
+#        arg.print_help()
+#        return
+#    arg = arg.parse_args()
+#    #
+#    run(arg)
+#
+#if __name__ == '__main__':
+#    main()

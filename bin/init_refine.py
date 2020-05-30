@@ -5,6 +5,7 @@ import sys
 import path
 import json
 import argparse
+import numpy as np
 
 from libcommon import *
 
@@ -36,15 +37,20 @@ def prep(arg):
     #
     job = Job(arg.work_dir, arg.title, build=True)
     job.run_type = 'refine'
-    if arg.use_hybrid:
-        job.use_hybrid = is_continuous_domain(arg.input_pdb)
+    if arg.use_hybrid and is_continuous_domain(arg.input_pdb):
+        job.use_hybrid = True
     else:
-        job.use_hybrid = arg.use_hybrid
+        job.use_hybrid = False
     job.use_extensive = arg.use_extensive
     if arg.is_membrane_protein:
         job.is_membrane_protein = True
     if arg.has_ligand:
         job.has_ligand = True
+    if arg.is_oligomer:
+        job.is_oligomer = True
+        if job.use_hybrid:
+            job.use_hybrid = False
+    #
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep

@@ -59,6 +59,8 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--membrane")
     if kwargs.get("has_ligand", False):
         cmd.append("--ligand")
+    if kwargs.get("is_oligomer", False):
+        cmd.append("--oligomer")
     if kwargs.get("use_hybrid", False) and \
             is_continuous_domain(input_pdb) and \
             (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
@@ -170,6 +172,7 @@ def main():
             help='use hybrid')
     arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
     arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
+    arg.add_argument('--oligomer', dest='is_oligomer', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -193,6 +196,9 @@ def main():
     if not run(job, arg.wait_after_run):
         return 
     domain_pdb_s, trRosetta_min = get_outputs(job, 'trRosetta', expand='model_s')[0]
+    # temporarily now allow to split domain for oligomers
+    if job.has("is_oligomer"):
+        domain_pdb_s = [trRosetta_min]
 
     # create refine directory
     job.refine_home = job.work_home.subdir("refine", build=True)
@@ -207,12 +213,16 @@ def main():
         refine_proc_s = []
         job.refine_s = []
         for pdb_fn in domain_pdb_s:
-            domain_id = pdb_fn.name()
+            if not job.has("is_oligomer"):
+                domain_id = pdb_fn.name()
+            else:
+                domain_id = '%s_d0'%job.title
             #
-            refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=arg.verbose, \
+            refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=job.verbose, \
                                      use_hybrid=job.use_hybrid, \
                                      is_membrane_protein=job.has("is_membrane_protein"), \
                                      has_ligand=job.has("has_ligand"), \
+                                     is_oligomer=job.has("is_oligomer"),\
                                      wait_after_run=arg.wait_after_run)
             refine_home = job.refine_home.subdir(domain_id)
             #
@@ -229,7 +239,14 @@ def main():
     # paste
     job.work_home.chdir()
     model_home = job.work_home.subdir("model", build=True)
-    prep_s = paste_refined(model_home, trRosetta_min, refined, verbose=arg.verbose)
+    if not job.has("is_oligomer"):
+        prep_s = paste_refined(model_home, trRosetta_min, refined, verbose=job.verbose)
+    else:
+        prep_s = []
+        for i in range(N_MODEL):
+            prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+            prep_s.append(prep_fn)
+            system(['cp', refined[0][i].short(), prep_fn.short()], verbose=job.verbose)
     #
     import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):

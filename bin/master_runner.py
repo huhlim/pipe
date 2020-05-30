@@ -14,6 +14,7 @@ EXEC = {}
 EXEC['refine'] = '%s/casp14_refine.py'%BIN_HOME
 EXEC['sp'] = '%s/casp14_sp.py'%BIN_HOME
 EXEC['meta'] = '%s/casp14_meta.py'%BIN_HOME
+EXEC['refine_meta'] = '%s/casp14_refine_meta.py'%BIN_HOME
 
 def run(verbose):
     with open("%s/bin/hosts/job_s.json"%WORK_HOME) as fp:
@@ -24,6 +25,8 @@ def run(verbose):
     proc_s = []
     for job_fn in job_fn_s:
         job_fn = path.Path(job_fn)
+        if not job_fn.status():
+            continue
         job = Job.from_json(job_fn)
         #
         if job.run_type not in EXEC:

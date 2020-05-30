@@ -9,16 +9,17 @@ import argparse
 
 from libcommon import *
 
-METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'score', 'calc_rmsd', 'average', 'scwrl', 'qa']
+METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'prod_meta', 'score', 'average', 'average_meta', 'scwrl', 'qa']
 INPUTs = {}
 INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
 INPUTs['locPREFMD'] = 0
 INPUTs['equil'] = 0
 INPUTs['prod'] = 0
+INPUTs['prod_meta'] = 0
 INPUTs['score'] = 0
-INPUTs['calc_rmsd'] = 0
 INPUTs['average'] = 0
+INPUTs['average_meta'] = 1
 INPUTs['qa'] = 0
 INPUTs['scwrl'] = 0
 
@@ -74,8 +75,12 @@ def check_status(job):
                 #
                 t_curr, t_target, speed = get_prod_info(run_home)
                 if t_curr == 0.0:
-                    status = 'WAIT'
-                    progress = 0.0
+                    if status != 'DONE':
+                        status = 'WAIT'
+                        progress = 0.0
+                    else:
+                        progress = 100.0
+                        speed = 0.0
                 else:
                     if status == 'SUBMITTED':
                         status = 'RUN'
@@ -89,7 +94,7 @@ def check_status(job):
                 #
                 wrt = []
                 wrt.append("%-10s"%job.title)
-                wrt.append('%-10s'%method)
+                wrt.append('%-12s'%method)
                 wrt.append("%-6s"%status)
                 wrt.append("%-12s"%host)
                 wrt.append("%s"%(run_home.short()))
@@ -111,7 +116,7 @@ def check_status(job):
                 #
                 wrt = []
                 wrt.append("%-10s"%job.title)
-                wrt.append('%-10s'%method)
+                wrt.append('%-12s'%method)
                 wrt.append("%-6s"%status)
                 wrt.append("%-12s"%host)
                 wrt.append("%s"%input)
@@ -168,7 +173,7 @@ def check_resource(host_s, json_job_s):
     #
     sys.stdout.write("#\n")
     #
-    for host in sorted(host_s):
+    for host in host_list:
         if resource_s[host]['cpu'] is None:
             wrt = ''
         else:
@@ -301,6 +306,8 @@ def main():
                 json_job_fn = path.Path(json_job_fn)
             else:
                 json_job_fn = path.Dir(json_job_fn).fn("job.json")
+            if not json_job_fn.status():
+                continue
             #
             job = Job.from_json(json_job_fn)
             check_status(job)

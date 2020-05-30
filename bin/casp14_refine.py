@@ -36,13 +36,32 @@ def get_membrane_topology(job, n_init, wait_after_run, sleep=30):
             job.membrane_psf.append(psf_fn[0])
             job.membrane_crd.append(crd_fn[0])
         #
-        if wait_after_run:
+        if wait_after_run and (not status):
             sys.stderr.write("waiting for CHARMM-GUI membrane topology... \n")
             time.sleep(sleep)
         else:
             break
         #
     if status: job.to_json()
+    return status
+
+def get_oligomer_topology(job, wait_after_run, sleep=30):
+    oligomer_home = job.work_home.subdir("oligomer", build=True)
+    #
+    while True:
+        oligomer_pdb = oligomer_home.glob("*.pdb")
+        #
+        status = (len(oligomer_pdb) != 0)
+        #
+        if wait_after_run and (not status):
+            sys.stderr.write("waiting for Oligomer topology... \n")
+            time.sleep(sleep)
+        else:
+            break
+        #
+    if status: 
+        job.oligomer_pdb = oligomer_pdb
+        job.to_json()
     return status
 
 def main():
@@ -64,6 +83,7 @@ def main():
             help='use extensive sampling')
     arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
     arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
+    arg.add_argument('--oligomer', dest='is_oligomer', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -81,6 +101,11 @@ def main():
         job.append_to_joblist()
     else:
         job = import_module("init_refine").prep(arg)
+    #
+    if job.has("is_oligomer") and not job.has("oligomer_pdb"):
+        if not get_oligomer_topology(job, arg.wait_after_run):
+            sys.stderr.write("waiting for Oligomer topology... \n")
+            return
 
     # hybrid
     if job.use_hybrid:
@@ -95,7 +120,10 @@ def main():
     n_init = len(job.init_pdb)
 
     # locPREFMD
-    import_module("locPREFMD").prep(job, job.init_pdb)
+    if job.has("is_oligomer"):
+        import_module("locPREFMD").prep(job, job.oligomer_pdb)
+    else:
+        import_module("locPREFMD").prep(job, job.init_pdb)
     if not run(job, arg.wait_after_run):
         return 
     locPREFMD_out = get_outputs(job, "locPREFMD")[:n_init]
@@ -170,7 +198,7 @@ def main():
     for i,out in enumerate(average_out):
         prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
         if not prep_fn.status():
-            system(['cp', out.short(), prep_fn.short()], verbose=arg.verbose)
+            system(['cp', out.short(), prep_fn.short()], verbose=job.verbose)
         prep_s.append(prep_fn)
     #
     import_module("scwrl").prep(job, prep_s)
@@ -187,7 +215,7 @@ def main():
     for i,out in enumerate(locPREFMD_out):
         model_fn = model_home.fn("model_%d.pdb"%(i+1))
         if not model_fn.status():
-            system(['cp', out[0].short(), model_fn.short()], verbose=arg.verbose)
+            system(['cp', out[0].short(), model_fn.short()], verbose=job.verbose)
         model_s.append(model_fn)
 
     # qa
@@ -201,7 +229,7 @@ def main():
     for i,out in enumerate(qa_out):
         pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
         if not pdb_fn.status():
-            system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
+            system(['cp', out[0].short(), pdb_fn.short()], verbose=job.verbose)
     #
     job.remove_from_joblist()
 

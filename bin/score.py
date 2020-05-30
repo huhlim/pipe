@@ -26,6 +26,27 @@ def prep(job, input_dcd):
     #
     job.to_json()
 
+def prep_meta(job, prod_task_s):
+    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+        return
+    #
+    for _,task in prod_task_s:
+        if task['resource'][0] != 'DONE':
+            continue
+        #
+        dcd_fn = task['output'][0]
+        run_home = task['input'][0]
+        index_fn = task['input'][1]
+        top_fn = task['input'][2]
+        #
+        input_s = [dcd_fn]
+        output_s = [run_home.fn("statpot.dat"), run_home.fn("qual_init.dat")]
+        etc_s = [index_fn, top_fn]
+        #
+        job.add_task(METHOD, input_s, output_s, *etc_s, use_gpu=False, n_proc=24)
+    #
+    job.to_json()
+
 def run(job):
     task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
     if len(task_s) == 0:
@@ -39,12 +60,21 @@ def run(job):
         if output_score.status() and output_qual.status():
             continue
         #
+        if len(task['etc']) > 0:    # meta
+            index_fn = task['etc'][0]
+            top_fn = task['etc'][1]
+        else:
+            index_fn = None
+            top_fn = job.top_fn
+        #
         run_home.chdir()
         #
         pdblist = run_home.fn("pdb_s")
         if not run_home.subdir("ens").status() or not pdblist.status():
             with pdblist.open("wt") as fout:
-                cmd = ['%s/pdb_extract'%EXEC_HOME, job.top_fn.short()]
+                cmd = ['%s/pdb_extract'%EXEC_HOME, top_fn.short()]
+                if index_fn is not None:
+                    cmd.extend(['--topIndex', index_fn.short()])
                 cmd.extend(['--dir', 'ens'])
                 cmd.extend(['--name', 'sample'])
                 cmd.append("--structured")

@@ -10,24 +10,52 @@ from importlib import import_module
 
 from libcommon import *
 from libmain import *
+from casp14_sp import wait_refine, paste_refined, update_bfactor
 
+EXEC_REFINE = '%s/casp14_refine_meta.py'%BIN_HOME
+EXEC_PASTE = '%s/trRosetta/paste_domains.py'%EXEC_HOME
+
+N_MODEL_REFINE = 5
 N_MODEL = 5
 
-def add_meta_tasks(job, meta_s):
-    method = 'prod'
-    job.task[method] = []
-    for meta in meta_s:
-        job.task[method].extend([task for _,task in meta.get_task(method)])
+def check_meta_tasks(meta_s, wait_after_run, sleep=30):
+    while True:
+        status = True
+        #
+        for meta in meta_s:
+            method = 'prod'
+            if len(meta.get_task(method, not_status='DONE')) > 0:
+                status = False ; break
+            #
+            method = 'score'
+            if len(meta.get_task(method, not_status='DONE')) > 0:
+                status = False ; break
+        #
+        if status: break
+        #
+        if wait_after_run:
+            time.sleep(sleep)
+        else:
+            break
+    return status
+
+def run_refine(title, input_pdb, work_home, sp_refine_job, refine_job_s, **kwargs):
+    cmd = []
+    cmd.append(EXEC_REFINE)
+    cmd.append(title)
+    cmd.extend(['--input', input_pdb.short()])
+    cmd.extend(['--dir', work_home.short()])
+    cmd.extend(['--sp', sp_refine_job.json_job.short()])
+    cmd.append('--meta')
+    cmd.extend([refine_job.json_job.short() for refine_job in refine_job_s])
+    if kwargs.get("verbose", False):
+        cmd.append("--verbose")
+    if kwargs.get("wait_after_run", False):
+        cmd.append("--wait")
     #
-    method = 'score'
-    job.task[method] = [] ; k = -1
-    output_s = get_outputs(job, 'calc_rmsd')
-    for i,meta in enumerate(meta_s):
-        for j,task in meta.get_task(method):
-            k += 1
-            task['output'][1] = output_s[k][0]
-            job.task[method].append(task)
-    job.to_json()
+    proc = sp.Popen(cmd)
+    time.sleep(60)
+    return proc
 
 def main():
     arg = argparse.ArgumentParser(prog='casp14_meta')
@@ -66,39 +94,53 @@ def main():
         meta_s.append(Job.from_json(meta_json_fn))
     n_meta = len(meta_s)
     #
-    job.init_pdb = [meta_s[0].init_pdb[0]]
-    locPREFMD_out = get_outputs(meta_s[0], "locPREFMD")[0]
-    import_module("define_topology").prep(job, locPREFMD_out[0])
+    sp_job = meta_s[0]
+    sp_job.sub_s = []
+    for refine_home in sp_job.refine_s:
+        sp_job.sub_s.append(Job.from_json(refine_home.fn("job.json")))
+    refine_job_s = meta_s[1:]
     #
-    # calc_rmsd
-    for i,meta in enumerate(meta_s):
-        prod_out = get_outputs(meta, 'prod')
-        import_module("calc_rmsd").prep(job, i, job.init_pdb[0], [out[0] for out in prod_out])
-    if not run(job, arg.wait_after_run, sleep=10):
+    if not check_meta_tasks(sp_job.sub_s, arg.wait_after_run):
         return
-
-    add_meta_tasks(job, meta_s)
-
-    # average
-    import_module("average").prep(job, '%s.meta'%job.title, [i for i in range(n_meta)], path.Path("%s/average.json"%DEFAULT_HOME), rule='casp12')
-    import_module("average").prep(job, '%s.cluster'%job.title, [i for i in range(n_meta)], path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
-    if not run(job, arg.wait_after_run):
+    if not check_meta_tasks(refine_job_s, arg.wait_after_run):
         return
     #
-    average_out = []
-    for output in get_outputs(job, 'average', expand='pdb_s'):
-        average_out.extend(output[0])
-    average_out = average_out[:N_MODEL]
-
-    # model
+    domain_pdb_s, trRosetta_min = get_outputs(sp_job, 'trRosetta', expand='model_s')[0]
+    #
+    # create refine directory
+    job.refine_home = job.work_home.subdir("refine", build=True)
+    #
+    has_refine = job.has("refine_s")
+    if has_refine:
+        for refine_home in job.refine_s:
+            if not refine_home.fn("job.json").status():
+                has_refine = False ; break
+    #
+    if not has_refine:
+        refine_proc_s = []
+        job.refine_s = []
+        for domain_pdb, sp_refine_job in zip(domain_pdb_s, sp_job.sub_s):
+            domain_id = sp_refine_job.title
+            #
+            refine_proc = run_refine(domain_id, domain_pdb, job.refine_home, \
+                                     sp_refine_job, refine_job_s, \
+                                     verbose=job.verbose, wait_after_run=arg.wait_after_run)
+            refine_home = job.refine_home.subdir(domain_id)
+            #
+            refine_proc_s.append(refine_proc)
+            job.refine_s.append(refine_home)
+    else:
+        refine_proc_s = None
+    job.to_json()
+    #
+    status, refined = wait_refine(refine_proc_s, job.refine_s, arg.wait_after_run)
+    if not status:
+        return
+    #
+    # paste
     job.work_home.chdir()
     model_home = job.work_home.subdir("model", build=True)
-    prep_s = []
-    for i,out in enumerate(average_out):
-        prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
-        if not prep_fn.status():
-            system(['cp', out.short(), prep_fn.short()], verbose=arg.verbose)
-        prep_s.append(prep_fn)
+    prep_s = paste_refined(model_home, trRosetta_min, refined, verbose=job.verbose)
     #
     import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):
@@ -108,27 +150,14 @@ def main():
     import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
     if not run(job, arg.wait_after_run):
         return 
-    locPREFMD_out = get_outputs(job, "locPREFMD")[n_init:]
-    #
-    model_s = []
-    for i,out in enumerate(locPREFMD_out):
-        model_fn = model_home.fn("model_%d.pdb"%(i+1))
-        if not model_fn.status():
-            system(['cp', out[0].short(), model_fn.short()], verbose=arg.verbose)
-        model_s.append(model_fn)
-
-    # qa
-    import_module("qa").prep(job, model_s, path.Path("%s/qa.json"%DEFAULT_HOME))
-    if not run(job, arg.wait_after_run):
-        return
-    qa_out = get_outputs(job, 'qa')
+    locPREFMD_out = get_outputs(job, "locPREFMD")
 
     # final
     final_home = job.work_home.subdir("final", build=True)
-    for i,out in enumerate(qa_out):
+    for i,out in enumerate(locPREFMD_out):
         pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
         if not pdb_fn.status():
-            system(['cp', out[0].short(), pdb_fn.short()], verbose=arg.verbose)
+            update_bfactor(pdb_fn, out[0], prep_s[i])
     #
     job.remove_from_joblist()
 

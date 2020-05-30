@@ -3,11 +3,12 @@
 import os
 import sys
 import time
+import glob
 import subprocess as sp
 
 from libcasp14 import *
 
-UPDATE_INTERVAL = 300
+UPDATE_INTERVAL = 600
 PARAM_BIG_TARGET = 700
 
 def initialize_TS_server(target, fa_fn, use_hybrid=False, use_extensive=False):
@@ -51,7 +52,7 @@ def initialize_server_target(target):
             fout.write(">%s\n"%(target['target_id']))
             fout.write("%s\n"%(target['sequence']))
     #
-    if target['target_id'].startswith("T"):
+    if target['target_id'].startswith("T") or target['target_type'] == 'Private':
         initialize_TS_server(target, fa_fn)
     elif target['target_id'].startswith("R"):
         initialize_TR_server(target)
@@ -69,6 +70,17 @@ def initialize_human_target(target, meta, pdb_fn, use_hybrid=False, use_extensiv
         cmd.append("--extensive")
     sp.call(cmd)
 
+def initialize_meta_target(target):
+    EXEC = '%s/bin/casp14_meta.py'%PREFMD_HOME
+    #
+    cmd = [EXEC]
+    cmd.append(target['target_id'])
+    cmd.append("--input")
+    for meta in ['FEIG-S', 'FEIG-R1', 'FEIG-R2', 'FEIG-R3']:
+        cmd.append("%s/%s/%s/job.json"%(WORK_HOME, meta, target['target_id']))
+    cmd.extend(['--dir', '%s/%s'%(WORK_HOME, 'FEIG')])
+    sp.call(cmd)
+
 def update_target(target, predictor):
     run_home = '%s/%s/%s'%(WORK_HOME, predictor, target['target_id'])
     final_home = '%s/final'%run_home
@@ -79,6 +91,20 @@ def update_target(target, predictor):
         if not os.path.exists(pdb_fn):
             status = False
             break
+    #
+    out_s = []
+    cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check']
+    cmd.append('%s/job.json'%run_home)
+    out_s.append(sp.check_output(cmd).decode("utf8"))
+    if predictor in ['FEIG-S', 'FEIG']:
+        refine_s = glob.glob("%s/refine/*/job.json"%run_home)
+        refine_s.sort(key=lambda x: x.split("/")[-2])
+        for refine in refine_s:
+            cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check', refine]
+            out_s.append(sp.check_output(cmd).decode("utf8"))
+    with open("%s/status.dat"%(run_home), 'wt') as fout:
+        for out in out_s:
+            fout.write(out)
     #
     if not status: return False
     #
@@ -153,6 +179,23 @@ def run_human(target_s):
                     sys.stdout.write("Finalizing %s %s\n"%(meta, target['target_id']))
                     target[status_name] = 'DONE'
                     target['updated'].append(status_name)
+        #
+        if target['status_H'] is None:
+            human_status = [target['status%s'%meta] == 'DONE' for meta in ['', '_R1', '_R2', '_R3']]
+            if False in human_status:
+                continue
+            initialize_meta_target(target)
+            sys.stdout.write("Running %s %s\n"%('FEIG', target['target_id']))
+            #
+            target['status_H'] = 'RUN'
+            target['updated'].append('status_H')
+        elif target['status_H'] == 'DONE':
+            continue
+        else:
+            if update_target(target, 'FEIG'):
+                sys.stdout.write("Finalizing %s %s\n"%('FEIG', target['target_id']))
+                target['status_H'] = 'DONE'
+                target['updated'].append('status_H')
 
 def run():
     db, target_s = get_from_db()
