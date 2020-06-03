@@ -177,31 +177,40 @@ fi
 disuoptions=`assigndisu.pl $ssbond $ssauto $tag.protein.pdb`
 
 chain_s=$(convpdb.pl -nsel protein $tag.protein.pdb | cut -c22 | grep -v ^$ | uniq)
-chain=${chain_s:0:1}
+chain0=${chain_s:0:1}
 for c in ${chain_s:1};
 do
-    chain="${chain}+${c}"
+    chain0="${chain0}+${c}"
 done
-if [ "$chain" != " " ]; then
-  convpdb.pl -nsel ${chain}: $tag.protein.pdb | fixleu.pl | convpdb.pl $disuoptions -segnames > $tag.init.pdb
+if [ "$chain0" != " " ]; then
+    convpdb.pl -nsel ${chain0}: $tag.protein.pdb | fixleu.pl | convpdb.pl $disuoptions -segnames > $tag.init.pdb
 else
-  convpdb.pl -setall -setchain "X" $tag.protein.pdb | fixleu.pl | convpdb.pl $disuoptions -segnames > $tag.init.pdb
+    convpdb.pl -setall -setchain "X" $tag.protein.pdb | fixleu.pl | convpdb.pl $disuoptions -segnames > $tag.init.pdb
 fi
 molprobity.sh $tag.init.pdb > $tag.init.mpscore 2> /dev/null &
 
 for seg in `convpdb.pl -listseg $tag.init.pdb`; do
-  convpdb.pl -nsel ${seg}: -readseg $tag.init.pdb | complete.pl | convpdb.pl -setseg $seg -setchain " " > $tag.$seg.pdb
-  convpdb.pl -out generic $tag.$seg.pdb > $tag.$seg.clean.pdb
-  convpdb.pl -out generic $tag.$seg.clean.pdb | convpdb.pl -out generic -setseg $seg > $tag.$seg.zero.pdb
-  fixcis.pl $tag.$seg.clean.pdb | convpdb.pl -out generic -setseg $seg > $tag.$seg.fix.pdb
-  fixciscons.pl $tag.$seg.zero.pdb >> $tag.consdihe.custom
-  /bin/cat $tag.$seg.zero.pdb | egrep -v "(TER|END)" >> $tag.clean.pdb
-  /bin/cat $tag.$seg.fix.pdb | egrep -v "(TER|END)" >> $tag.fix.pdb
+    chain=$(convpdb.pl -nsel ${seg}: -readseg $tag.init.pdb | grep ^ATOM | head -n1 | cut -c22)
+    convpdb.pl -nsel ${seg}: -readseg $tag.init.pdb | complete.pl | convpdb.pl -setchain " " > $tag.$seg.pdb
+    convpdb.pl -out generic -setseg $seg $tag.$seg.pdb > $tag.$seg.zero.pdb
+    convpdb.pl -out generic -setseg $seg -setchain $chain $tag.$seg.pdb > $tag.$seg.clean.pdb
+    fixcis.pl $tag.$seg.pdb | grep -v OXT | complete.pl | convpdb.pl -setseg $seg | convpdb.pl -out generic -readseg -setchain $chain > $tag.$seg.fix.pdb
+    fixciscons.pl $tag.$seg.zero.pdb >> $tag.consdihe.custom
 done
+for seg in `convpdb.pl -listseg $tag.init.pdb`; do
+    grep ^SSBOND $tag.$seg.clean.pdb >> $tag.clean.pdb
+    grep ^SSBOND $tag.$seg.fix.pdb >> $tag.fix.pdb
+done
+for seg in `convpdb.pl -listseg $tag.init.pdb`; do
+    grep -v ^SSBOND $tag.$seg.clean.pdb | grep -v END >> $tag.clean.pdb
+    grep -v ^SSBOND $tag.$seg.fix.pdb | grep -v END >> $tag.fix.pdb
+done
+echo "END" >> $tag.clean.pdb
+echo "END" >> $tag.fix.pdb
 molprobity.sh $tag.clean.pdb > $tag.clean.mpscore 2> /dev/null &
 
-minCHARMM.pl  -par sdsteps=0,minsteps=0,$ffpar -log $tag.m0log $tag.clean.pdb > $tag.clean.cinp.pdb
-minCHARMM.pl  -par sdsteps=0,minsteps=0,$ffpar -log $tag.fix.m0log $tag.fix.pdb > $tag.fix.cinp.pdb
+minCHARMM.pl  -par hbuild,sdsteps=0,minsteps=0,$ffpar -log $tag.m0log $tag.clean.pdb > $tag.clean.cinp.pdb
+minCHARMM.pl  -par hbuild,sdsteps=0,minsteps=0,$ffpar -log $tag.fix.m0log $tag.fix.pdb > $tag.fix.cinp.pdb
 
 cons=""
 for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
@@ -219,18 +228,18 @@ reslist=`cat $tag.checkring.out | awk '/CROSS/ {print $3}' | sort -u | xargs ech
 /bin/rm -f $tag.checkring.out
 
 while [ "$reslist" -a $xtag -lt 6 ]; do
-  convpdb.pl -setall -setchain " " -out generic -setseg PRO0 $inp | grep -v TER > $tag.tinp.pdb
-  rebpart.pl $tag.tinp.pdb $reslist | convpdb.pl -setchain X | convpdb.pl -segnames | minCHARMM.pl -custom $tag.consdihe.custom -cons ca $tag.clean.cinp.pdb 0:999_$caforce -par minsteps=$minsteps,$ffpar -log "$tag.m1x${xtag}.log" > $tag.min1x$xtag.pdb
-  /bin/rm -f $tag.tinp.pdb
+    convpdb.pl -setall -setchain " " -out generic -setseg PRO0 $inp | grep -v TER > $tag.tinp.pdb
+    rebpart.pl $tag.tinp.pdb $reslist | convpdb.pl -setchain X | convpdb.pl -segnames | minCHARMM.pl -custom $tag.consdihe.custom -cons ca $tag.clean.cinp.pdb 0:999_$caforce -par minsteps=$minsteps,$ffpar -log "$tag.m1x${xtag}.log" > $tag.min1x$xtag.pdb
+    /bin/rm -f $tag.tinp.pdb
 
-  inp="$tag.min1x$xtag.pdb"
+    inp="$tag.min1x$xtag.pdb"
 
-  checkring.pl $inp > $tag.checkring.out 2>&1
-  reslist=`cat $tag.checkring.out | awk '/CROSS/ {print $3}' | sort -u | xargs echo | sed -e "s/ /:/g"`
-  /bin/rm -f $tag.checkring.out
+    checkring.pl $inp > $tag.checkring.out 2>&1
+    reslist=`cat $tag.checkring.out | awk '/CROSS/ {print $3}' | sort -u | xargs echo | sed -e "s/ /:/g"`
+    /bin/rm -f $tag.checkring.out
 
-  xtag=$[$xtag+1]
-  caforce=`echo $caforce | awk '{print $1/2.0}'`
+    xtag=$[$xtag+1]
+    caforce=`echo $caforce | awk '{print $1/2.0}'`
 done
 
 /bin/rm -f $tag.min1y.pdb
@@ -252,40 +261,44 @@ minCHARMM.pl -custom $tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar -
 
 inp=$tag.min3.pdb
 
-reslist=`mprobrotamers.sh $inp | grep OUTLIER | awk '{print $2}' | xargs echo | sed -e "s/ /:/g"`
-
+reslist=`mprobrotamers.sh $inp | grep OUTLIER | cut -c3-6 | xargs echo | sed -e "s/ /:/g"`
 if [ "$reslist" ]; then
-  rm -f $tag.tinp.pdb
-  for seg in $(convpdb.pl -listseg $inp);
-  do
-    convpdb.pl $inp -nsel ${seg}: -readseg -setseg ${seg} -setchain " " -out generic > $tag.tinp.$seg.pdb
-    egrep -v "(TER|END)" $tag.tinp.$seg.pdb >> $tag.tinp.pdb
-  done
-  #
-  rm -f $tag.tinp2.pdb
-  rebpart.pl $tag.tinp.pdb $reslist 1 > $tag.tinp2.pdb
-  #
-  rm -f $tag.tinp3.pdb
-  for seg in $(convpdb.pl -listseg $inp);
-  do
-    convpdb.pl $tag.tinp2.pdb -selseq $(genseq.pl $tag.tinp.$seg.pdb -out one) -setchain ${seg:3} | egrep -v "(TER|END)" >> $tag.tinp3.pdb
-    echo "TER" >> $tag.tinp3.pdb
-  done
-  echo "END" >> $tag.tinp3.pdb
-  #
-  convpdb.pl -segnames $tag.tinp3.pdb > $tag.tinp3.seg.pdb
-  cons=""
-  for seg in $(convpdb.pl -listseg $tag.tinp3.seg.pdb);
-  do
-    cons="${cons} -cons ca $tag.clean.cinp.pdb $seg:0:9999_0.5"
-  done
-  convpdb.pl -segnames $tag.tinp3.pdb | minCHARMM.pl -custom $tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar -log $tag.m3xlog $tag.tinp3.seg.pdb > $tag.min3x.pdb
-  #
-  /bin/rm -f $tag.tinp.pdb $tag.tinp2.pdb $tag.tinp.PRO?.pdb $tag.tinp3.pdb $tag.tinp3.seg.pdb
+    for seg in $(convpdb.pl -listseg $inp);
+    do
+        chain=$(convpdb.pl -nsel ${seg}: -readseg $inp | grep ^ATOM | head -n1 | cut -c22)
+        convpdb.pl -nsel ${seg}: -readseg $inp | convpdb.pl -setchain " " > $tag.tinp1.$seg.pdb
+
+        reslist=$(mprobrotamers.sh $tag.tinp1.$seg.pdb | grep OUTLIER | cut -c3-6 | xargs echo | sed -e "s/ /:/g")
+        rebpart.pl $tag.tinp1.$seg.pdb $reslist 1 | complete.pl > $tag.tinp2.$seg.pdb
+
+        convpdb.pl $tag.tinp2.$seg.pdb -setchain $chain -setseg $seg > $tag.tinp3.$seg.pdb
+    done
+    for seg in $(convpdb.pl -listseg $inp);
+    do
+        grep ^SSBOND $tag.tinp3.$seg.pdb >> $tag.tinp3.pdb
+    done
+    for seg in $(convpdb.pl -listseg $inp);
+    do
+        grep -v ^SSBOND $tag.tinp3.$seg.pdb | grep -v END >> $tag.tinp3.pdb
+    done
+    echo "END" >> $tag.tinp3.pdb
+    #
+    convpdb.pl -segnames $tag.tinp3.pdb > $tag.tinp3.seg.pdb
+    #
+    cons=""
+    for seg in $(convpdb.pl -listseg $tag.tinp3.seg.pdb);
+    do
+        cons="${cons} -cons ca $tag.clean.cinp.pdb $seg:0:9999_0.5"
+    done
+
+    minCHARMM.pl -custom $tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar -log $tag.m3xlog $tag.tinp3.seg.pdb > $tag.min3x.pdb
+    #
+    /bin/rm -f $tag.tinp1.pdb $tag.tinp2.pdb $tag.tinp3.pdb $tag.tinp[1-3].*.pdb $tag.tinp3.seg.pdb
 else
-  /bin/rm -f $tag.min3x.pdb
-  /bin/ln -s $inp $tag.min3x.pdb
+    /bin/rm -f $tag.min3x.pdb
+    /bin/ln -s $inp $tag.min3x.pdb
 fi
+
 
 cons=""
 for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
@@ -316,14 +329,14 @@ mdCHARMM.pl -custom ../$tag.consdihe.custom $cons -par dynsteps=$mdsteps,dyntemp
 
 cd ../$tag.md4
 if [ $fixca -eq 0 ]; then
-  mdCHARMM.pl -custom ../$tag.consdihe.custom -par dynsteps=$mdsteps,dyntemp=150,dynber,dynbertc=0.1,dynoutfrq=$savefrq,dyntstep=0.001,$ffpar -log $tag.md4log -final ../$tag.md4.pdb -trajout ../$tag.md4.dcd ../$tag.min4.pdb &
+    mdCHARMM.pl -custom ../$tag.consdihe.custom -par dynsteps=$mdsteps,dyntemp=150,dynber,dynbertc=0.1,dynoutfrq=$savefrq,dyntstep=0.001,$ffpar -log $tag.md4log -final ../$tag.md4.pdb -trajout ../$tag.md4.dcd ../$tag.min4.pdb &
 else
-  cons=""
-  for seg in $(convpdb.pl -listseg ../$tag.clean.cinp.pdb);
-  do
-      cons="${cons} -cons ca ../$tag.clean.cinp.pdb $seg:0:9999_2"
-  done
-  mdCHARMM.pl -custom ../$tag.consdihe.custom $cons -par dynsteps=$mdsteps,dyntemp=150,dynber,dynbertc=0.1,dynoutfrq=$savefrq,dyntstep=0.001,$ffpar -log $tag.md4log -final ../$tag.md4.pdb -trajout ../$tag.md4.dcd ../$tag.min4.pdb &
+    cons=""
+    for seg in $(convpdb.pl -listseg ../$tag.clean.cinp.pdb);
+    do
+        cons="${cons} -cons ca ../$tag.clean.cinp.pdb $seg:0:9999_2"
+    done
+    mdCHARMM.pl -custom ../$tag.consdihe.custom $cons -par dynsteps=$mdsteps,dyntemp=150,dynber,dynbertc=0.1,dynoutfrq=$savefrq,dyntstep=0.001,$ffpar -log $tag.md4log -final ../$tag.md4.pdb -trajout ../$tag.md4.dcd ../$tag.min4.pdb &
 fi
 
 cd ..
@@ -333,23 +346,23 @@ impc=`cat $tag.clean.mpscore`
 
 /bin/rm -rf $tag.optmd
 for n in 1 2 3 4; do
-  processDCD.pl -ensdir $tag.optmd -ens md $tag.min1.pdb $tag.md$n.dcd
+    processDCD.pl -ensdir $tag.optmd -ens md $tag.min1.pdb $tag.md$n.dcd
 done
 
 if [ $fixca -eq 0 ]; then
-  cons=""
-  for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
-  do
-      cons="${cons} -cons ca self $seg:0:9999_0.01"
-  done
-  ensrun.pl -nocompress -dir $tag.optmd -cpus $cpus -new min md minCHARMM.pl -custom `pwd`/$tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar 
+    cons=""
+    for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
+    do
+        cons="${cons} -cons ca self $seg:0:9999_0.01"
+    done
+    ensrun.pl -nocompress -dir $tag.optmd -cpus $cpus -new min md minCHARMM.pl -custom `pwd`/$tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar 
 else
-  cons=""
-  for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
-  do
-      cons="${cons} -cons ca self $seg:0:9999_1"
-  done
-  ensrun.pl -nocompress -dir $tag.optmd -cpus $cpus -new min md minCHARMM.pl -custom `pwd`/$tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar 
+    cons=""
+    for seg in $(convpdb.pl -listseg $tag.clean.cinp.pdb);
+    do
+        cons="${cons} -cons ca self $seg:0:9999_1"
+    done
+    ensrun.pl -nocompress -dir $tag.optmd -cpus $cpus -new min md minCHARMM.pl -custom `pwd`/$tag.consdihe.custom $cons -par minsteps=$minsteps,$ffpar 
 fi
 
 checkin.pl -dir $tag.optmd min $tag.min*.pdb
@@ -360,19 +373,19 @@ ensrun.pl -dir $tag.optmd -set molprobity:1 min stdinmprob.sh  > /dev/null 2>&1
 ensrun.pl -dir $tag.optmd -set molprobity:1 min stdinmprob.sh  > /dev/null 2>&1
 
 if [ $fixca -eq 0 ]; then
-  best=`ensfiles.pl -prop molprobity,irmsdca,irmsdall -dir $tag.optmd min | awk '{print $1,$2+$3*0.001,$2,$3,$4}' | sort -k 2 -n | head -1` 
+    best=`ensfiles.pl -prop molprobity,irmsdca,irmsdall -dir $tag.optmd min | awk '{print $1,$2+$3*0.001,$2,$3,$4}' | sort -k 2 -n | head -1` 
 else 
-  best=`ensfiles.pl -prop molprobity,irmsdca,irmsdall -dir $tag.optmd min | awk '{print $1,$2+$3*0.1,$2,$3,$4}' | sort -k 2 -n | head -1` 
+    best=`ensfiles.pl -prop molprobity,irmsdca,irmsdall -dir $tag.optmd min | awk '{print $1,$2+$3*0.1,$2,$3,$4}' | sort -k 2 -n | head -1` 
 fi
 read -a results <<< $best
 fmp=${results[2]}
 irmsca=${results[3]}
 irmssc=${results[4]}
 
-if [ "$chain" != " " ]; then
-  convpdb.pl ${results[0]} -out generic > $tag.final.pdb
+if [ "$chain0" != " " ]; then
+    convpdb.pl ${results[0]} -out generic > $tag.final.pdb
 else
-  convpdb.pl -setchain " " ${results[0]} -out generic > $tag.final.pdb
+    convpdb.pl -setchain " " ${results[0]} -out generic > $tag.final.pdb
 fi
 
 echo "REMARK initial molprobity $imp"
@@ -382,9 +395,9 @@ echo "REMARK CA-RMSD from-initial $irmsca"
 echo "REMARK SC-RMSD from-initial $irmssc"
 
 if [ `grep ATOM $tag.final.pdb | wc -l` -lt 1 ]; then
-  echo "ERROR: refinement unsuccessful"
+    echo "ERROR: refinement unsuccessful"
 else 
-  cat $tag.final.pdb
+    cat $tag.final.pdb
 fi
 
 /bin/rm -rf $tmpdir/$tag

@@ -133,9 +133,6 @@ def get_input_structures(arg, options):
             assert n_frame == rmsd.shape[0]
             rmsd_s.append(rmsd)
     #
-    traj_s = mdtraj.join(traj_s, check_topology=False)
-    traj_s.superpose(top, atom_indices=top.topology.select("name CA"))
-    #
     if options['rule'][0] == 'score':
         score_s = np.concatenate(score_s)
         score_cutoff = np.percentile(score_s, options['rule'][1][1])
@@ -162,12 +159,16 @@ def get_input_structures(arg, options):
             radius = max(0.0, radius-0.05)
             angle1 += 0.1
     #
-    avrg = copy.deepcopy(top)
-    avrg.xyz = np.mean(traj_s[frame].xyz, 0)
+    traj_s = mdtraj.join(traj_s, check_topology=False)
+    traj_selected = traj_s[frame]
+    traj_selected.superpose(top0, atom_indices=top0.topology.select("name CA"))
     #
-    rmsd = mdtraj.rmsd(traj_s[frame], avrg)
+    avrg = copy.deepcopy(top)
+    avrg.xyz = np.mean(traj_selected.xyz, 0)
+    #
+    rmsd = mdtraj.rmsd(traj_selected, avrg)
     i_min = np.argmin(rmsd)
-    cntr = traj_s[frame][i_min]
+    cntr = traj_selected[i_min]
     #
     return avrg, cntr
 
