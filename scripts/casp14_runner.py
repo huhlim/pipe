@@ -13,7 +13,7 @@ PARAM_BIG_TARGET = 700
 
 def initialize_TS_server(target, fa_fn, use_hybrid=False, use_extensive=False):
     if len(target['sequence']) > PARAM_BIG_TARGET:
-        send_warning(target, fa_fn)
+        send_big_target_warning(target, fa_fn)
     #
     EXEC = '%s/bin/casp14_sp.py'%PREFMD_HOME
     #
@@ -57,11 +57,11 @@ def initialize_server_target(target):
     elif target['target_id'].startswith("R"):
         initialize_TR_server(target)
 
-def initialize_human_target(target, meta, pdb_fn, use_hybrid=False, use_extensive=False):
+def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_extensive=False):
     EXEC = '%s/bin/casp14_refine.py'%PREFMD_HOME
     #
     cmd = [EXEC]
-    cmd.append(target['target_id'])
+    cmd.append(target_id)
     cmd.extend(['--input', pdb_fn])
     cmd.extend(['--dir', '%s/%s'%(WORK_HOME, meta)])
     if use_hybrid or OPTION_s[meta].get("use_hybrid", False):
@@ -77,7 +77,9 @@ def initialize_meta_target(target):
     cmd.append(target['target_id'])
     cmd.append("--input")
     for meta in ['FEIG-S', 'FEIG-R1', 'FEIG-R2', 'FEIG-R3']:
-        cmd.append("%s/%s/%s/job.json"%(WORK_HOME, meta, target['target_id']))
+        job_fn = "%s/%s/%s/job.json"%(WORK_HOME, meta, target['target_id'])
+        if os.path.exists(job_fn):
+            cmd.append(job_fn)
     cmd.extend(['--dir', '%s/%s'%(WORK_HOME, 'FEIG')])
     sp.call(cmd)
 
@@ -92,19 +94,21 @@ def update_target(target, predictor):
             status = False
             break
     #
-    out_s = []
-    cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check']
-    cmd.append('%s/job.json'%run_home)
-    out_s.append(sp.check_output(cmd).decode("utf8"))
-    if predictor in ['FEIG-S', 'FEIG']:
-        refine_s = glob.glob("%s/refine/*/job.json"%run_home)
-        refine_s.sort(key=lambda x: x.split("/")[-2])
-        for refine in refine_s:
-            cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check', refine]
-            out_s.append(sp.check_output(cmd).decode("utf8"))
-    with open("%s/status.dat"%(run_home), 'wt') as fout:
-        for out in out_s:
-            fout.write(out)
+    job_fn = '%s/job.json'%run_home
+    if os.path.exists(job_fn):
+        out_s = []
+        cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check']
+        cmd.append(job_fn)
+        out_s.append(sp.check_output(cmd).decode("utf8"))
+        if predictor in ['FEIG-S', 'FEIG']:
+            refine_s = glob.glob("%s/refine/*/job.json"%run_home)
+            refine_s.sort(key=lambda x: x.split("/")[-2])
+            for refine in refine_s:
+                cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check', refine]
+                out_s.append(sp.check_output(cmd).decode("utf8"))
+        with open("%s/status.dat"%(run_home), 'wt') as fout:
+            for out in out_s:
+                fout.write(out)
     #
     if not status: return False
     #
@@ -159,16 +163,30 @@ def run_human(target_s):
             #
             status_name = 'status_%s'%(meta.split("-")[1])
             if target[status_name] is None:
+                multiple_domain = False ; pdb_fn_s = None
+                #
                 if META_s[meta] == 'RaptorX_TS1':
                     pdb_fn = '%s/%s.raptorX/model_1.pdb'%(TARBALL_HOME, target['target_id'])
-                    if not os.path.exists(pdb_fn):
+                    if os.path.exists(pdb_fn):
+                        pdb_fn_s = glob.glob('%s/%s.raptorX/model_1d*.pdb'%(TARBALL_HOME, target['target_id']))
+                        if len(pdb_fn_s) > 0:
+                            multiple_domain = True
+                            pdb_fn_s.sort(key=lambda x: int(x.split("_1d")[-1][:-4]))
+                    else:
                         pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
                 else:
                     pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
-                #pdb_fn = '%s/%s/%s'%(TARBALL_HOME, target['target_id'], META_s[meta])
+                #
                 if os.path.exists(pdb_fn):
-                    initialize_human_target(target, meta, pdb_fn)
-                    sys.stdout.write("Running %s %s\n"%(meta, target['target_id']))
+                    if not multiple_domain:
+                        initialize_human_target(target['target_id'], meta, pdb_fn)
+                        sys.stdout.write("Running %s %s\n"%(meta, target['target_id']))
+                    else:
+                        send_raptorX_multiple_domain_warning(target, pdb_fn_s)
+                        for i,pdb_fn in enumerate(pdb_fn_s):
+                            target_domain_id = '%sd%d'%(target['target_id'], i+1)
+                            initialize_human_target(target_domain_id, meta, pdb_fn)
+                            sys.stdout.write("Running %s %s\n"%(meta, target_domain_id))
                     #
                     target[status_name] = 'RUN'
                     target['updated'].append(status_name)

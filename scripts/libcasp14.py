@@ -63,7 +63,7 @@ def send_prediction(predictor, target_id, model_no, fn, mail_to=PARAM_CASP_EMAIL
     with open(fn) as content:
         sp.check_output(cmd, stdin=content)
 
-def send_warning(target, fn):
+def send_big_target_warning(target, fn):
     cmd = []
     cmd.append("mail")
     cmd.append("-s")
@@ -74,6 +74,18 @@ def send_warning(target, fn):
     #
     with open(fn) as content:
         sp.check_output(cmd, stdin=content)
+
+def send_raptorX_multiple_domain_warning(target, pdb_fn_s):
+    cmd = []
+    cmd.append("mail")
+    cmd.append("-s")
+    cmd.append("RaptorX prediction has multiple domains: %s"%(target['target_id']))
+    cmd.append("-r")
+    cmd.append(PARAM_MY_EMAIL)
+    cmd.append(PARAM_MY_EMAIL)
+    for pdb_fn in pdb_fn_s:
+        cmd.extend(['-A', pdb_fn])
+    sp.check_output(cmd, stdin=sp.DEVNULL)
 
 def write_in_TS_format(predictor, target_id, model_no, pdb_fn):
     pdb = []
@@ -263,6 +275,43 @@ def get_raptorX(target_s):
                 elif model is not None:
                     model.append(line)
         return model_s
+    def split_chain_breaks(fn):
+        PARAM_CHAIN_BREAK = 8.0
+        #
+        R = [] ; resNo_s = []
+        with open(fn) as fp:
+            for line in fp:
+                if not line.startswith("ATOM"):
+                    continue
+                atmName = line[12:16].strip()
+                if atmName != 'CA':
+                    continue
+                resNo_s.append(line[21:26])
+                R.append([line[30:38], line[38:46], line[46:54]])
+        R = np.array(R, dtype=float)
+        b_len = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
+        #
+        chain_breaks = np.where(b_len> PARAM_CHAIN_BREAK)[0]
+        if len(chain_breaks) == 0:
+            return False, []
+        #
+        chain_breaks = np.where(b_len> PARAM_CHAIN_BREAK)[0]+1
+        #
+        domain_index = -np.ones(len(resNo_s), dtype=int)
+        brN = 0
+        for i,brC in enumerate(chain_breaks):
+            domain_index[brN:brC] = i
+            brN = brC
+        #
+        domain_s = [[] for _ in range(len(chain_breaks)+1)]
+        with open(fn) as fp:
+            for line in fp:
+                if not line.startswith("ATOM"):
+                    continue
+                resNo = line[21:26]
+                i_d = domain_index[resNo_s.index(resNo)]
+                domain_s[i_d].append(line)
+        return True, domain_s
 
     cwd = os.getcwd()
     #
@@ -282,8 +331,16 @@ def get_raptorX(target_s):
         #
         model_s = parse_model(pdb_fn)
         for i,model in enumerate(model_s):
-            with open("%s/model_%d.pdb"%(run_home, i+1), 'wt') as fout:
+            model_fn = "%s/model_%d.pdb"%(run_home, i+1)
+            with open(model_fn, 'wt') as fout:
                 fout.writelines(model)
+            multiple_domain, domain_s = split_chain_breaks(model_fn)
+            if multiple_domain:
+                for k,domain in enumerate(domain_s):
+                    out_fn = '%s/model_%dd%d.pdb'%(run_home, i+1, k+1)
+                    with open(out_fn, 'wt') as fout:
+                        fout.writelines(domain)
+                        fout.write("TER\nEND\n")
     #
     os.chdir(cwd)
 
