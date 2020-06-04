@@ -161,7 +161,7 @@ def get_input_structures(arg, options):
     #
     traj_s = mdtraj.join(traj_s, check_topology=False)
     traj_selected = traj_s[frame]
-    traj_selected.superpose(top0, atom_indices=top0.topology.select("name CA"))
+    traj_selected.superpose(top, atom_indices=top.topology.select("name CA"))
     #
     avrg = copy.deepcopy(top)
     avrg.xyz = np.mean(traj_selected.xyz, 0)
