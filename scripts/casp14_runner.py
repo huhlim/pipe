@@ -107,6 +107,7 @@ def update_target(target, predictor):
                 cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check', refine]
                 out_s.append(sp.check_output(cmd).decode("utf8"))
         with open("%s/status.dat"%(run_home), 'wt') as fout:
+            fout.write("Updated: %s\n\n"%time.ctime())
             for out in out_s:
                 fout.write(out)
     #

@@ -129,12 +129,12 @@ class Queue(object):
     def from_json(self):
         task_s = []
         with self.host_json.open("r") as fp:
-            for X in json.load(fp):
+            for X in json.load(fp)['task']:
                 task = Task.from_json(X, self.task_s)
                 if task is not None:
                     task_s.append(task)
         return task_s
-    def to_json(self):
+    def to_json(self, resource):
         if self.host_json.status():
             for i in range(10):
                 try:
@@ -152,7 +152,8 @@ class Queue(object):
                     task.update_status(comm.status)
 
         with self.host_json.open("wt") as fout:
-            fout.write(json.dumps([task.to_json() for task in self.task_s], indent=2))
+            fout.write(json.dumps({"resource": resource, \
+                    "task": [task.to_json() for task in self.task_s]}, indent=2))
 
     def check_resources(self, proc_s):
         cpu_status = True
@@ -225,7 +226,7 @@ class Queue(object):
                 else:
                     cpu_status = True
             #
-            self.to_json()
+            self.to_json([cpu_status, gpu_status])
             #
             proc_s = []
             for proc,task in proc_running:

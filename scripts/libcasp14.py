@@ -203,7 +203,9 @@ def parse_target_list(target_s):
         if len(x) < 2: continue
         #
         target_id = x[0]
-        if x[1].startswith("All"):
+        if target_id.startswith("R"):
+            target_type_s[target_id] = 'REFINE'
+        elif x[1].startswith("All"):
             target_type_s[target_id] = 'HUMAN'
         else:
             target_type_s[target_id] = 'SERVER'

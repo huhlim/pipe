@@ -17,8 +17,7 @@ def prep(job, input_pdb):
     #
     for pdb_fn in input_pdb:
         out_fn = pdb_fn.dirname().fn("%s.scwrl.pdb"%(pdb_fn.name()))
-        if out_fn.status(): 
-            continue
+        #
         input_s = [pdb_fn]
         output_s = [out_fn]
         job.add_task(METHOD, input_s, output_s, use_gpu=False, n_proc=1)

@@ -45,7 +45,8 @@ USERNAME = "heolim"
 #TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
 TBM_EXCLUDE = None
 HH_sequence_database = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
-HH_pdb70_database = "/green/s2/huhlim/work/database/hhsuite/pdb70/current/pdb70"
+HH_pdb70_database = "/green/s2/huhlim/db/hhsuite/pdb70/current/pdb70"
+#HH_pdb70_database = "/green/s2/huhlim/work/database/hhsuite/pdb70/current/pdb70"
 
 class GracefulExit(Exception):
     pass

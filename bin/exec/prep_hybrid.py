@@ -120,6 +120,7 @@ def run_modeller(homolog_home, id, fa_fn, input_pdb, selected):
         cmd.append("--hhdb")
         cmd.append(HH_pdb70_database)
         if len(selected) > 0:
+            print (" ".join(cmd))
             system(cmd, verbose=False, stdout=True, errfile='/dev/null')
         #
         model_s = []
@@ -185,25 +186,40 @@ def select_init(hybrid_home, input_pdb, model_s, tm_s):
             for i in range(N_HYBRID):
                 fout.write("%s\n"%init_s[i%n_init].short())
 
+def use_selected(hybrid_home, input_pdb, selected_home):
+    init_s = [] ; init_s.append(input_pdb)
+    init_s.extend(selected_home.glob("*.pdb"))
+    #
+    hybrid_home.chdir()
+    with hybrid_home.fn("init_s").open("wt") as fout:
+        n_init = len(init_s)
+        for i in range(N_HYBRID):
+            fout.write("%s\n"%init_s[i%n_init].short())
+
 def main():
     id = sys.argv[1]
     input_pdb = path.Path(sys.argv[2])
     #
+    selected_home = path.Dir("selected")
     homolog_home = path.Dir("homolog", build=True)
     hybrid_home = path.Dir("hybrid", build=True)
     #
-    homolog_home.chdir()
-    #
-    fa_fn = homolog_home.fn("%s.fa"%id)
-    if not fa_fn.status():
-        with fa_fn.open("wt") as fout:
-            system(["%s/pdb_seq"%EXEC_HOME, input_pdb.short()], outfile=fout, verbose=False, stdout=True, errfile='/dev/null')
-    #
-    selected = run_hhsearch(homolog_home, id, fa_fn, input_pdb)
-    #
-    model_s, tm_s = run_modeller(homolog_home, id, fa_fn, input_pdb, selected)
-    #
-    select_init(hybrid_home, input_pdb, model_s, tm_s)
+    if not selected_home.status():
+        #
+        homolog_home.chdir()
+        #
+        fa_fn = homolog_home.fn("%s.fa"%id)
+        if not fa_fn.status():
+            with fa_fn.open("wt") as fout:
+                system(["%s/pdb_seq"%EXEC_HOME, input_pdb.short()], outfile=fout, verbose=False, stdout=True, errfile='/dev/null')
+        #
+        selected = run_hhsearch(homolog_home, id, fa_fn, input_pdb)
+        #
+        model_s, tm_s = run_modeller(homolog_home, id, fa_fn, input_pdb, selected)
+        #
+        select_init(hybrid_home, input_pdb, model_s, tm_s)
+    else:
+        use_selected(hybrid_home, input_pdb, selected_home)
 
 if __name__ == '__main__':
     main()

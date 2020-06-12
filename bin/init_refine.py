@@ -22,18 +22,23 @@ def prep(arg):
     assert arg.input_pdb is not None
     #
     def is_continuous_domain(pdb_fn):
-        R = []
+        Rs = [] ; R = [] ; Rs.append(R)
         with pdb_fn.open() as fp:
             for line in fp:
                 if not line.startswith("ATOM"):
+                    if line.startswith("TER"):
+                        R = [] ; Rs.append(R)
                     continue
                 atmName = line[12:16].strip()
                 if atmName == 'CA':
                     R.append([line[30:38], line[38:46], line[46:54]])
-        R = np.array(R, dtype=float)
-        b = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
-        b_max = np.max(b)
-        return b_max < 5.0
+        for R in Rs:
+            R = np.array(R, dtype=float)
+            b = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
+            b_max = np.max(b)
+            if b_max > 5.0:
+                return False
+        return True
     #
     job = Job(arg.work_dir, arg.title, build=True)
     job.run_type = 'refine'

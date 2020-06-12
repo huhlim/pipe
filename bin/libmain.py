@@ -11,6 +11,7 @@ from libcommon import *
 def check_status(job):
     updated = False
     status = True
+    released = []
     for method in job.task:
         task_s = job.get_task(method)
         for index, task in task_s:
@@ -26,9 +27,11 @@ def check_status(job):
             if task_done:
                 updated = True
                 job.update_task_status(method, index, 'DONE')
+                if task['resource'][2] and (task['resource'][2] is not None):
+                    released.append(task['resource'][1])
             else:
                 status = False
-    return updated, status
+    return updated, status, released
 
 def get_resource_taken():
     cpu_s = [] ; gpu_s = {}
@@ -54,7 +57,7 @@ def get_resource_taken():
                     cpu_s.append(host)
     return cpu_s, gpu_s
 
-def assign_resource(job, updated):
+def assign_resource(job, updated, released):
     has_new_job = False
     for method in job.task:
         task_s = job.get_task(method, status='WAIT')
@@ -74,9 +77,17 @@ def assign_resource(job, updated):
     for host in host_s:
         if not host_s[host][0]:
             continue
-        gpu = GPU(host=host, login=HOSTNAME)
-        gpu._visible_devices = host_s[host][1]
-        gpu_host_s[host] = gpu
+        host_json = path.Path("%s/%s.json"%(HOST_HOME, host))
+        with host_json.open() as fp:
+            host_resource = json.load(fp)['resource']
+        gpu_host_s[host] = {}
+        for gpu_id in host_resource[1]:
+            gpu_host_s[host][int(gpu_id)] = host_resource[1][gpu_id]
+    for resource in released:
+        host,gpu_id = resource.split("/")
+        if host not in gpu_host_s:
+            gpu_host_s[host] = {}
+        gpu_host_s[host][int(gpu_id)] = True
     #
     cpu_taken, gpu_taken = get_resource_taken()
     #
@@ -96,15 +107,12 @@ def assign_resource(job, updated):
             continue
         #
         gpu = gpu_host_s[host]
-        usable = gpu.usable(update=True)
+        usable = [gpu_id for gpu_id in gpu if gpu[gpu_id]]
         if host in gpu_taken:
             usable = [x for x in usable if x not in gpu_taken[host]]
         if len(usable) >= 0:
             for gpu_id in usable:
-                if len(host_s[host]) > 2:
-                    gpu_s.append(('%s/%d'%(host, gpu_id), host_s[host][2]))
-                else:
-                    gpu_s.append(('%s/%d'%(host, gpu_id), []))
+                gpu_s.append(('%s/%d'%(host, gpu_id), host_s[host][2]))
     #
     cpu_status = [True for _ in cpu_s]
     gpu_status = [True for _ in gpu_s]
@@ -193,12 +201,12 @@ def submit_task(job, updated):
 
 def run(job, wait_after_run, sleep=30):
     while True:
-        updated, status = check_status(job)
+        updated, status, released = check_status(job)
         if updated: job.to_json()
         if status: break
         #
         if RUNNER_METHOD == 'run':
-            updated = assign_resource(job, updated)
+            updated = assign_resource(job, updated, released)
         elif RUNNER_METHOD == 'submit':
             updated = submit_task(job, updated)
         #

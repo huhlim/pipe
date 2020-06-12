@@ -17,7 +17,7 @@ def print_header():
 <html>
 <head>
     <title>FeigLab CASP14 status</title>
-    <meta http-equiv="refresh" content="1800">
+    <meta http-equiv="refresh" content="600">
 </head>
 ''')
 
@@ -55,8 +55,6 @@ def print_targets(target_s):
         target_type = target['target_type']
         if target_type is None:
             target_type = 'NONE'
-        #elif target_type not in ['HUMAN', 'SERVER']:
-        #    continue
         submit_time = target['submit_time']
         #
         server_exp = submit_time + datetime.timedelta(days=3)
@@ -74,11 +72,11 @@ def print_targets(target_s):
             print ("      <td align='center'>%s</td>"%(target['target_id']))
         print ("      <td align='center'>%s</td>"%(target_type.lower()))
         print ("      <td align='center'>%s</td>"%(submit_time.strftime("%Y-%m-%d")))
-        if target_type in ['HUMAN', 'SERVER']:
+        if target_type in ['HUMAN', 'SERVER', 'REFINE']:
             print ("      <td align='center'>%s</td>"%(server_exp.strftime("%Y-%m-%d")))
         else:
             print ("      <td align='center'>-</td>")
-        if target_type in ['HUMAN']:
+        if target_type in ['HUMAN', 'REFINE']:
             print ("      <td align='center'>%s</td>"%(human_exp.strftime("%Y-%m-%d")))
         else:
             print ("      <td align='center'>-</td>")
@@ -93,7 +91,8 @@ def print_targets(target_s):
                         print ("      <td align='center' bgcolor='e0e0e0'>O</td>")
                 else:
                     print ("      <td align='center' bgcolor='e0e0e0'>O</td>")
-            elif pred != 'FEIG-S' and target_type != 'HUMAN':
+            elif (target['target_id'].startswith("T") and pred != 'FEIG-S' and target_type != 'HUMAN') or \
+                    (target['target_id'].startswith("R") and pred in ['FEIG-R1', 'FEIG-R2', 'FEIG-R3', 'FEIG-R4']):
                 print ("      <td align='center' bgcolor='e0e0e0'>.</td>")
             else:
                 if pred == 'FEIG-S':

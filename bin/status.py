@@ -190,10 +190,16 @@ def remove_from_slaves(json_job_s):
             for index, task in task_s:
                 if task['resource'][1] is None:
                     continue
+                #
                 host = task['resource'][1].split("/")[0]
                 if host not in task_by_host:
                     task_by_host[host] = []
                 task_by_host[host].append((json_job, method, index))
+                #
+                if task['resource'][0] != 'DONE':
+                    job.update_task_host(method, index, None)
+                    job.update_task_status(method, index, "WAIT")
+        job.to_json()
     #
     for host in task_by_host:
         host_json = path.Path("%s/%s.json"%(HOST_HOME, host))
@@ -201,7 +207,8 @@ def remove_from_slaves(json_job_s):
         #
         task_s = []
         with host_json.open('r') as fp:
-            for task in json.load(fp):
+            host_info = json.load(fp)
+            for task in host_info['task']:
                 X = task.split()
                 #
                 status = X[1]
@@ -216,7 +223,8 @@ def remove_from_slaves(json_job_s):
                 else:
                     task_s.append(task)
         with host_json.open("wt") as fout:
-            fout.write(json.dumps(task_s, indent=2))
+            fout.write(json.dumps({'resource': host_info['resource'],\
+                    'task': task_s}, indent=2))
 
 def reallocate_task(json_job, method, index, resource):
     job = Job.from_json(json_job)
@@ -231,7 +239,8 @@ def reallocate_task(json_job, method, index, resource):
         if host_json.status():
             task_s = []
             with host_json.open('r') as fp:
-                for task in json.load(fp):
+                host_info = json.load(fp)
+                for task in host_info['task']:
                     X = task.split()
                     #
                     status = X[1]
@@ -249,7 +258,8 @@ def reallocate_task(json_job, method, index, resource):
                     else:
                         task_s.append(task)
             with host_json.open("wt") as fout:
-                fout.write(json.dumps(task_s, indent=2))
+                fout.write(json.dumps({'resource': host_info['resource'],\
+                        'task': task_s}, indent=2))
     #
     job.update_task_host(method, index, resource)
     job.update_task_status(method, index, "RUN")
@@ -322,7 +332,15 @@ def main():
         else:
             job_s = []
 
-        job_s += [path.Path(fn).path() for fn in arg.json_job_s]
+        for fn in arg.json_job_s:
+            if fn.endswith("job.json"):
+                fn = path.Path(fn)
+                if fn.status():
+                    job_s.append(fn.path())
+            else:
+                job_dir = path.Dir(fn)
+                if job_dir.fn("job.json").status():
+                    job_s.append(job_dir.fn("job.json").path())
         #
         with JOBs_json.open('wt') as fout:
             fout.write(json.dumps(job_s, indent=2))

@@ -192,7 +192,6 @@ def get_A3M(templ_id, pdb70_db, verbose):
         return a3m_fn
     #
     if pdb70_db is 'pdb70':
-        #pdb70_db = '/local/huhlim/db/hhsuite/pdb70/current/pdb70'
         pdb70_db = '/green/s2/huhlim/db/hhsuite/pdb70/current/pdb70'
     #
     cmd = []
