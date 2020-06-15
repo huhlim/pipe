@@ -27,7 +27,7 @@ def check_status(job):
             if task_done:
                 updated = True
                 job.update_task_status(method, index, 'DONE')
-                if task['resource'][2] and (task['resource'][2] is not None):
+                if task['resource'][2] and (task['resource'][1] is not None):
                     released.append(task['resource'][1])
             else:
                 status = False

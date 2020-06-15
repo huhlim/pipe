@@ -36,17 +36,18 @@ def prep_init_models(init_s):
     return prep_s
 
 def build_frag(fa_fn, n_proc):
-    if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
+    name = fa_fn.name()
+    if not os.path.exists("%s.200.3mers"%name) or not os.path.exists("%s.200.9mers"%name):
         cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
         cmd.extend(['-cpus', '%d'%n_proc])
         cmd.append(fa_fn.short())
         system(cmd, errfile='/dev/null')
-    if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
+    if not os.path.exists("%s.200.3mers"%name) or not os.path.exists("%s.200.9mers"%name):
         return False
     if not os.path.exists("t000_.3mers"):
-        os.symlink("input.200.3mers", "t000_.3mers")
+        os.symlink("%s.200.3mers"%name, "t000_.3mers")
     if not os.path.exists("t000_.9mers"):
-        os.symlink("input.200.9mers", "t000_.9mers")
+        os.symlink("%s.200.9mers"%name, "t000_.9mers")
     return True
 
 def prep_run(init_s):

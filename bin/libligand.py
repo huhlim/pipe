@@ -53,7 +53,7 @@ def get_ligand_info(job, wait_after_run, sleep=30):
         #
         pdb_fn = ligand_home.glob("*.pdb")
         if len(pdb_fn) == 0:
-            status = False
+            status = False ; break
         ligand_pdb_fn = pdb_fn[0]
         #
         ligand_s = read_ligand_pdb(ligand_pdb_fn, STDRES, METALs)

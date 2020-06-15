@@ -335,11 +335,11 @@ def main():
         for fn in arg.json_job_s:
             if fn.endswith("job.json"):
                 fn = path.Path(fn)
-                if fn.status():
+                if fn.status() and fn.path() not in job_s:
                     job_s.append(fn.path())
             else:
                 job_dir = path.Dir(fn)
-                if job_dir.fn("job.json").status():
+                if job_dir.fn("job.json").status() and job_dir.fn("job.json").path() not in job_s:
                     job_s.append(job_dir.fn("job.json").path())
         #
         with JOBs_json.open('wt') as fout:
