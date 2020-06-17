@@ -7,6 +7,14 @@ import subprocess as sp
 
 from libcasp14 import *
 
+STATUS_NAMEs = {}
+STATUS_NAMEs['FEIG-S'] = 'status'
+STATUS_NAMEs['FEIG-R1'] = 'status_R1'
+STATUS_NAMEs['FEIG-R2'] = 'status_R2'
+STATUS_NAMEs['FEIG-R3'] = 'status_R3'
+STATUS_NAMEs['FEIG-R4'] = 'status_R4'
+STATUS_NAMEs['FEIG'] = 'status_H'
+
 def send_FINAL_model(predictor, target_id):
     run_home = '%s/%s/%s'%(WORK_HOME, predictor, target_id)
     #
@@ -42,6 +50,15 @@ def main():
     arg = arg.parse_args()
     #
     send_FINAL_model(arg.predictor, arg.target_id)
+    #
+    db, target_s = get_from_db()
+    for target in target_s:
+        if target['target_id'] != arg.target_id:
+            continue
+        status_name = STATUS_NAMEs[arg.predictor]
+        target[status_name] = 'DONE'
+        target['updated'].append(status_name)
+    update_db(db, target_s)
 
 if __name__ == '__main__':
     main()

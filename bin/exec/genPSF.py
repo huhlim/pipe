@@ -46,7 +46,7 @@ def read_pdb(fn):
                     his_s[(segName, resNo)] = 'HSE'
                 #resName_new = resName_update[resName]
                 #line = line[:17] + resName_new + line[20:]
-            if atmName in atmName_update:
+            if (resName in AAs) and (atmName in atmName_update):
                 atmName_new = atmName_update[atmName]
                 line = line[:12] + atmName_new + line[16:]
             if line.startswith("HETA"):
@@ -129,6 +129,7 @@ def write_top_cmd(toppar):
 
 def split_seg(segName_s, seg_s):
     tmpdir = mkdtemp(prefix='genPSF.')
+    tmpdir = os.path.abspath(tmpdir)
     #
     for segName in segName_s:
         out = '%s/%s'%(tmpdir, segName)

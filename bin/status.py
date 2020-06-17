@@ -321,6 +321,8 @@ def main():
             #
             job = Job.from_json(json_job_fn)
             check_status(job)
+            if len(json_job_s) > 1:
+                sys.stdout.write("#" + '-'*99 + '\n')
 
     elif arg.method == 'update':
         return

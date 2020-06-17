@@ -139,8 +139,9 @@ def set_bsite(info, top_fn, ligand_pdb_fn):
     ligand_pdb = mdtraj.load(ligand_pdb_fn.short())
     ligand_pdb = ligand_pdb.atom_slice(ligand_pdb.top.select("element != H"))
     #
+    ligandIndex = ligand_pdb.top.select("resname %s"%(" ".join(info['ligand_s'].keys())))
     proteinIndex = ligand_pdb.top.select("protein")
-    ligandIndex = ligand_pdb.top.select("not protein")
+    proteinIndex = proteinIndex[~np.isin(proteinIndex, ligandIndex)]
     #
     protein = ligand_pdb.atom_slice(proteinIndex)
     ligand = ligand_pdb.atom_slice(ligandIndex)
@@ -287,7 +288,8 @@ def add_ligand(info, pdb_fn, out_fn):
     target_align = calphaIndex[info['bsite_align'][1]]
     #
     ligand_pdb.superpose(target_pdb, atom_indices=ligand_align, ref_atom_indices=target_align)
-    ligand = ligand_pdb.atom_slice(ligand_pdb.top.select("not protein"))
+    ligandIndex = ligand_pdb.top.select("resname %s"%(" ".join(info['ligand_s'].keys())))
+    ligand = ligand_pdb.atom_slice(ligandIndex)
     #
     ligand = add_missing_hydrogen(ligand, info['str_fn_s'])
     #
