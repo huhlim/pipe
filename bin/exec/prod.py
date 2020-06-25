@@ -195,6 +195,9 @@ def run(output_prefix, input_json, options, verbose):
         cmd.extend(['--log', run_home.fn("%s.%d.log"%(output_prefix, k_iter)).short()])
         if 'use_hmr' in options['ff'] and options['ff']['use_hmr']:
             cmd.append("--hmr")
+        if 'use_barostat' in options['md']:
+            cmd.append("--barostat")
+            cmd.append(options['md']['use_barostat'])
         #
         with open("%s.err"%output_prefix, 'wt') as ferr:
             system(cmd, errfile=ferr, verbose=verbose)
