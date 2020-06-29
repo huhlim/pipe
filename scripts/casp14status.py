@@ -3,6 +3,7 @@
 import os
 import sys
 import cgi
+import glob
 import pymysql
 import datetime
 
@@ -31,14 +32,16 @@ def get_targets_from_db():
     db.close()
     return result_s
 
-def print_targets(target_s):
+def print_targets(form, target_s):
     now = datetime.datetime.now()
+    type_filter = form.getvalue("type")
     #
     print ("<table border=1>")
     print ("  <thead>")
     print ("    <tr>")
     print ("      <th rowspan=2 width=120>Target</th>")
-    print ("      <th rowspan=2 width=120>Type</th>")
+    print ("      <th rowspan=2 width=100>Type</th>")
+    print ("      <th rowspan=2 width=80>Native</th>")
     print ("      <th rowspan=2 width=120>Entry date</th>")
     print ("      <th rowspan=2 width=120>Server exp.</th>")
     print ("      <th rowspan=2 width=120>Human exp.</th>")
@@ -50,11 +53,19 @@ def print_targets(target_s):
     print ("    </tr>")
     print ("  </thead>")
     print ('  <tbody style="border:1px solid black;border-collaspse:collapse;border:1px;">')
+    #
+    native_pdb_id = {}
+    with open("/green/s2/huhlim/work/casp14/native/pdb_id") as fp:
+        for line in fp:
+            x = line.strip().split()
+            native_pdb_id[x[0]] = x[1]
 
     for target in sorted(target_s, reverse=True, key=lambda x: x['submit_time']):
         target_type = target['target_type']
         if target_type is None:
             target_type = 'NONE'
+        if (type_filter is not None) and target_type.lower() != type_filter:
+            continue
         submit_time = target['submit_time']
         #
         server_exp = submit_time + datetime.timedelta(days=3)
@@ -71,6 +82,16 @@ def print_targets(target_s):
         else:
             print ("      <td align='center'>%s</td>"%(target['target_id']))
         print ("      <td align='center'>%s</td>"%(target_type.lower()))
+
+        if target['target_id'] in native_pdb_id:
+            qual_fn = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(target['target_id'], target['target_id']))
+            if len(qual_fn) > 0:
+                print ("      <td align='center'><a href='./casp14status.py?qual=%s'>%s</a></td>"%(target['target_id'], native_pdb_id[target['target_id']]))
+            else:
+                print ("      <td align='center'>%s</td>"%(native_pdb_id[target['target_id']]))
+        else:
+            print ("     <td></td>")
+
         print ("      <td align='center'>%s</td>"%(submit_time.strftime("%Y-%m-%d")))
         if target_type in ['HUMAN', 'SERVER', 'REFINE']:
             print ("      <td align='center'>%s</td>"%(server_exp.strftime("%Y-%m-%d")))
@@ -140,6 +161,36 @@ def print_status(form):
                 line = "<span style='font-family: Monospace;'>%s</span>"%line
             print ("%s</br>"%line)
 
+def print_qual(form):
+    id = form.getvalue("qual")
+    #
+    qual_fn_s = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(id, id))
+    qual_fn_s.sort(key=lambda x: int(x.split("/")[-1][:-4].split("-D")[-1]))
+    #
+    for qual_fn in qual_fn_s:
+        with open(qual_fn) as fp:
+            for line in fp:
+                line = line.rstrip()
+                if 'pdb=' in line:
+                    if (not line.endswith("_TS1")) and (not line.endswith("model_1.pdb")) and (not line.endswith("min.pdb")):
+                        continue
+                line = line.replace(" ",'&nbsp')
+                if 'min.pdb' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: red ;'>%s</span>"%line
+                elif '/FEIG-S' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: blue ;'>%s</span>"%line
+                elif '/FEIG' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: green ;'>%s</span>"%line
+                elif 'RaptorX_TS1' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: black ;'>%s</span>"%line
+                elif 'Zhang-Server_TS1' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: black ;'>%s</span>"%line
+                elif 'BAKER-ROSETTASERVER_TS1' in line:
+                    line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: black ;'>%s</span>"%line
+                else:
+                    line = "<span style='font-family: Monospace;'>%s</span>"%line
+                print ("%s</br>"%line)
+
 def print_model(form, target_s):
     id = form.getvalue("model")
     #
@@ -177,12 +228,14 @@ def main():
     print ("<body>")
     if form.has_key("id") and form.has_key("pred"):
         print_status(form)
+    elif form.has_key("qual"):
+        print_qual(form)
     elif form.has_key("model"):
         target_s = get_targets_from_db()
         print_model(form, target_s)
     else:
         target_s = get_targets_from_db()
-        print_targets(target_s)
+        print_targets(form, target_s)
     #
     print ("</body>")
     print ("</html>")

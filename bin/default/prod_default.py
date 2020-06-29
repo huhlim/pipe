@@ -33,7 +33,7 @@ SIMUL_FRAME_INTERVAL = 50.0         # 50 ps
 SIMUL_TRAJ_LENGTH = 10000.0         # 10 ns
 options['md']['dynoutfrq'] = int(SIMUL_FRAME_INTERVAL/options['md']['dyntstep'])
 options['md']['dynsteps'] = int(SIMUL_TRAJ_LENGTH/options['md']['dyntstep'])
-options['md']['time_limit'] = 86400.0
+options['md']['time_limit'] = 3600. * 36
 options['md']['iter'] = 10
 
 options['restraint'] = {}

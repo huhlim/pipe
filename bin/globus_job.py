@@ -94,7 +94,7 @@ def flatten_list(input_list):
 
 def get_job_file_list(job):
     output_s = []
-    output_s.append(job.json_job)
+    #output_s.append(job.json_job)
     #
     if job.run_type == 'refine':
         output_s.extend(job.init_home.glob("*"))

@@ -5,6 +5,7 @@ import sys
 import copy
 import path
 import mdtraj
+import tempfile
 import numpy as np
 import networkx as nx
 
@@ -375,8 +376,15 @@ def split_model(job, pdb_fn):
         mask[job.searched] = job.domain_s[split].mask
         selected = np.where(mask[resNo])[0]
         #
+        tmp_pdb_fn = tempfile.NamedTemporaryFile("wt", suffix='.pdb')
         pdb = pdb0.atom_slice(selected)
-        pdb.save(out_fn.short())
+        pdb.save(tmp_pdb_fn.name)
+        #
+        cmd = []
+        cmd.append("scwrl4")
+        cmd.extend(['-i', tmp_pdb_fn.name])
+        cmd.extend(['-o', out_fn.short()])
+        system(cmd, verbose=False, errfile='/dev/null')
     #
     with job.fn("model_s").open("wt") as fout:
         for out in out_fn_s:

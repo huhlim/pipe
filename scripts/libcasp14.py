@@ -75,6 +75,16 @@ def send_big_target_warning(target, fn):
     with open(fn) as content:
         sp.check_output(cmd, stdin=content)
 
+def send_action_needed_warning(target_id, meta, human):
+    cmd = []
+    cmd.append("mail")
+    cmd.append("-s")
+    cmd.append("Action needed for a target, %s, %s, %s"%(target_id, meta, human))
+    cmd.append("-r")
+    cmd.append(PARAM_MY_EMAIL)
+    cmd.append(PARAM_MY_EMAIL)
+    sp.check_output(cmd, stdin=sp.DEVNULL)
+
 def send_raptorX_multiple_domain_warning(target, pdb_fn_s):
     cmd = []
     cmd.append("mail")
@@ -254,7 +264,8 @@ def get_tarball(target_s):
                 continue
             #
             os.chdir(run_home)
-            sp.call(['tar', 'xzf', tgz_fn, '-C', '..'])
+            if tarball_type != 'stage1.3D':
+                sp.call(['tar', 'xzf', tgz_fn, '-C', '..'])
             #
             for fn in glob.glob("*_TS1"):
                 if fn.startswith("server"):

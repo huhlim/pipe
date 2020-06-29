@@ -45,6 +45,61 @@ def initialize_TR_server(target, use_hybrid=False, use_extensive=False):
         cmd.append("--extensive")
     sp.call(cmd)
 
+def initialize_TR_human(target):
+    pdb_fn = '%s/refine.init/%s.pdb'%(WORK_HOME, target['target_id'])
+    #
+    job_home = '%s/FEIG/%s'%(WORK_HOME, target['target_id'])
+    if not os.path.exists(job_home):
+        os.mkdir(job_home)
+    #
+    init_home = '%s/init'%job_home
+    if not os.path.exists(init_home):
+        os.mkdir(init_home)
+    if not os.path.exists("%s/init.pdb"%init_home):
+        out = sp.check_output(['convpdb.pl', '-out', 'generic', pdb_fn])
+        out_fn = '%s/init.pdb'%init_home
+        with open(out_fn, 'wt') as fout:
+            fout.write(out.decode("utf8"))
+    #
+    server_home = '%s/server'%job_home
+    if not os.path.exists(server_home):
+        os.mkdir(server_home)
+
+    out_fn = "%s/tm.dat"%(server_home)
+    if os.path.exists(out_fn):
+        return
+    #
+    parent_id = 'T%s'%(target['target_id'].split("-")[0][1:].split("v")[0])
+    server_model_s = glob.glob("%s/%s/*_TS?"%(TARBALL_HOME, parent_id))
+    if len(server_model_s) == 0:
+        return
+    server_model_s = [fn for fn in server_model_s if not fn.split("/")[-1].startswith("server")]
+    #
+    cmd = []
+    cmd.append("casp_eval.py")
+    cmd.extend(['-r', pdb_fn])
+    cmd.append("-m")
+    cmd.extend(server_model_s)
+    cmd.append("-simple")
+    cmd.extend(['-j', '32'])
+    #
+    output = sp.check_output(cmd).decode("utf8").split("\n")[:-2]
+    #
+    wrt = [] ; dat = []
+    for line in output:
+        if line.startswith("#"):
+            wrt.append("%s\n"%line)
+        else:
+            tm = float(line.strip().split()[1])
+            dat.append((tm, '%s\n'%line))
+    dat.sort(key=lambda x: x[0], reverse=True)
+    for x in dat:
+        wrt.append(x[1])
+    wrt.append("#\n")
+    #
+    with open(out_fn, 'wt') as fout:
+        fout.writelines(wrt)
+
 def initialize_server_target(target):
     fa_fn = "%s/fa/%s.fa"%(WORK_HOME, target['target_id'])
     if not os.path.exists(fa_fn):
@@ -56,8 +111,9 @@ def initialize_server_target(target):
         initialize_TS_server(target, fa_fn)
     elif target['target_id'].startswith("R"):
         initialize_TR_server(target)
+        initialize_TR_human(target)
 
-def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_extensive=False):
+def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_extensive=False, human=None):
     EXEC = '%s/bin/casp14_refine.py'%PREFMD_HOME
     #
     cmd = [EXEC]
@@ -68,6 +124,9 @@ def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_exten
         cmd.append("--hybrid")
     if use_extensive or OPTION_s[meta].get("use_extensive", False):
         cmd.append("--extensive")
+    if human is not None:
+        send_action_needed_warning(target_id, meta, human)
+        cmd.extend(human.split())
     sp.call(cmd)
 
 def initialize_meta_target(target):
@@ -180,13 +239,13 @@ def run_human(target_s):
                 #
                 if os.path.exists(pdb_fn):
                     if not multiple_domain:
-                        initialize_human_target(target['target_id'], meta, pdb_fn)
+                        initialize_human_target(target['target_id'], meta, pdb_fn, human=target['human'])
                         sys.stdout.write("Running %s %s\n"%(meta, target['target_id']))
                     else:
                         send_raptorX_multiple_domain_warning(target, pdb_fn_s)
                         for i,pdb_fn in enumerate(pdb_fn_s):
                             target_domain_id = '%sd%d'%(target['target_id'], i+1)
-                            initialize_human_target(target_domain_id, meta, pdb_fn)
+                            initialize_human_target(target_domain_id, meta, pdb_fn, human=target['human'])
                             sys.stdout.write("Running %s %s\n"%(meta, target_domain_id))
                     #
                     target[status_name] = 'RUN'

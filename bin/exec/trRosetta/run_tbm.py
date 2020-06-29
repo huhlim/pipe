@@ -42,7 +42,7 @@ def run(fa_fn, n_build=10, n_proc=8, exclude=TBM_EXCLUDE):
             cmd.extend(['--exclude', exclude])
         cmd.extend(OPTIONs[method])
         #
-        if not out_fn.status():
+        if not out_fn.status(size=-1):
             system(cmd)
         #
         summary_s[method] = read_summary(out_fn)

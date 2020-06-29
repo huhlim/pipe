@@ -27,6 +27,17 @@ def prep_init_models(init_s):
         with init.open("wt") as fout:
             system("convpdb.pl -out generic -renumber 1 %s"%init_s[0].short(), outfile=fout, verbose=False)
     #
+    disu_s = []
+    with init.open() as fp:
+        for line in fp:
+            if line.startswith("SSBOND"):
+                disu_s.append("%s %s\n"%(line[17:21], line[31:35]))
+    with open("disulf.def", 'wt') as fout:
+        if len(disu_s) > 0:
+            fout.writelines(disu_s)
+        else:
+            fout.write("1 1\n")
+    #
     for i,model in enumerate(init_s[1:]):
         prep = path.Path("model.%d.pdb"%(i+1))
         if not prep.status():

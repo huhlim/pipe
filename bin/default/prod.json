@@ -22,7 +22,7 @@
     "langfbeta": 0.01,
     "dynoutfrq": 12500,
     "dynsteps": 2500000,
-    "time_limit": 86400.0,
+    "time_limit": 129600.0,
     "iter": 10
   },
   "restart": true,

@@ -154,7 +154,7 @@ def main():
     if not job.has("is_membrane_protein"):
         if job.use_extensive:
             prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
-            n_traj = 10
+            n_traj = 20
         else:
             prod_input = path.Path("%s/prod.json"%DEFAULT_HOME)
             n_traj = 5
