@@ -136,12 +136,10 @@ class Queue(object):
         return task_s
     def to_json(self, resource):
         if self.host_json.status():
-            for i in range(10):
-                try:
-                    comm_s = self.from_json()
-                    break
-                except:
-                    time.sleep(5.0)
+            try:
+                comm_s = self.from_json()
+            except:
+                comm_s = []
             for task in self.task_s:
                 if task.status in ['FINISHED', 'KILLED']:
                     continue

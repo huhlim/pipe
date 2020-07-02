@@ -90,15 +90,27 @@ def initialize_TR_human(target):
         if line.startswith("#"):
             wrt.append("%s\n"%line)
         else:
-            tm = float(line.strip().split()[1])
-            dat.append((tm, '%s\n'%line))
+            x = line.strip().split()
+            gdtha = float(x[1])
+            tm = float(x[3])
+            dat.append((gdtha, tm, '%s\n'%line))
     dat.sort(key=lambda x: x[0], reverse=True)
+    #
+    pdb_fn_s = []
     for x in dat:
-        wrt.append(x[1])
+        wrt.append(x[2])
+        if x[1] > 0.5:
+            pdb_fn_s.append(x[2].strip().split()[-1])
     wrt.append("#\n")
     #
     with open(out_fn, 'wt') as fout:
         fout.writelines(wrt)
+    #
+    model_home = '%s/models'%server_home
+    if not os.path.exists(model_home):
+        os.mkdir(model_home)
+    for pdb_fn in pdb_fn_s[:20]:
+        sp.check_output(['cp', pdb_fn, '%s/%s.pdb'%(model_home, pdb_fn.split("/")[-1])])
 
 def initialize_server_target(target):
     fa_fn = "%s/fa/%s.fa"%(WORK_HOME, target['target_id'])

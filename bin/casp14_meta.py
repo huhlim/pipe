@@ -13,7 +13,6 @@ from libmain import *
 from casp14_sp import wait_refine, paste_refined, update_bfactor
 
 EXEC_REFINE = '%s/casp14_refine_meta.py'%BIN_HOME
-EXEC_PASTE = '%s/trRosetta/paste_domains.py'%EXEC_HOME
 
 N_MODEL_REFINE = 5
 N_MODEL = 5

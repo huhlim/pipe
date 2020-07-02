@@ -62,8 +62,14 @@ def get_hist(n_residue, feature_s):
     for feature_name in feature_s:
         hist[feature_name] = np.zeros((n_residue, n_residue, BINS[feature_name].shape[0]), dtype=np.float32)
         #
-        for i in range(n_residue-1):
-            for j in range(i+1, n_residue):
+        for i in range(n_residue):
+            for j in range(n_residue):
+                if i == j: continue
+                #
+                if feature_name in ['dist', 'omega'] and j < i:
+                    hist[feature_name][j,i] = hist[feature_name][i,j]
+                    continue
+                #
                 h = np.histogram(feature_s[feature_name][:,i,j], bins=BINS[feature_name])[0].astype(np.float32)
                 h /= h.sum()
                 hist[feature_name][i,j,0] = h[-1]
@@ -97,10 +103,15 @@ def get_distr(n_residue, feature_s, mask):
         #
         hist[feature_name] = np.zeros((n_residue, n_residue, bins.shape[0]), dtype=np.float32)
         #
-        for i in range(n_residue-1):
+        for i in range(n_residue):
             if not mask[i]: continue
-            for j in range(i+1, n_residue):
+            for j in range(n_residue):
                 if not mask[j]: continue
+                if i == j: continue
+                #
+                if feature_name in ['dist', 'omega'] and j < i:
+                    hist[feature_name][i,j] = hist[feature_name][j,i]
+                    continue
                 #
                 m = feature_s[feature_name][:,i,j]
                 h0 = func(m, sigma, bins) * space
@@ -173,7 +184,6 @@ def run(title, domain):
     #
     out_s = []
     for method in METHODs:
-        #method_home = domain_home.subdir(method)
         method_home = domain.domain_home().subdir(method)
         summary = read_summary(method_home.fn("%s.templ_s.summary"%(title)))
         weight = 0.1*WEIGHTs[method]
