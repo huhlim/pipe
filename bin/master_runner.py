@@ -29,9 +29,13 @@ def run(verbose):
             continue
         job = Job.from_json(job_fn)
         #
-        if job.run_type not in EXEC:
+        if job.has("run_exec") and (job.run_type not in EXEC):
+            run_exec = job.run_exec
+        elif job.run_type in EXEC:
+            run_exec = EXEC[job.run_type]
+        else:
             continue
-        cmd = [EXEC[job.run_type]]
+        cmd = [run_exec]
         cmd.append(job_fn.path())
         #
         sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))

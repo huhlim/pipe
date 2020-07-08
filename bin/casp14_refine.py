@@ -153,8 +153,11 @@ def main():
     # prod
     if not job.has("is_membrane_protein"):
         if job.use_extensive:
-            prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
-            n_traj = 20
+            if n_init == 1:
+                prod_input = path.Path("%s/prod_ext.json"%DEFAULT_HOME)
+            else:
+                prod_input = path.Path("%s/prod_hybrid_ext.json"%DEFAULT_HOME)
+            n_traj = 10
         else:
             prod_input = path.Path("%s/prod.json"%DEFAULT_HOME)
             n_traj = 5

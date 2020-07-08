@@ -135,7 +135,8 @@ def send_via_globus(remote, job, out_s):
     remote_path = set_remote_path(remote, job.title)
     curr_path = '%s:%s'%(ENDPOINT['huhlim'], os.getcwd())
     #
-    flist = TemporaryFile(mode='w+t')
+    #flist = TemporaryFile(mode='w+t')
+    flist = open("SEND", 'wt')
     for out in out_s:
         fn = out.short()
         flist.write("%s %s\n"%(fn, fn))
@@ -194,11 +195,14 @@ def main():
     if method == 'send':
         output_s = get_job_file_list(job)
         send_via_globus(remote, job, output_s)
+        with job.work_home.fn("SEND").open("wt") as fp:
+            fout.write("%s\n"%remote)
     else:
         output_s = get_remote_file_list(job, remote)
         receive_via_globus(remote, job, output_s)
         #
     finalize_globus(proc_globus)
+    #
 
 if __name__ == '__main__':
     main()
