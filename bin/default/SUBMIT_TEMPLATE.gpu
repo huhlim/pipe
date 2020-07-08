@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+#SBATCH -p feig
+#
+#SBATCH --job-name=JOB_NAME
+#SBATCH --output=JOB_OUTPUT
+#
+#SBATCH --time=72:00:00
+#SBATCH --gres=gpu:1
+
+source activate cu11

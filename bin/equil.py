@@ -137,9 +137,9 @@ def submit(job):
     for index,task in task_s:
         run_home = task['input'][0]
         input_pdb  = task['input'][1]
-        input_json = task['input'][2]
+        input_json = task['input'][-1]
         #
-        if 'MEMBRANE' in task['etc']:
+        if job.has("is_membrane_protein"):
             is_membrane = True
             EXEC = EXEC_MEMBRANE
             input_psf = task['input'][2]

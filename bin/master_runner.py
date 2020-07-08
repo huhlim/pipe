@@ -39,14 +39,18 @@ def run(verbose):
 
 def main():
     arg = argparse.ArgumentParser(prog='master_runner')
+    arg.add_argument('--iter', dest='run_iterative', default=False, action='store_true')
     arg.add_argument('--interval', dest='time_interval', default=60, type=int)
     arg.add_argument('--verbose', dest='verbose', action='store_true', default=False)
     #
     arg = arg.parse_args()
     #
-    while True:
+    if arg.run_iterative:
+        while True:
+            run(arg.verbose)
+            time.sleep(arg.time_interval)
+    else:
         run(arg.verbose)
-        time.sleep(arg.time_interval)
 
 if __name__ == '__main__':
     try:

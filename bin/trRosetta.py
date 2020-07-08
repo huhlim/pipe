@@ -20,7 +20,7 @@ def prep(job, input_fa):
     min_pdb = job.trRosetta_home.fn("build/min.pdb")
     out = job.trRosetta_home.fn("model_s")
     #
-    job.add_task(METHOD, [job.title, input_fa, job.trRosetta_home], [out, min_pdb], use_gpu=False, n_proc=48)
+    job.add_task(METHOD, [job.title, input_fa, job.trRosetta_home], [out, min_pdb], use_gpu=False, n_proc=16)
     #
     job.to_json()
 
@@ -37,9 +37,10 @@ def run(job):
         min_pdb = task['output'][1]
         if min_pdb.status() and output_list.status():
             continue
+        n_proc = task['resource'][3]
         #
         run_home.chdir()
-        cmd = [EXEC, input_fa.short()]
+        cmd = [EXEC, input_fa.short(), '%d'%n_proc]
         system(cmd, verbose=job.verbose)
 
 def submit(job):
@@ -55,12 +56,13 @@ def submit(job):
         min_pdb = task['output'][1]
         if min_pdb.status() and output_list.status():
             continue
+        n_proc = task['resource'][3]
         #
         run_home.chdir()
         #
         cmd = []
         cmd.append("cd %s\n"%run_home)
-        cmd.append(" ".join([EXEC, input_fa.short()]) + '\n')
+        cmd.append(" ".join([EXEC, input_fa.short(), '%d'%n_proc]) + '\n')
         #
         job.write_submit_script(METHOD, index, cmd)
 

@@ -22,10 +22,12 @@ HOST_HOME = '%s/hosts'%BIN_HOME
 JOBs_json = path.Path("%s/job_s.json"%HOST_HOME)
 HOSTs_json = path.Path("%s/host_s.json"%HOST_HOME)
 
-RUNNER_METHOD = 'run'
-#RUNNER_METHOD = 'submit'
+#RUNNER_METHOD = 'run'
+RUNNER_METHOD = 'submit'
 
-SUBMIT_TEMPLATE = '%s/SUBMIT_TEMPLATE'%DEFAULT_HOME
+SUBMIT_TEMPLATE_GPU = '%s/SUBMIT_TEMPLATE.gpu'%DEFAULT_HOME
+SUBMIT_TEMPLATE_CPU = '%s/SUBMIT_TEMPLATE.cpu'%DEFAULT_HOME
+SUBMIT_MAX_PROC = 16
 
 CHARMMEXEC = '/home/huhlim/apps/charmm/current/charmm'
 if os.path.exists("/usr/bin/mpirun"):
@@ -40,7 +42,7 @@ N_MODEL = 5
 MAX_ERROR = 20
 
 MAX_SUBMIT = 10000
-USERNAME = "heolim"
+USERNAME = "huhlim"
 
 #TBM_EXCLUDE = '%s/exclude.casp13'%DEFAULT_HOME
 TBM_EXCLUDE = None
@@ -215,7 +217,7 @@ class Job(dict):
         #
         # status allocated_resource use_gpu n_proc
         self.task[method].append({\
-                 'resource': ["WAIT", None, kwarg.get("use_gpu", False), kwarg.get("n_proc", 1)],\
+                 'resource': ["WAIT", None, kwarg.get("use_gpu", False), min(SUBMIT_MAX_PROC, kwarg.get("n_proc", 1))],\
                  'input': input_arg, \
                  'output': output_arg, \
                  'etc': arg\
@@ -240,11 +242,20 @@ class Job(dict):
     def update_task_host(self, method, index, host):
         self.task[method][index]['resource'][1] = host
     def write_submit_script(self, method, index, cmd_s):
-        with open(SUBMIT_TEMPLATE) as fp:
-            que = fp.read()
+        task_resource = self.get_task(method)[index][1]['resource']
+        is_gpu = task_resource[2]
+        if is_gpu:
+            with open(SUBMIT_TEMPLATE_GPU) as fp:
+                que = fp.read()
+        else:
+            with open(SUBMIT_TEMPLATE_CPU) as fp:
+                que = fp.read()
         job_name = '%s.%s.%d'%(self.title, method, index)
         que = que.replace("JOB_NAME", job_name)
         que = que.replace("JOB_OUTPUT", self.queue_home.fn("%s.log"%(job_name)).path())
+        if not is_gpu:
+            n_proc = task_resource[3]
+            que = que.replace("NUM_PROC", '%d'%n_proc)
         #
         que_fn = self.queue_home.fn("%s.sh"%job_name)
         with que_fn.open("wt") as fout:

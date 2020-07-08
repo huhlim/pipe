@@ -29,11 +29,12 @@ from build_model import run as build_model
 from plot_contact import run as plot_contact
 
 class Job(object):
-    def __init__(self, run_home, fa_fn):
+    def __init__(self, run_home, fa_fn, n_proc=PARAM_N_PROC):
         self.fa_fn0 = path.Path(fa_fn)
         self.title = path.name(fa_fn)
         self.run_home = path.Dir(run_home, build=True)
         self.domain_s = BreadthFirstSearch()
+        self.n_proc = n_proc
     def __repr__(self):
         return self.title
     def initialize_run(self, forced=False):
@@ -314,10 +315,10 @@ def run(job):
             domain.write_fasta(fa_fn)
         #
         # TBM-search
-        tbm_s = run_tbm(fa_fn, n_proc=PARAM_N_PROC)
+        tbm_s = run_tbm(fa_fn, n_proc=job.n_proc)
         #
         # MSA generation
-        msa_s = build_msa(fa_fn, n_proc=PARAM_N_PROC)
+        msa_s = build_msa(fa_fn, n_proc=job.n_proc)
         #
         # trRosetta
         trRosetta = run_trRosetta(msa_s['trRosetta'])
@@ -393,13 +394,17 @@ def split_model(job, pdb_fn):
 
 def main():
     if len(sys.argv) == 1:
-        sys.stderr.write("USAGE: %s [FA]\n"%__file__)
+        sys.stderr.write("USAGE: %s [FA] (n_proc)\n"%__file__)
         return
     #
     run_home = os.getcwd()
     in_fa = sys.argv[1]
+    if len(sys.argv) > 2:
+        n_proc = int(sys.argv[2])
+    else:
+        n_proc = PARAM_N_PROC
     #
-    job = Job(run_home, in_fa)
+    job = Job(run_home, in_fa, n_proc=n_proc)
     if not job.initialize_run():
         return
     #
