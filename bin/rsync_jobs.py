@@ -68,9 +68,18 @@ def get_job_file_list(job):
             refine_json_job = refine_home.fn("job.json")
             refine_job = Job.from_json(refine_json_job)
             output_s.extend(get_job_file_list(refine_job))
+    #
+    output_s.extend(job.work_home.subdir("model").glob("*"))
+    output_s.extend(job.work_home.subdir("final").glob("*"))
     return output_s
 
 def receive_via_rsync(remote, job):
+    with open("SEND", 'wt') as fout:
+        hostname, work_home = remote.split(":", maxsplit=1)
+        cmd = ['ssh', hostname, '$PREFMD_HOME/rsync_jobs.py output %s/%s/job.json'%(work_home, job.title)]
+        output_s = sp.check_output(cmd)
+        fout.write(output_s)
+    sys.exit()
     cmd = []
     cmd.append("rsync")
     cmd.append("-ar")
@@ -95,22 +104,29 @@ def send_via_rsync(remote, job, output_s):
     sp.call(cmd)
 
 def main():
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         sys.stderr.write("usage: %s [METHOD] [REMOTE] [JOB]\n"%__file__)
         return
     #
     method = sys.argv[1]
-    if method not in ['send', 'receive']:
+    if method not in ['send', 'receive', 'output']:
         sys.stderr.write("error: [METHOD = (send/receive)]\n")
         return
-    remote = sys.argv[2]
-    json_job = path.Path(sys.argv[3])
+    if method != 'output':
+        remote = sys.argv[2]
+        json_job = path.Path(sys.argv[3])
+    else:
+        json_job = path.Path(sys.argv[2])
     #
     job = Job.from_json(json_job)
     cwd = os.getcwd()
     job.work_home.chdir()
     #
-    if method == 'send':
+    if method == 'output':
+        output_s = get_job_file_list(job)
+        for output in output_s:
+            sys.stdout.write('%s\n'%output)
+    elif method == 'send':
         output_s = get_job_file_list(job)
         send_via_rsync(remote, job, output_s)
     else:
