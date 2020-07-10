@@ -76,8 +76,8 @@ def get_job_file_list(job):
 def receive_via_rsync(remote, job):
     with open("SEND", 'wt') as fout:
         hostname, work_home = remote.split(":", maxsplit=1)
-        cmd = ['ssh', hostname, '$PREFMD_HOME/rsync_jobs.py output %s/%s/job.json'%(work_home, job.title)]
-        output_s = sp.check_output(cmd)
+        cmd = ['ssh', hostname, '$PREFMD_HOME/bin/rsync_jobs.py output %s/%s/job.json'%(work_home, job.title)]
+        output_s = sp.check_output(cmd).decode("utf8")
         fout.write(output_s)
     sys.exit()
     cmd = []
@@ -125,7 +125,7 @@ def main():
     if method == 'output':
         output_s = get_job_file_list(job)
         for output in output_s:
-            sys.stdout.write('%s\n'%output)
+            sys.stdout.write('%s\n'%output.short())
     elif method == 'send':
         output_s = get_job_file_list(job)
         send_via_rsync(remote, job, output_s)
