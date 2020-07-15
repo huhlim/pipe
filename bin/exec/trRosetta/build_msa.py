@@ -126,6 +126,7 @@ def run_trRosetta_HMMER_search(title, in_msa, n_proc=PARAM_N_PROC):
     cmd.extend(['-o', "%s.hmmer.log"%title])
     cmd.extend(['-A', out_sto.short()])
     cmd.extend(OPTIONs['trRosetta']['HMMsearch'])
+    cmd.extend(['--cpu', '%d'%n_proc])
     cmd.append(hmm_fn.short())
     cmd.append(OPTIONs['trRosetta']['HMMsearch_database'])
     if not out_sto.status():

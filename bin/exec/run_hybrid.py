@@ -48,22 +48,25 @@ def prep_init_models(init_s):
     return prep_s
 
 def build_frag(fa_fn, n_proc):
-    ss2_fn = path.Path("%s.ss2"%fa_fn.name())
-    if not ss2_fn.status():
-        cmd = [PSIPRED_EXEC, fa_fn.short()]
-        system(cmd, errfile='/dev/null')
-    if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
+    name = fa_fn.name()
+    #
+    if not os.path.exists("%s.200.3mers"%name) or not os.path.exists("%s.200.9mers"%name):
+        ss2_fn = path.Path("%s.ss2"%name)
+        if not ss2_fn.status():
+            cmd = [PSIPRED_EXEC, fa_fn.short()]
+            system(cmd, errfile='/dev/null')
+        #
         cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
         cmd.extend(['-cpus', '%d'%n_proc])
         cmd.extend(['-psipredfile', ss2_fn.path()])
         cmd.append(fa_fn.short())
         system(cmd, errfile='/dev/null')
-    if not os.path.exists("input.200.3mers") or not os.path.exists("input.200.9mers"):
+    if not os.path.exists("%s.200.3mers"%name) or not os.path.exists("%s.200.9mers"%name):
         return False
     if not os.path.exists("t000_.3mers"):
-        os.symlink("input.200.3mers", "t000_.3mers")
+        os.symlink("%s.200.3mers"%name, "t000_.3mers")
     if not os.path.exists("t000_.9mers"):
-        os.symlink("input.200.9mers", "t000_.9mers")
+        os.symlink("%s.200.9mers"%name, "t000_.9mers")
     return True
 
 def prep_run(init_s):
@@ -119,12 +122,25 @@ def main():
     #
     init_s = prep_init_models(init_s)
     #
+    fa_fn0 = hybrid_home.fn("input0.fa")
     fa_fn = hybrid_home.fn("input.fa")
-    if not fa_fn.status():
+    if (not fa_fn0.status()) or (not fa_fn.status()):
+        out_s = system(["%s/pdb_seq"%EXEC_HOME, init_s[0].short()], stdout=True, verbose=False).split("\n")[:-1]
+        with fa_fn0.open("wt") as fout:
+            fout.write(">init\n")
+            for line in out_s:
+                if not line.startswith(">"):
+                    fout.write("%s\n"%line)
         with fa_fn.open("wt") as fout:
-            system(["%s/pdb_seq"%EXEC_HOME, init_s[0].short()], outfile=fout, verbose=False)
+            fout.write(">init\n")
+            for line in out_s[1:]:
+                if line.startswith(">"):
+                    fout.write("/\n")
+                else:
+                    fout.write("%s"%line)
+            fout.write("\n")
     #
-    if not build_frag(fa_fn, n_proc):
+    if not build_frag(fa_fn0, n_proc):
         sys.exit("Failed to build fragments\n")
     #
     prep_run(init_s)
