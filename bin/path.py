@@ -101,7 +101,10 @@ class Path:
 class Dir(Path):
     def __init__(self, path, build=False):
         self._isdir = True
-        self._path = os.path.realpath(path)
+        if not isinstance(path, Path):
+            self._path = os.path.realpath(path)
+        else:
+            self._path = path._path
         if build:
             self.build()
     def build(self):

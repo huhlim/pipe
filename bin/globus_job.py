@@ -24,6 +24,11 @@ EXPAND_s = {}
 EXPAND_s['hybrid'] = 'model_s'
 EXPAND_s['average'] = 'pdb_s'
 
+class FakeJob(object):
+    def __init__(self, fn):
+        self.work_home = path.Dir(fn)
+        self.title = fn.split("/")[-1]
+
 def check_output(cmd):
     return sp.check_output(cmd).decode("utf-8")
 
@@ -186,7 +191,13 @@ def main():
     remote = sys.argv[2]
     json_job = path.Path(sys.argv[3])
     #
-    job = Job.from_json(json_job)
+    if json_job.endswith("job.json"):
+        job = Job.from_json(json_job)
+    elif method != 'receive':
+        sys.exit("job.json MUST BE PROVIDED")
+    else:
+        job = FakeJob(json_job)
+    #
     cwd = os.getcwd()
     job.work_home.chdir()
     #

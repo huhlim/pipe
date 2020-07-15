@@ -11,6 +11,11 @@ EXPAND_s = {}
 EXPAND_s['hybrid'] = 'model_s'
 EXPAND_s['average'] = 'pdb_s'
 
+class FakeJob(object):
+    def __init__(self, fn):
+        self.work_home = path.Dir(fn)
+        self.title = fn.split("/")[-1]
+
 ### THIS IS DIFFERENT FROM libmain.get_outputs
 def get_outputs(job, method):
     task_s = job.get_task(method, status='DONE')
@@ -69,6 +74,14 @@ def get_job_file_list(job):
             refine_job = Job.from_json(refine_json_job)
             output_s.extend(get_job_file_list(refine_job))
     #
+    if job.run_type in ['refine', 'refine_remote']:
+        if job.has("is_oligomer") and job.work_home.subdir("oligomer").status():
+            output_s.append(job.work_home.subdir("oligomer"))
+        if job.has("is_membrane_protein") and job.work_home.subdir("membrane").status():
+            output_s.append(job.work_home.subdir("membrane"))
+        if job.has("has_ligand") and job.work_home.subdir("ligand").status():
+            output_s.append(job.work_home.subdir("ligand"))
+    #
     output_s.extend(job.work_home.subdir("model").glob("*"))
     output_s.extend(job.work_home.subdir("final").glob("*"))
     return output_s
@@ -117,7 +130,13 @@ def main():
     else:
         json_job = path.Path(sys.argv[2])
     #
-    job = Job.from_json(json_job)
+    if json_job.endswith("job.json"):
+        job = Job.from_json(json_job)
+    elif method != 'receive':
+        sys.exit("job.json MUST BE PROVIDED")
+    else:
+        job = FakeJob(json_job)
+    #
     cwd = os.getcwd()
     job.work_home.chdir()
     #
