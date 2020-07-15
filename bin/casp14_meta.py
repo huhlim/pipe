@@ -23,7 +23,15 @@ def check_meta_tasks(meta_s, wait_after_run, sleep=30):
         #
         for meta in meta_s:
             method = 'prod'
+            if len(meta.get_task(method)) == 0:
+                status = False ; break
+
+            method = 'prod'
             if len(meta.get_task(method, not_status='DONE')) > 0:
+                status = False ; break
+            #
+            method = 'score'
+            if len(meta.get_task(method)) == 0:
                 status = False ; break
             #
             method = 'score'
