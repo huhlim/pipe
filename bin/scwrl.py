@@ -45,7 +45,7 @@ def run(job):
         system(cmd, stdout=True)
 
 def submit(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
+    task_s = job.get_task(METHOD, status='SUBMIT') 
     if len(task_s) == 0:
         return
     #
