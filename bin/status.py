@@ -95,7 +95,7 @@ def check_status(job):
                 wrt = []
                 wrt.append("%-10s"%job.title)
                 wrt.append('%-12s'%method)
-                wrt.append("%-6s"%status)
+                wrt.append("%-10s"%status)
                 wrt.append("%-12s"%host)
                 wrt.append("%s"%(run_home.short()))
                 wrt.append("%5.1f [%%]"%progress)
@@ -117,7 +117,7 @@ def check_status(job):
                 wrt = []
                 wrt.append("%-10s"%job.title)
                 wrt.append('%-12s'%method)
-                wrt.append("%-6s"%status)
+                wrt.append("%-10s"%status)
                 wrt.append("%-12s"%host)
                 wrt.append("%s"%input)
                 sys.stdout.write("  ".join(wrt) + '\n')
