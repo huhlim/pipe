@@ -111,11 +111,11 @@ def submit(job):
                 line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
             options['ssbond'].append(line)
         #
-        options['input_pdb'] = input_pdb
-        options['input_json'] = input_json
-        #
         run_home.build()
         run_home.chdir()
+        #
+        options['input_pdb'] = input_pdb.short()
+        options['input_json'] = input_json.short()
         #
         run_json = run_home.fn("input.json")
         if not run_json.status():
@@ -129,7 +129,7 @@ def submit(job):
         cmd.extend(['--input', run_json.short()])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
-        cmd_s.append(" ".join(cmd_s) + '\n')
+        cmd_s.append(" ".join(cmd) + '\n')
         #
         job.write_submit_script(METHOD, index, cmd_s)
         #
