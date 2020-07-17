@@ -1,0 +1,34 @@
+{
+  "ff": {
+    "use_modified_CMAP": false,
+    "toppar": [
+      "/home/huhlim/work/ff/c36m/par_all36m_prot.prm",
+      "/home/huhlim/work/ff/c36m/top_all36_prot.rtf",
+      "/home/huhlim/work/ff/c36m/toppar_water_ions.str",
+      "/home/huhlim/work/ff/c36m/toppar_ions_won.str"
+    ],
+    "cgenff": [
+      "/home/huhlim/work/ff/cgenff/top_all36_cgenff.rtf",
+      "/home/huhlim/work/ff/cgenff/par_all36_cgenff.prm"
+    ]
+  },
+  "openmm": {
+    "platform": "CUDA"
+  },
+  "md": {
+    "dyntstep": 0.002,
+    "dyntemp": 298.15,
+    "lang": true,
+    "langfbeta": 0.01,
+    "dynoutfrq": 12500,
+    "dynsteps": 5000000,
+    "iter": 5
+  },
+  "restart": true,
+  "restraint": {
+    "mode": "Cartesian",
+    "Cartesian": [
+      0.025
+    ]
+  }
+}
