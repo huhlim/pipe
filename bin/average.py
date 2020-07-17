@@ -118,7 +118,6 @@ def submit(job):
         return
     #
     for index,task in task_s:
-        if task['resource'][1].split("/")[1] != gpu_id: continue
         input_s = task['input']
         output_prefix = input_s[0]
         rule = input_s[1]
@@ -146,16 +145,19 @@ def submit(job):
             fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd_s = []
-        cmd_s.append("cd %s\n"%average_home)
+        cmd_s.append("cd %s\n"%job.average_home)
         cmd = [EXEC, output_prefix, job.top_fn.short()]
         cmd.extend(['--input', input_json.short()])
+        cmd.append("\\\n    ")
         cmd.append('--dcd')
         cmd.extend([fn.short() for fn in input_dcd_s])
-        if rule in ['score', 'casp12']:
+        if rule[0] in ['score', 'casp12']:
+            cmd.append("\\\n    ")
             cmd.append('--score')
             cmd.extend([fn.short() for fn in input_s[4]])
-        if rule in ['casp12']:
-            cmd.append('--score')
+        if rule[0] in ['casp12']:
+            cmd.append("\\\n    ")
+            cmd.append('--qual')
             cmd.extend([fn.short() for fn in input_s[5]])
         cmd_s.append(" ".join(cmd) + '\n')
         #
