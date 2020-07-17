@@ -69,7 +69,8 @@ def build_restraint(output_prefix, options, verbose):
                 wrt.append(format%(ca, par[0], par[1]))
         with open("%s.rsr"%output_prefix, 'wt') as fout:
             fout.writelines(wrt)
-        rsr_fn_s.append("%s.rsr"%output_prefix)
+        for _ in range(options['md']['iter']):
+            rsr_fn_s.append("%s.rsr"%output_prefix)
 
     elif options['restraint']['mode'] == 'distance':
         wrt = []
@@ -88,7 +89,8 @@ def build_restraint(output_prefix, options, verbose):
                 wrt.append(format%(ca_i, ca_j, par[0], d, par[1]))
         with open("%s.rsr"%output_prefix, 'wt') as fout:
             fout.writelines(wrt)
-        rsr_fn_s.append("%s.rsr"%output_prefix)
+        for _ in range(options['md']['iter']):
+            rsr_fn_s.append("%s.rsr"%output_prefix)
 
     elif options['restraint']['mode'] == 'dual.anneal':
         rsr_C = build_restraint_Cartesian(ref)
