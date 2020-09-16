@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RWHOME=/apps/rwplus
+RWHOME=$HOME/apps/rwplus
 EXEC=./calRWplus
 
 n=$#

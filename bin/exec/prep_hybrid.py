@@ -59,6 +59,7 @@ def run_hhsearch(homolog_home, id, fa_fn, input_pdb):
         cmd = ['%s/run_hhpred.py'%EXEC_HOME, fa_fn.short()]
         cmd.extend(['-p', 'simple'])
         cmd.extend(['-d', HH_sequence_database])
+        print (" ".join(cmd))
         system(cmd, verbose=False, stdout=True, errfile='/dev/null')
     #
     hh_s = libhhsuite.parse_hhr(hh_fn.short())

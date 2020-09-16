@@ -5,7 +5,7 @@ import sys
 import argparse
 import subprocess as sp
 
-import libfile
+from path import name
 from seqName import to_one_letter
 
 PDBDIR='/blue/pdb'
@@ -85,7 +85,7 @@ def main():
         if arg.ignore:
             seq[chain_id] = seq[chain_id].replace("X",'')
     #
-    title = libfile.name(arg.pdb_fn)
+    title = name(arg.pdb_fn)
     output = []
     for chain_id in chain_s:
         if chain_id != '' and '_' not in title and len(chain_s) != 1:

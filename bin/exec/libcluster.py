@@ -7,8 +7,9 @@ import mdtraj
 import argparse
 import numpy as np
 from sklearn.cluster import DBSCAN
+from libmd_contact import get_dist_distr
 
-def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0):
+def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
     if subsample > 0:
         subsampled = np.zeros(len(frame_s), dtype=bool)
         subsampled[::subsample] = True
@@ -52,7 +53,11 @@ def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0):
         xyz = superposed.xyz.mean(axis=0)
         averaged = copy.deepcopy(center)
         averaged.xyz = xyz
-        cluster_s.append((n_member, center, averaged))
+        if get_distr:
+            distr = get_dist_distr(superposed)
+            cluster_s.append((n_member, center, averaged, distr))
+        else:
+            cluster_s.append((n_member, center, averaged))
     cluster_s.sort(key=lambda x: x[0], reverse=True)
     return cluster_s
 

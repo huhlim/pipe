@@ -9,8 +9,8 @@ import numpy as np
 
 from libcommon import *
 
-METHOD = 'average'
-EXEC = '%s/average.py'%EXEC_HOME
+METHOD = 'average_d'
+EXEC = '%s/average_d.py'%EXEC_HOME
 
 PARAM = {}
 PARAM['score'] = ("RWplus", 25.0)
@@ -27,8 +27,8 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
     #
     score_s = job.get_task("score")
     #
-    job.average_home = job.work_home.subdir("average", build=True)
-    job.average_home.chdir()
+    job.average_d_home = job.work_home.subdir("average_d", build=True)
+    job.average_d_home.chdir()
     #
     if rule == 'score':
         input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], []]
@@ -62,14 +62,14 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
         if rule in ['casp12']:
             input_s[5].append(score['output'][1])
     #
-    output_s = [job.average_home.fn("%s.pdb_s"%output_prefix)]
+    output_s = [job.average_d_home.fn("%s.pdb_s"%output_prefix)]
     job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
     #
     job.to_json()
 
 def prep_from_msm(job, output_prefix, msm_fn, input_json):
-    job.average_home = job.work_home.subdir("average", build=True)
-    job.average_home.chdir()
+    job.average_d_home = job.work_home.subdir("average_d", build=True)
+    job.average_d_home.chdir()
     #
     rule = 'msm'
     input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], [], msm_fn]
@@ -94,7 +94,7 @@ def prep_from_msm(job, output_prefix, msm_fn, input_json):
         input_s[3].append(traj_fn)
         input_s[4].append(score['output'][0])
     #
-    output_s = [job.average_home.fn("%s.pdb_s"%output_prefix)]
+    output_s = [job.average_d_home.fn("%s.pdb_s"%output_prefix)]
     job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
     #
     job.to_json()
@@ -127,9 +127,9 @@ def run(job):
             options['ssbond'].append(line)
         options['rule'] = rule
         #
-        job.average_home.chdir()
+        job.average_d_home.chdir()
         #
-        input_json = job.average_home.fn("%s.json"%output_prefix)
+        input_json = job.average_d_home.fn("%s.json"%output_prefix)
         with input_json.open("wt") as fout:
             fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
@@ -174,14 +174,14 @@ def submit(job):
             options['ssbond'].append(line)
         options['rule'] = rule
         #
-        job.average_home.chdir()
+        job.average_d_home.chdir()
         #
-        input_json = job.average_home.fn("%s.json"%output_prefix)
+        input_json = job.average_d_home.fn("%s.json"%output_prefix)
         with input_json.open("wt") as fout:
             fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd_s = []
-        cmd_s.append("cd %s\n"%job.average_home)
+        cmd_s.append("cd %s\n"%job.average_d_home)
         cmd = [EXEC, output_prefix, job.top_fn.short()]
         cmd.extend(['--input', input_json.short()])
         if rule[0] == 'msm':

@@ -38,6 +38,12 @@ def run(arg, options):
 
     ff = CharmmParameterSet(*ff_file_s)
     platform = Platform.getPlatformByName(options['openmm']['platform'])
+    properties = {}
+    cuda_devices = os.getenv("CUDA_VISIBLE_DEVICES")
+    if cuda_devices is not None:
+        n_gpu = len(cuda_devices.split(","))
+    if n_gpu > 1:
+        properties['DeviceIndex'] = ",".join(['%d'%index for index in range(n_gpu)])
     #
     if arg.use_hmr:
         sys = psf.createSystem(ff, \
@@ -79,7 +85,7 @@ def run(arg, options):
                                     options['md']['langfbeta']/picosecond, \
                                     options['md']['dyntstep']*picosecond)
     #
-    simulation = Simulation(psf.topology, sys, integrator, platform)
+    simulation = Simulation(psf.topology, sys, integrator, platform, properties)
     simulation.context.setPositions(crd)
     #
     if arg.restart_fn is not None:

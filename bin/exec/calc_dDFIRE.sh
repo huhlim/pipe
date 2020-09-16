@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DATADIR=/apps/dfire/
-EXEC=/apps/dfire/dDFIRE
+export DATADIR=$HOME/apps/dfire/
+EXEC=$HOME/apps/dfire/dDFIRE
 
 n=$#
 

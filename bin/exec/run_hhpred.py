@@ -22,9 +22,7 @@ def run_hhblits(fa_fn, db, prefix, n_proc, verbose):
     if os.path.exists('%s_a3m.ffdata'%db):
         db_fn = db
     elif db in ['uniclust30', 'uc30']:
-        db_fn = '/green/s2/huhlim/db/hhsuite/uc30/current/uc30'
-    elif db in ['uniprot20', 'ur20']:
-        db_fn = '/green/s2/huhlim/db/hhsuite/ur20/current/ur20'
+        db_fn = '/feig/s1/huhlim/db/hhsuite/uc30/current/uc30'
     else:
         sys.stderr.write("ERROR: Cannot identify the HHblits database\n")
         sys.exit()
@@ -66,8 +64,7 @@ def run_hhsearch(a3m_fn, db, prefix, use_global, use_viterbi, n_proc, verbose):
         return out_fn
     #
     if db is 'pdb70':
-        #db_fn = '/local/huhlim/db/hhsuite/pdb70/current/pdb70'
-        db_fn = '/green/s2/huhlim/db/hhsuite/pdb70/current/pdb70'
+        db_fn = '/feig/s1/huhlim/db/hhsuite/pdb70/current/pdb70'
     else:
         if os.path.exists('%s_a3m.ffdata'%db):
             db_fn = db
@@ -130,8 +127,7 @@ def build_model(out_prefix, glo_fn, fa_fn, pdb70_db, n_proc, allow_fix_build, ve
         return out_fn
     #
     if pdb70_db is 'pdb70':
-        #pdb70_db = '/local/huhlim/db/hhsuite/pdb70/current/pdb70'
-        pdb70_db = '/green/s2/huhlim/db/hhsuite/pdb70/current/pdb70'
+        pdb70_db = '/feig/s1/huhlim/db/hhsuite/pdb70/current/pdb70'
     #
     cmd = []
     cmd.append("%s/hh_msa.py"%EXEC_HOME)
@@ -192,7 +188,7 @@ def get_A3M(templ_id, pdb70_db, verbose):
         return a3m_fn
     #
     if pdb70_db is 'pdb70':
-        pdb70_db = '/green/s2/huhlim/db/hhsuite/pdb70/current/pdb70'
+        pdb70_db = '/feig/s1/huhlim/db/hhsuite/pdb70/current/pdb70'
     #
     cmd = []
     cmd.append("ffindex_get")

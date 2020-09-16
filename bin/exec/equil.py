@@ -32,8 +32,11 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     #
     pdb = mdtraj.load(solv_fn.short())
     #
-    box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
-    boxsize = np.max(box, 0) - np.min(box, 0)
+    if options['md']['solvate'] > 0.0:  # solvated via libmd.solvate_pdb
+        box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
+        boxsize = np.max(box, 0) - np.min(box, 0)
+    else:   # solvated prior to the script
+        boxsize = pdb.unitcell_lengths[0]
     psf.setBox(*boxsize)
     #
     ff_file_s = options['ff']['toppar']
@@ -116,6 +119,10 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                                         getEnergy=True, \
                                         enforcePeriodicBox=True)
     #
+    chk_fn = '%s.equil.restart'%(output_prefix)
+    with open("%s.pkl"%chk_fn, 'wb') as fout:
+        pickle.dump(state, fout)
+    #
     boxinfo = state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer)
     #
     equil_pdb_fn = path.Path('%s.equil.pdb'%output_prefix)
@@ -136,10 +143,6 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                 for line in options['ssbond']:
                     fout.write("%s\n"%line)
             fout.write(output)
-    #
-    chk_fn = '%s.equil.restart'%(output_prefix)
-    with open("%s.pkl"%chk_fn, 'wb') as fout:
-        pickle.dump(state, fout)
 
 def run(input_pdb, output_prefix, options, verbose, nonstd):
     tempfile_s = []
@@ -152,11 +155,14 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
         init_pdb = input_pdb
     #
     pdb = mdtraj.load(init_pdb.short())
-    orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
+    if options['md']['solvate'] > 0.0:
+        orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
+        tempfile_s.extend([orient_fn, solv_fn])
+    else:
+        solv_fn = init_pdb
     if 'ligand' in options:
         update_ligand_name(orient_fn, options['ligand']['ligand_s'])
         update_ligand_name(solv_fn, options['ligand']['ligand_s'])
-    tempfile_s.extend([orient_fn, solv_fn])
     #
     psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, verbose)
     tempfile_s.append(crd_fn)

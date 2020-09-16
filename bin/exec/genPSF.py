@@ -86,6 +86,14 @@ def read_pdb(fn):
             disu_out.append((seg_0, disu[0][1], seg_1, disu[1][1]))
     return segName_s, seg_s, disu_out
 
+def parse_patch(args):
+    patch_s = []
+    for arg in args:
+        patch,res = arg.split(":")
+        segName,resNo = res.split(".")
+        patch_s.append((patch, segName, resNo))
+    return patch_s
+
 def write_top_cmd(toppar):
     rtf_s = [] ; prm_s = [] ; str_s = []
     for fn in toppar:
@@ -140,7 +148,7 @@ def split_seg(segName_s, seg_s):
         seg_s[segName].append(out)
     return tmpdir
 
-def write_pdb_cmd(tmpdir, segName_s, seg_s, disu_s, write_crd=False):
+def write_pdb_cmd(tmpdir, segName_s, seg_s, disu_s, patch_s, write_crd=False, blocked=False, terminal=['ACE', 'CT3']):
     cmd = []
     for segName in segName_s:
         if seg_s[segName][0] != 0: continue
@@ -148,10 +156,16 @@ def write_pdb_cmd(tmpdir, segName_s, seg_s, disu_s, write_crd=False):
         fn = seg_s[segName][2]
         cmd.append('open unit 10 read form name "%s"\n'%fn)
         cmd.append("read sequ pdb unit 10\n")
-        cmd.append("generate %s setup warn\n"%segName)
+        if blocked:
+            cmd.append("generate firs %s last %s"%tuple(terminal) + " %s setup warn\n"%segName)
+        else:
+            cmd.append("generate %s setup warn\n"%segName)
         cmd.append("close unit 10\n")
     for disu in disu_s:
         cmd.append("patch DISU %s %d %s %d\n"%(disu))
+    for patch in patch_s:
+        cmd.append("patch %s %s %s setup\n"%patch)
+    cmd.append("auto angle dihe\n")
     for segName in segName_s:
         if seg_s[segName][0] != 1: continue
         #
@@ -218,6 +232,9 @@ def main():
     arg.add_argument('-ff',  '--toppar', dest='toppar', nargs='*')
     arg.add_argument('-psf', '--psfout', dest='psfout', default='out.psf')
     arg.add_argument('-crd', '--crdout', dest='crdout', default=None)
+    arg.add_argument('-patch', '--patch', dest='patch_s', default=[], nargs='*')
+    arg.add_argument('-blocked', '--blocked', dest='blocked', default=False, action='store_true')
+    arg.add_argument('-terminal', '--terminal', dest='terminal', default=['ACE', 'CT3'], nargs=2)
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -226,13 +243,15 @@ def main():
     #
     arg.toppar = [os.path.realpath(fn) for fn in arg.toppar]
     #
+    patch_s = parse_patch(arg.patch_s)
     segName_s, seg_s, disu_s = read_pdb(arg.init_pdb)
     tmpdir = split_seg(segName_s, seg_s)
     pwd = os.getcwd()
     #
     cmd_s = []
     cmd_s.extend(write_top_cmd(arg.toppar))
-    cmd_s.extend(write_pdb_cmd(tmpdir, segName_s, seg_s, disu_s, write_crd=(arg.crdout is not None)))
+    cmd_s.extend(write_pdb_cmd(tmpdir, segName_s, seg_s, disu_s, patch_s, \
+            write_crd=(arg.crdout is not None), blocked=arg.blocked, terminal=arg.terminal))
     cmd_s.append("stop\n")
     #
     with open("%s/genPSF.cmd"%tmpdir, 'wt') as fout:

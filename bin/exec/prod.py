@@ -77,7 +77,7 @@ def build_restraint(output_prefix, options, verbose):
         wrt.append("REFERENCE   %s\n"%ref_fn.path())
         #
         rsr_d = build_restraint_distance(ref)
-        par = options['restraint']['Cartesian']
+        par = options['restraint']['distance']
         n_param = len(par)
         if n_param == 1:
             format = 'bond 2 2  %5d %5d  %8.5f %8.5f\n'
@@ -88,6 +88,47 @@ def build_restraint(output_prefix, options, verbose):
             for ca_i, ca_j, d in rsr_d:
                 wrt.append(format%(ca_i, ca_j, par[0], d, par[1]))
         with open("%s.rsr"%output_prefix, 'wt') as fout:
+            fout.writelines(wrt)
+        for _ in range(options['md']['iter']):
+            rsr_fn_s.append("%s.rsr"%output_prefix)
+
+    elif options['restraint']['mode'] == 'dual':
+        rsr_C = build_restraint_Cartesian(ref)
+        rsr_d = build_restraint_distance(ref)
+        #
+        par_C = options['restraint']['Cartesian']
+        n_param_C = len(par_C)
+        if n_param_C == 1:
+            format_C = 'position 1 1  %5d  %8.5f\n'
+        else:
+            format_C = 'position_flat 1 2  %5d  %8.5f %8.5f\n'
+        par_d = options['restraint']['distance']
+        n_param_d = len(par_d)
+        if n_param_d == 1:
+            format_d = 'bond 2 2  %5d %5d  %8.5f %8.5f\n'
+        else:
+            format_d = 'bond_flat 2 3  %5d %5d  %8.5f %8.5f %8.5f\n'
+        #
+        w_d = 0.5 ; w_C = 1.0 - w_d
+        #
+        wrt = []
+        wrt.append("REFERENCE   %s\n"%ref_fn.path())
+        #
+        if w_C > 0.0:
+            if n_param_C == 1:
+                for ca in rsr_C:
+                    wrt.append(format_C%(ca, par_C[0]*w_C))
+            else:
+                for ca in rsr_C:
+                    wrt.append(format_C%(ca, par_C[0]*w_C, par_C[1]))
+        if w_d > 0.0:
+            if n_param_d == 1:
+                for ca_i, ca_j, d in rsr_d:
+                    wrt.append(format_d%(ca_i, ca_j, par_d[0]*w_d, d))
+            else:
+                for ca_i, ca_j, d in rsr_d:
+                    wrt.append(format_d%(ca_i, ca_j, par_d[0]*w_d, d, par_d[1]))
+        with open("%s.rsr"%(output_prefix), 'wt') as fout:
             fout.writelines(wrt)
         for _ in range(options['md']['iter']):
             rsr_fn_s.append("%s.rsr"%output_prefix)
@@ -135,17 +176,32 @@ def build_restraint(output_prefix, options, verbose):
             rsr_fn_s.append("%s.%d.rsr"%(output_prefix, k))
     return rsr_fn_s
 
-def run(output_prefix, input_json, options, verbose):
+def stop_SLURM(dt_per_step, requeue):
+    job_id = os.getenv("SLURM_JOB_ID")
+    if job_id is None:
+        return False
+    #
+    cmd = ['squeue', '-h', '-j', job_id, '-o', '%L']
+    out = system(cmd, stdout=True, verbose=False).strip()
+    time_left = 0.0 # seconds
+    if '-' in out:
+        time_left += float(out.split("-")[0]) * 24 * 60 * 60
+        out = out.split("-")[1]
+    x = out.split(":") ; n = len(x)
+    for i,xi in enumerate(x):
+        time_left += float(xi) * 60**(n-i-1)
+    #
+    status = (time_left < dt_per_step)
+    if status and requeue:
+        sp.call(['scontrol', 'requeue', job_id])
+    return status
+
+def run(output_prefix, input_json, options, verbose, requeue=False):
     run_home = path.Dir(".")
     #
-    #LOCK = run_home.fn("lock")
     DONE = run_home.fn("solute.dcd")
     if DONE.status():
         return
-    #if LOCK.exists() or DONE.status():
-    #    return
-    #with LOCK.open('wt') as fout:
-    #    fout.write("#")
     #
     if 'restraint' in options:
         rsr_s = build_restraint(output_prefix, options, verbose)
@@ -201,8 +257,10 @@ def run(output_prefix, input_json, options, verbose):
             cmd.append("--barostat")
             cmd.append(options['md']['use_barostat'])
         #
+        t_begin = time.time()
         with open("%s.err"%output_prefix, 'wt') as ferr:
             system(cmd, errfile=ferr, verbose=verbose)
+        dt_per_step = time.time() - t_begin
         #
         try:
             n_frame = mdtraj.load(out_dcd_fn.short(), top=dcdOut_topology, atom_indices=[0]).n_frames
@@ -214,6 +272,9 @@ def run(output_prefix, input_json, options, verbose):
             k_iter += 1
             out_dcd_fn_s.append(out_dcd_fn)
             restart_fn = out_chk_fn
+            if RUNNER_METHOD == 'submit' and k_iter < options['md']['iter']:
+                if stop_SLURM(dt_per_step, requeue): 
+                    sys.exit("Less time left to procede the next step!")
         else:
             n_error += 1
             system("mv %s.err %s.err.%d"%(output_prefix, output_prefix, n_error))
@@ -225,8 +286,6 @@ def run(output_prefix, input_json, options, verbose):
     system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\
             (DONE.short(), options['input']['n_atom'], boxsize, \
             ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))
-    #
-    #LOCK.remove()
 
 def check_speed(output_prefix, input_json, options, verbose):
     if 'time_limit' in options['md'] and options['md']['time_limit'] > 0.0:
@@ -259,6 +318,7 @@ def main():
     arg.add_argument('-v', '--verbose', default=False, action='store_true')
     arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
             help='set temporary file mode (default=False)')
+    arg.add_argument('--requeue', dest='requeue', action='store_true', default=False)
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -275,7 +335,7 @@ def main():
         options['ff']['custom'] = arg.custom_file
 
     options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
-    run(arg.output_prefix, arg.input_json, options, arg.verbose)
+    run(arg.output_prefix, arg.input_json, options, arg.verbose, requeue=arg.requeue)
 
 if __name__=='__main__':
     main()

@@ -184,6 +184,8 @@ def remove_from_slaves(json_job_s):
     task_by_host = {}
     #
     for json_job in json_job_s:
+        if not json_job.status():
+            continue
         job = Job.from_json(json_job)
         for method in job.task:
             task_s = job.get_task(method)
@@ -381,4 +383,7 @@ def main():
         check_resource(host_s, json_job_s)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except BrokenPipeError:
+        sys.exit()

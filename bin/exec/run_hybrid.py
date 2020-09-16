@@ -56,7 +56,8 @@ def build_frag(fa_fn, n_proc):
             cmd = [PSIPRED_EXEC, fa_fn.short()]
             system(cmd, errfile='/dev/null')
         #
-        cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
+        #cmd = ['python2', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
+        cmd = ['python', "%s/tools/fragment_tools/make_fragments.py"%ROSETTA_HOME]
         cmd.extend(['-cpus', '%d'%n_proc])
         cmd.extend(['-psipredfile', ss2_fn.path()])
         cmd.append(fa_fn.short())
@@ -149,7 +150,8 @@ def main():
         fout.write("%d/localhost"%n_proc)
     #
     cmd = []
-    cmd.append("python2")
+    #cmd.append("python2")
+    cmd.append("python")
     cmd.append("%s/IterationMaster.py"%SCRIPT_HOME)
     cmd.extend(["-iha", "60"])
     cmd.extend(["-nodefile", "NODEFILE"])

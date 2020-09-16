@@ -5,7 +5,7 @@
 #SBATCH --job-name=JOB_NAME
 #SBATCH --output=JOB_OUTPUT
 #
-#SBATCH --time=72:00:00
+#SBATCH --time=48:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=NUM_PROC
 

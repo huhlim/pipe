@@ -26,14 +26,13 @@ from libcommon import *
 
 from libcustom import *
 from libmd import solvate_pdb, generate_PSF, construct_restraint
+from libmd_contact import get_dist_distr, construct_restraint_contact
 
-def run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options):
+def run_md(output_prefix, solv_fn, avrg, distr, psf_fn, crd_fn, options):
     psf = CharmmPsfFile(psf_fn.short())
     crd = CharmmCrdFile(crd_fn.short())
     #
     pdb = mdtraj.load(solv_fn.short())
-    avrg = avrg.superpose(pdb, atom_indices=avrg.top.select("name CA"),\
-                               ref_atom_indices=pdb.top.select("name CA"))
     #
     box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
     boxsize = np.max(box, 0) - np.min(box, 0)
@@ -48,7 +47,7 @@ def run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options):
                            nonbondedCutoff=1.0*nanometers, \
                            constraints=HBonds)
     #
-    sys.addForce(construct_restraint(psf, avrg, 1.0))
+    sys.addForce(construct_restraint_contact(psf, distr, 20.0))
     #
     if 'custom' in options['ff'] and options['ff']['custom'] is not None:
         custom_restrains = read_custom_restraint(options['ff']['custom'])
@@ -70,7 +69,11 @@ def run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options):
         simulation = Simulation(psf.topology, sys, integrator, platform)
         simulation.context.setPositions(crd.positions)
         if i == 0:
+            state = simulation.context.getState(getEnergy=True)
+            print (state.getPotentialEnergy())
             simulation.minimizeEnergy(maxIterations=500)
+            state = simulation.context.getState(getEnergy=True)
+            print (state.getPotentialEnergy())
             simulation.context.setVelocitiesToTemperature(temp*kelvin)
         else:
             with open(chk_fn, 'rb') as fp:
@@ -162,6 +165,7 @@ def get_input_structures(arg, options):
     traj_s = mdtraj.join(traj_s, check_topology=False)
     traj_selected = traj_s[frame]
     traj_selected.superpose(top, atom_indices=top.topology.select("name CA"))
+    distr = get_dist_distr(traj_selected)
     #
     avrg = copy.deepcopy(top)
     avrg.xyz = np.mean(traj_selected.xyz, 0)
@@ -170,7 +174,7 @@ def get_input_structures(arg, options):
     i_min = np.argmin(rmsd)
     cntr = traj_selected[i_min]
     #
-    return avrg, cntr
+    return avrg, cntr, distr
 
 def get_input_structures_from_msm(arg, options):
     top = mdtraj.load(arg.top_pdb.short())
@@ -199,6 +203,7 @@ def get_input_structures_from_msm(arg, options):
     #
     avrg_s = []
     cntr_s = []
+    distr_s = []
     for i in range(n_state):
         frame = (labels == i)
         score_frame = score_s[frame]
@@ -207,6 +212,8 @@ def get_input_structures_from_msm(arg, options):
         #
         traj_selected = traj_s[frame]
         traj_selected.superpose(top, atom_indices=top.topology.select("name CA"))
+        distr = get_dist_distr(traj_selected)
+        distr_s.append(distr)
         #
         avrg = copy.deepcopy(top)
         avrg.xyz = np.mean(traj_selected.xyz, 0)
@@ -217,7 +224,7 @@ def get_input_structures_from_msm(arg, options):
         #
         avrg_s.append(avrg)
         cntr_s.append(cntr)
-    return avrg_s, cntr_s
+    return avrg_s, cntr_s, distr_s
 
 def run(arg, options):
     if options['rule'][0] == 'cluster':
@@ -230,7 +237,8 @@ def run(arg, options):
         frame_s = mdtraj.join(frame_s, check_topology=False)
         #
         cluster_s = import_module("libcluster").get_clusters(frame_s, \
-                rmsd_cutoff=options['rule'][1][0], subsample=options['rule'][1][1])
+                rmsd_cutoff=options['rule'][1][0], subsample=options['rule'][1][1], \
+                get_distr=True)
         frame_s = None # to free memory
         #
         final_s = []
@@ -238,29 +246,30 @@ def run(arg, options):
             output_prefix = '%s.%04d'%(arg.output_prefix, i)
             cntr = cluster_s[i][1]
             avrg = cluster_s[i][2]
+            distr = cluster_s[i][3]
             #
             orient_fn, solv_fn = solvate_pdb(output_prefix, cntr, options, False)
             psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, False)
-            final = run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
+            final = run_md(output_prefix, solv_fn, avrg, distr, psf_fn, crd_fn, options)
             final_s.append((output_prefix, final))
     elif options['rule'][0] == 'msm':
         assert arg.msm_fn is not None
-        avrg_s, cntr_s = get_input_structures_from_msm(arg, options)
+        avrg_s, cntr_s, distr_s = get_input_structures_from_msm(arg, options)
         #
         final_s = []
-        for i, (avrg, cntr) in enumerate(zip(avrg_s, cntr_s)):
+        for i, (avrg, cntr, distr) in enumerate(zip(avrg_s, cntr_s, distr_s)):
             output_prefix = '%s.%04d'%(arg.output_prefix, i)
             #
             orient_fn, solv_fn = solvate_pdb(output_prefix, cntr, options, False)
             psf_fn, crd_fn = generate_PSF(output_prefix, solv_fn, options, False)
-            final = run_md(output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
+            final = run_md(output_prefix, solv_fn, avrg, distr, psf_fn, crd_fn, options)
             final_s.append((output_prefix, final))
     else:
-        avrg, cntr = get_input_structures(arg, options)
+        avrg, cntr, distr = get_input_structures(arg, options)
         #
         orient_fn, solv_fn = solvate_pdb(arg.output_prefix, cntr, options, False)
         psf_fn, crd_fn = generate_PSF(arg.output_prefix, solv_fn, options, False)
-        final = run_md(arg.output_prefix, solv_fn, avrg, psf_fn, crd_fn, options)
+        final = run_md(arg.output_prefix, solv_fn, avrg, distr, psf_fn, crd_fn, options)
         final_s = [(arg.output_prefix, final)]
     return final_s
 

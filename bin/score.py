@@ -22,7 +22,7 @@ def prep(job, input_dcd):
         run_home = dcd_fn.dirname()
         input_s = [dcd_fn]
         output_s = [run_home.fn("statpot.dat"), run_home.fn("qual_init.dat")]
-        job.add_task(METHOD, input_s, output_s, use_gpu=False, n_proc=24)
+        job.add_task(METHOD, input_s, output_s, use_gpu=False, n_proc=16)
     #
     job.to_json()
 
@@ -43,7 +43,7 @@ def prep_meta(job, prod_task_s):
         output_s = [run_home.fn("statpot.dat"), run_home.fn("qual_init.dat")]
         etc_s = [index_fn, top_fn]
         #
-        job.add_task(METHOD, input_s, output_s, *etc_s, use_gpu=False, n_proc=24)
+        job.add_task(METHOD, input_s, output_s, *etc_s, use_gpu=False, n_proc=16)
     #
     job.to_json()
 

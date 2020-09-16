@@ -13,8 +13,8 @@ EXEC_SOLUBLE = '%s/equil.py'%EXEC_HOME
 EXEC_MEMBRANE = '%s/equil_membrane.py'%EXEC_HOME
 
 def prep(job, equil_index, input_pdb, input_json):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
-        return
+#    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+#        return
     #
     OUTs = ['%s.psf'%job.title, '%s.orient.pdb'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
     #

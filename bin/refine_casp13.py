@@ -80,9 +80,6 @@ def main():
         return
     prod_out = get_outputs(job, 'prod')
     #
-    job.remove_from_joblist()
-    return
-    #
     # score
     import_module("score").prep(job, [out[0] for out in prod_out])
     if not run(job, arg.wait_after_run):

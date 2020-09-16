@@ -36,6 +36,8 @@ def solvate_pdb(output_prefix, pdb, options, verbose):
             axis_0 = pca.components_[i]
             axis_1 = np.zeros(3, dtype=float)
             axis_1[i] = 1.
+            if np.all(axis_0 == axis_1):
+                continue
             #
             axis_r = np.cross(axis_0, axis_1)
             angle_r = np.arccos(np.dot(axis_0, axis_1))
@@ -44,7 +46,12 @@ def solvate_pdb(output_prefix, pdb, options, verbose):
             #
             xyz = np.dot(xyz, q.rotate().T)
         #
-        system_size = np.max(xyz, axis=0) - np.min(xyz, axis=0) + 2.0*(options['md']['solvate'] * 0.1)
+        solvateBox = options['md'].get("solvateBox", 'rectangular')
+        if solvateBox == 'cubic':
+            system_size = np.ones(3)*max(np.max(xyz, axis=0) - np.min(xyz, axis=0))
+        else:
+            system_size = np.max(xyz, axis=0) - np.min(xyz, axis=0)
+        system_size += 2.0*(options['md']['solvate'] * 0.1)
         translate = (system_size - (np.max(xyz, axis=0) + np.min(xyz, axis=0))) * 0.5
         xyz += translate
         pdb.xyz[0] = xyz
@@ -94,6 +101,8 @@ def generate_PSF(output_prefix, solv_fn, options, verbose):
     cmd.extend(['-crd', crd_fn.short()])
     cmd.append("--toppar")
     cmd.extend(options['ff']['toppar'])
+    if 'blocked' in options['ff'] and options['ff']['blocked']:
+        cmd.append("-blocked")
     if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
         cmd.extend(options['ff']['cgenff'])
         cmd.extend([fn.short() for fn in options['ligand']['str_fn_s']])

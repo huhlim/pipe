@@ -68,8 +68,6 @@ def main():
     if not run(job, arg.wait_after_run):
         return 
     locPREFMD_out = get_outputs(job, "locPREFMD")[:n_init]
-    job.remove_from_joblist()
-    return
 
     # define topology
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
