@@ -67,7 +67,7 @@ def main():
     arg = argparse.ArgumentParser(prog='hybrid')
     arg.add_argument(dest='output_prefix')
     arg.add_argument(dest='init_pdb')
-    arg.add_argument('-j', '--cpu', dest='n_proc', type=int)
+    arg.add_argument('-j', '--cpu', dest='n_proc', type=int, default=20)
     #
     if len(sys.argv) == 1:
         arg.print_help()

@@ -57,6 +57,8 @@ def print_targets(form, target_s):
     native_pdb_id = {}
     with open("/green/s2/huhlim/work/casp14/native/pdb_id") as fp:
         for line in fp:
+            if line.startswith("#"):
+                continue
             x = line.strip().split()
             native_pdb_id[x[0]] = x[1]
 
@@ -84,7 +86,10 @@ def print_targets(form, target_s):
         print ("      <td align='center'>%s</td>"%(target_type.lower()))
 
         if target['target_id'] in native_pdb_id:
-            qual_fn = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(target['target_id'], target['target_id']))
+            if target['target_id'].startswith("T"):
+                qual_fn = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(target['target_id'], target['target_id']))
+            else:
+                qual_fn = glob.glob("/green/s2/huhlim/work/casp14/analysis/TR.raw/%s.dat"%(target['target_id']))
             if len(qual_fn) > 0:
                 print ("      <td align='center'><a href='./casp14status.py?qual=%s'>%s</a></td>"%(target['target_id'], native_pdb_id[target['target_id']]))
             else:
@@ -164,22 +169,25 @@ def print_status(form):
 def print_qual(form):
     id = form.getvalue("qual")
     #
-    qual_fn_s = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(id, id))
-    qual_fn_s.sort(key=lambda x: int(x.split("/")[-1][:-4].split("-D")[-1]))
+    if id.startswith("T"):
+        qual_fn_s = glob.glob("/green/s2/huhlim/work/casp14/servers/%s/%s-D*.dat"%(id, id))
+        qual_fn_s.sort(key=lambda x: int(x.split("/")[-1][:-4].split("-D")[-1]))
+    else:
+        qual_fn_s = glob.glob("/green/s2/huhlim/work/casp14/analysis/TR.raw/%s.dat"%id)
     #
     for qual_fn in qual_fn_s:
         with open(qual_fn) as fp:
             for line in fp:
                 line = line.rstrip()
-                if 'pdb=' in line:
+                if 'pdb=' in line and id.startswith("T"):
                     if (not line.endswith("_TS1")) and (not line.endswith("model_1.pdb")) and (not line.endswith("min.pdb")):
                         continue
                 line = line.replace(" ",'&nbsp')
-                if 'min.pdb' in line:
+                if 'min.pdb' in line or 'refine.init' in line:
                     line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: red ;'>%s</span>"%line
-                elif '/FEIG-S' in line:
+                elif '/FEIG-S' in line and (line.endswith("_TS1") or 'model_1.pdb' in line):
                     line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: blue ;'>%s</span>"%line
-                elif '/FEIG' in line:
+                elif '/FEIG' in line and (line.endswith("_TS1") or 'model_1.pdb' in line):
                     line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: green ;'>%s</span>"%line
                 elif 'RaptorX_TS1' in line:
                     line = "<span style='font-size:0.9em; font-weight: bold; font-family: Monospace ; color: black ;'>%s</span>"%line

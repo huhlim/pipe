@@ -7,9 +7,6 @@ import subprocess as sp
 
 from libcasp14 import WORK_HOME, TARBALL_HOME, SERVER_NAME, CODE_s
 
-WORK_HOME = '/green/s2/huhlim/work/casp14'
-TARBALL_HOME = '%s/servers'%WORK_HOME
-
 def evaluate(ref_fn, model_s):
     cmd = []
     cmd.append("casp_eval.py")
@@ -44,17 +41,23 @@ def main():
         sys.exit("No native structure for %s\n"%id)
     ref_fn_s.sort()
     #
-    model_s = glob.glob("%s/%s/*_TS?"%(TARBALL_HOME, id))
-    model_s = [fn for fn in model_s if not fn.split("/")[-1].startswith("server")]
-    model_s.extend(glob.glob("%s/%s/%s/trRosetta/build/min.pdb"%(WORK_HOME, SERVER_NAME, id)))
+    if id.startswith("T"):
+        model_s = glob.glob("%s/%s/*_TS?"%(TARBALL_HOME, id))
+        model_s = [fn for fn in model_s if not fn.split("/")[-1].startswith("server")]
+        model_s.extend(glob.glob("%s/%s/%s/trRosetta/build/min.pdb"%(WORK_HOME, SERVER_NAME, id)))
+    elif id.startswith("R"):
+        model_s = ["%s/refine.init/%s.pdb"%(WORK_HOME, id)]
     #
     for pred_name in CODE_s.keys():
-        if pred_name == SERVER_NAME:
+        if pred_name == SERVER_NAME and id.startswith("T"):
             continue
         model_s.extend(glob.glob("%s/%s/%s/final/model_?.pdb"%(WORK_HOME, pred_name, id)))
     #
     for ref_fn in ref_fn_s:
-        out_fn = '%s/%s/%s.dat'%(TARBALL_HOME, id, ref_fn.split("/")[-1][:-4])
+        if id.startswith("T"):
+            out_fn = '%s/%s/%s.dat'%(TARBALL_HOME, id, ref_fn.split("/")[-1][:-4])
+        else:
+            out_fn = '%s/analysis/TR.raw/%s.dat'%(WORK_HOME, ref_fn.split("/")[-1][:-4])
         if os.path.exists(out_fn):
             continue
         wrt = evaluate(ref_fn, model_s)
