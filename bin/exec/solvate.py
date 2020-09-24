@@ -7,19 +7,21 @@ from mdtraj.core.element import sodium, chlorine
 import numpy as np
 from multiprocessing import Pool
 from string import ascii_uppercase
+import argparse
 
 WORK_HOME = os.getenv("PREFMD_HOME")
 assert WORK_HOME is not None
 sys.path.insert(0, '%s/bin'%WORK_HOME)
 from libcommon import DEFAULT_HOME
 
+import path
+from libmd import update_residue_name
+
 CHAINs = ascii_uppercase
 AVOGADRO = 6.0221420e23
 
 water_pdb_fn = '%s/water.pdb'%DEFAULT_HOME
 water_box = 1.8662
-#water_cutoff = 0.14
-water_cutoff = 0.20
 
 def calc_dist(arg):
     # prot.shape = (n_atom, 3)
@@ -29,9 +31,9 @@ def calc_dist(arg):
     d = np.sqrt(np.sum(dr**2, axis=-1))
     return d
 
-def place_water(pdb, water):
+def place_water(pdb, water, water_cutoff):
     boxsize = pdb.unitcell_lengths[0]
-    xyz = pdb.xyz[0]
+    xyz = pdb.xyz[0].copy()
     for i in range(3):
         xyz[xyz[:,i] > boxsize[i]] -= boxsize[i]
         xyz[xyz[:,i] < 0.] += boxsize[i]
@@ -56,8 +58,7 @@ def place_water(pdb, water):
     #
     return placed
 
-def place_ions(pdb, ion_conc):
-    net_charge = 0
+def place_ions(pdb, ion_conc, net_charge):
     for res in ['ASP', 'GLU']:
         net_charge -= pdb.top.select("resname %s and name CA"%res).shape[0]
     for res in ['LYS', 'ARG']:
@@ -161,20 +162,30 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
     return pdb
 
 def main():
-    in_pdb = sys.argv[1]
-    out_pdb = sys.argv[2]
-    ion_conc = float(sys.argv[3])
+    arg = argparse.ArgumentParser(prog='solvate')
+    arg.add_argument(dest="in_pdb")
+    arg.add_argument(dest="out_pdb")
+    arg.add_argument(dest='ion_conc', type=float)
+    arg.add_argument('--charge', dest='net_charge', type=int, default=0)
+    arg.add_argument('--cutoff', dest='water_cutoff', type=float, default=2.)
     #
-    pdb0 = mdtraj.load(in_pdb)
+    if len(sys.argv) == 1:
+        arg.print_help()
+        return
+    arg = arg.parse_args()
+    #
+    pdb0 = mdtraj.load(arg.in_pdb)
+    update_residue_name(path.Path(arg.in_pdb), pdb0)
+    #
     water0 = mdtraj.load(water_pdb_fn)
     water = water0.xyz[0].reshape((-1, 3, 3)) + water_box/2.0
     #
-    placed = place_water(pdb0, water)
-    n_ion = place_ions(pdb0, ion_conc)
+    placed = place_water(pdb0, water, arg.water_cutoff*0.1)
+    n_ion = place_ions(pdb0, arg.ion_conc, arg.net_charge)
     n_water = placed.shape[0] - sum(n_ion)
     #
     pdb = xyz_to_pdb(pdb0, water0, placed, n_ion, n_water)
-    pdb.save(out_pdb)
+    pdb.save(arg.out_pdb)
 
 if __name__ == '__main__':
     main()

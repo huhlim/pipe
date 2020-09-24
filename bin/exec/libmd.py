@@ -102,13 +102,49 @@ def generate_PSF(output_prefix, solv_fn, options, verbose):
     cmd.append("--toppar")
     cmd.extend(options['ff']['toppar'])
     if 'blocked' in options['ff'] and options['ff']['blocked']:
-        cmd.append("-blocked")
+        cmd.append("--blocked")
+        if 'terminal' in options['ff']:
+            cmd.append("--terminal")
+            cmd.extend(options['ff']['terminal'])
+    if 'patch' in options['ff']:
+        cmd.append("--patch")
+        cmd.extend(options['ff']['patch'])
     if 'ligand' in options and len(options['ligand']['str_fn_s']) > 0:
         cmd.extend(options['ff']['cgenff'])
         cmd.extend([fn.short() for fn in options['ligand']['str_fn_s']])
     system(cmd, verbose=verbose)
     #
     return psf_fn, crd_fn
+
+def update_residue_name(pdb_fn, pdb):
+    resName_s = ['HIS', 'HSP', 'HSD', 'HSE']
+    residue_s = {} ; chain_s = []
+    with pdb_fn.open() as fp:
+        for line in fp:
+            if not line.startswith("ATOM") and not line.startswith("HETA"):
+                continue
+            resName = line[17:20]
+            if resName not in resName_s:
+                continue
+            atmName = line[12:16].strip()
+            if atmName != 'CA':
+                continue
+            chain = line[21].strip()
+            if chain not in chain_s:
+                chain_s.append(chain)
+            resNo = line[22:27].strip()
+            chain_index = chain_s.index(chain)
+            try:
+                residue_s[(chain_index, int(resNo))] = resName
+            except:
+                residue_s[(chain_index, resNo)] = resName
+    #
+    for residue in pdb.top.residues:
+        chain_index = residue.chain.index
+        resNo = residue.resSeq
+        if (chain_index, resNo) in residue_s:
+            resName = residue_s[(chain_index, resNo)]
+            residue.name = resName
 
 def construct_restraint(psf, pdb, force_const):
     rsr = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")

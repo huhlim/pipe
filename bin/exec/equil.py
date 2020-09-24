@@ -24,7 +24,8 @@ from libcommon import *
 from libligand import read_ligand_json, add_ligand, update_ligand_name, get_ligand_restratint
 
 from libcustom import *
-from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint
+from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint,\
+                    update_residue_name
 
 def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
@@ -155,6 +156,7 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
         init_pdb = input_pdb
     #
     pdb = mdtraj.load(init_pdb.short())
+    update_residue_name(init_pdb, pdb)
     if options['md']['solvate'] > 0.0:
         orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
         tempfile_s.extend([orient_fn, solv_fn])

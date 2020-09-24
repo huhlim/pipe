@@ -196,7 +196,7 @@ def stop_SLURM(dt_per_step, requeue):
         sp.call(['scontrol', 'requeue', job_id])
     return status
 
-def run(output_prefix, input_json, options, verbose, requeue=False):
+def run(output_prefix, input_json, options, verbose, requeue=False, generate_solute_file=True):
     run_home = path.Dir(".")
     #
     DONE = run_home.fn("solute.dcd")
@@ -283,9 +283,10 @@ def run(output_prefix, input_json, options, verbose, requeue=False):
                     fout.write("#")
                 sys.exit("ERROR: failed to run %s\n"%run_home)
     #
-    system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\
-            (DONE.short(), options['input']['n_atom'], boxsize, \
-            ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))
+    if generate_solute_file:
+        system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\
+                (DONE.short(), options['input']['n_atom'], boxsize, \
+                ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))
 
 def check_speed(output_prefix, input_json, options, verbose):
     if 'time_limit' in options['md'] and options['md']['time_limit'] > 0.0:
@@ -319,6 +320,7 @@ def main():
     arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
             help='set temporary file mode (default=False)')
     arg.add_argument('--requeue', dest='requeue', action='store_true', default=False)
+    arg.add_argument('--no-solute', dest='generate_solute_file', action='store_false', default=True)
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -335,7 +337,8 @@ def main():
         options['ff']['custom'] = arg.custom_file
 
     options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
-    run(arg.output_prefix, arg.input_json, options, arg.verbose, requeue=arg.requeue)
+    run(arg.output_prefix, arg.input_json, options, arg.verbose, requeue=arg.requeue, \
+            generate_solute_file=arg.generate_solute_file)
 
 if __name__=='__main__':
     main()
