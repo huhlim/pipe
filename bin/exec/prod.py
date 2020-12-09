@@ -191,7 +191,7 @@ def stop_SLURM(dt_per_step, requeue):
     for i,xi in enumerate(x):
         time_left += float(xi) * 60**(n-i-1)
     #
-    status = (time_left < dt_per_step)
+    status = (time_left < dt_per_step*1.1)
     if status and requeue:
         sp.call(['scontrol', 'requeue', job_id])
     return status

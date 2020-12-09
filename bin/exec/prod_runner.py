@@ -13,6 +13,9 @@ import mdtraj
 from simtk.unit import *
 from simtk.openmm import *
 from simtk.openmm.app import *
+from simtk.openmm.app.internal.charmm.exceptions import CharmmPSFWarning
+import warnings
+warnings.filterwarnings("ignore", category=CharmmPSFWarning)
 
 from libcustom import *
 from libmd import construct_ligand_restraint

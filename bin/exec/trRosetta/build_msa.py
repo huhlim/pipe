@@ -13,10 +13,10 @@ OPTIONs = {}
 OPTIONs['trRosetta'] = {}
 OPTIONs['trRosetta']['MAX_SEQUENCE'] = 100000
 OPTIONs['trRosetta']['HHblits'] = "-mact 0.35 -maxfilt 1000000 -neffmax 20 -nodiff -realign_max 1000000 -maxseq 1000000 -maxmem 16 -n 4 -v 0".split()
-OPTIONs['trRosetta']['HHblits_database'] = "/green/s2/huhlim/db/hhsuite/uc30/current/uc30"
+OPTIONs['trRosetta']['HHblits_database'] = "/feig/s1/huhlim/db/hhsuite/uc30/current/uc30"
 OPTIONs['trRosetta']['HMMbuild'] = "--hand --amino --informat=a2m".split()
 OPTIONs['trRosetta']['HMMsearch'] = "-T 27".split()
-OPTIONs['trRosetta']['HMMsearch_database'] = "/green/s2/huhlim/db/uniref/uniref100.fasta"
+OPTIONs['trRosetta']['HMMsearch_database'] = "/feig/s1/huhlim/db/uniref/uniref100.fasta"
 
 def filter_msa(in_msa, cov, id_cut=90, out_msa=None, max_seq=None):
     if out_msa is None:

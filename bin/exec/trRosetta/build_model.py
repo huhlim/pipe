@@ -81,3 +81,43 @@ def run(job, n_model=PARAM_N_MODEL):
     job.run_home.chdir()
     return min_fn
     
+def main():
+    if len(sys.argv) < 3:
+        sys.exit("usage: %s [FA] [NPZ]\n"%__file__)
+        #
+    fa_fn = path.Path(sys.argv[1])
+    npz_fn = path.Path(sys.argv[2])
+    #
+    build_home = path.Dir(".")
+    cmd_s = [] ; out_fn_s = []
+    for i in range(PARAM_N_MODEL):
+        out_fn = build_home.fn("model.%d.pdb"%i)
+        out_fn_s.append(out_fn)
+        if out_fn.status():
+            continue
+        cmd = ['python', EXEC, npz_fn.short(), fa_fn.short(), out_fn.short()]
+        cmd_s.append(cmd)
+    #
+    n_run = len(cmd_s)
+    if n_run == 0:
+        return get_energy_min(out_fn_s)
+    #
+    npz = read_trRosetta(npz_fn)
+    l_seq = npz['dist'].shape[0]
+    est_memory = (l_seq*3000 + 80000)/1024./1024.
+    n_iter = int(est_memory * n_run / MAX_MEMORY) + 1
+    n_run = int(np.ceil(n_run/n_iter))
+    #
+    n_proc = min(PARAM_N_PROC, n_run)
+    proc = Pool(n_proc)
+    log_s = proc.map(runner, cmd_s)
+    proc.close()
+    #
+    with build_home.fn("build.log").open('wt') as fout:
+        for log in log_s:
+            fout.write(log)
+    #
+    min_fn = get_energy_min(out_fn_s)
+
+if __name__ == '__main__':
+    main()

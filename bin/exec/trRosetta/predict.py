@@ -16,6 +16,7 @@ from libtrRosetta import *
 from run_tbm import run as run_tbm
 from run_tbm import read_tbm
 from build_msa import run as build_msa
+#from build_msa_bfd import run as build_msa
 
 from run_trRosetta import read_trRosetta, get_contact_trRosetta, FEATUREs
 from run_trRosetta import merge as merge_trRosetta
