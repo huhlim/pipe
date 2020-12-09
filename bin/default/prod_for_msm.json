@@ -1,0 +1,28 @@
+{
+  "ff": {
+    "use_modified_CMAP": true,
+    "toppar": [
+      "/home/huhlim/work/ff/c36m.CMAPmod.hv/c36m_ecmap.prm",
+      "/home/huhlim/work/ff/c36m.CMAPmod.hv/c36m_ecmap.rtf",
+      "/home/huhlim/work/ff/c36m.CMAPmod.hv/toppar_water_ions.str",
+      "/home/huhlim/work/ff/c36m.CMAPmod.hv/toppar_ions_won.str"
+    ],
+    "cgenff": [
+      "/home/huhlim/work/ff/cgenff.hv/top_all36_cgenff.rtf",
+      "/home/huhlim/work/ff/cgenff.hv/par_all36_cgenff.prm"
+    ]
+  },
+  "openmm": {
+    "platform": "CUDA"
+  },
+  "md": {
+    "dyntstep": 0.004,
+    "dyntemp": 298.15,
+    "lang": true,
+    "langfbeta": 0.01,
+    "dynoutfrq": 50000,
+    "dynsteps": 12500000,
+    "iter": 10
+  },
+  "restart": true
+}
