@@ -29,14 +29,12 @@ def construct_custom_restraint(ref, custom_s):
     bond_flat.addPerBondParameter('r0')
     bond_flat.addPerBondParameter('rflat')
     #
-    #pos = CustomExternalForce("k0*dsq ; dsq=((x-x0)^2+(y-y0)^2+(z-z0)^2)")
     pos = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
     pos.addPerParticleParameter("x0")
     pos.addPerParticleParameter("y0")
     pos.addPerParticleParameter("z0")
     pos.addPerParticleParameter('k0')
     #
-    #pos_flat = CustomExternalForce("k0*(max(d-flat, 0.0))^2 ; d=sqrt((x-x0)^2+(y-y0)^2+(z-z0)^2)")
     pos_flat = CustomExternalForce("k0*(max(d-flat, 0.0))^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
     pos_flat.addPerParticleParameter('k0')
     pos_flat.addPerParticleParameter("x0")
@@ -54,10 +52,6 @@ def construct_custom_restraint(ref, custom_s):
                  custom.prm[1]*angstroms, \
                  custom.prm[2]*angstroms)
             bond_flat.addBond(custom.i_atm[0], custom.i_atm[1], p)
-        elif custom.r_type == 'angle':
-            pass
-        elif custom.r_type == 'torsion':
-            pass
         elif custom.r_type == 'position':
             i_atm = custom.i_atm[0]
             p = crd[i_atm].tolist()

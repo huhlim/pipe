@@ -196,7 +196,8 @@ def stop_SLURM(dt_per_step, requeue):
         sp.call(['scontrol', 'requeue', job_id])
     return status
 
-def run(output_prefix, input_json, options, verbose, requeue=False, generate_solute_file=True):
+def run(output_prefix, input_json, options, verbose, prod_runner=EXEC, \
+            requeue=False, generate_solute_file=True):
     run_home = path.Dir(".")
     #
     DONE = run_home.fn("solute.dcd")
@@ -241,7 +242,7 @@ def run(output_prefix, input_json, options, verbose, requeue=False, generate_sol
         if k_iter > 0:
             restart_fn = run_home.fn("%s.%d.restart.pkl"%(output_prefix, k_iter-1))
         #
-        cmd = [EXEC]
+        cmd = [prod_runner.short()]
         cmd.extend(['--input', input_json.short()])
         cmd.extend(['--pdb', init_pdb_fn.short()])
         cmd.extend(['--dcd', out_dcd_fn.short()])
@@ -321,11 +322,13 @@ def main():
             help='set temporary file mode (default=False)')
     arg.add_argument('--requeue', dest='requeue', action='store_true', default=False)
     arg.add_argument('--no-solute', dest='generate_solute_file', action='store_false', default=True)
+    arg.add_argument('--exec', dest='prod_runner', default=EXEC)
     #
     if len(sys.argv) == 1:
         arg.print_help()
         return
     arg = arg.parse_args()
+    arg.prod_runner = path.Path(arg.prod_runner)
     #
     arg.input_json = path.Path(arg.input_json)
     #
@@ -337,7 +340,9 @@ def main():
         options['ff']['custom'] = arg.custom_file
 
     options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
-    run(arg.output_prefix, arg.input_json, options, arg.verbose, requeue=arg.requeue, \
+    run(arg.output_prefix, arg.input_json, options, arg.verbose, \
+            prod_runner=arg.prod_runner, \
+            requeue=arg.requeue, \
             generate_solute_file=arg.generate_solute_file)
 
 if __name__=='__main__':

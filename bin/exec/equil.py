@@ -80,7 +80,11 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         simulation = Simulation(psf.topology, sys, integrator, platform)
         simulation.context.setPositions(crd.positions)
         if i == 0:
+            #state = simulation.context.getState(getEnergy=True)
+            #print (state.getPotentialEnergy())
             simulation.minimizeEnergy(maxIterations=500)
+            #state = simulation.context.getState(getEnergy=True)
+            #print (state.getPotentialEnergy())
             simulation.context.setVelocitiesToTemperature(temp*kelvin)
         else:
             with open(chk_fn, 'rb') as fp:

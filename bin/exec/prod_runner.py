@@ -48,18 +48,21 @@ def run(arg, options):
     if n_gpu > 1:
         properties['DeviceIndex'] = ",".join(['%d'%index for index in range(n_gpu)])
     #
+    switchDistance=options['ff'].get("switchDistance", 0.8)*nanometers
+    nonbondedCutoff=options['ff'].get("nonbondedCutoff", 1.0)*nanometers
+    #
     if arg.use_hmr:
         sys = psf.createSystem(ff, \
                                nonbondedMethod=PME, \
-                               switchDistance=0.8*nanometers, \
-                               nonbondedCutoff=1.0*nanometers, \
+                               switchDistance=switchDistance, \
+                               nonbondedCutoff=nonbondedCutoff, \
                                hydrogenMass=3.008*amu, \
                                constraints=HBonds)
     else:
         sys = psf.createSystem(ff, \
                                nonbondedMethod=PME, \
-                               switchDistance=0.8*nanometers, \
-                               nonbondedCutoff=1.0*nanometers, \
+                               switchDistance=switchDistance, \
+                               nonbondedCutoff=nonbondedCutoff, \
                                constraints=HBonds)
 
     if arg.rsr_fn is not None:
