@@ -136,8 +136,8 @@ def exists(path):
     else:
         return os.path.exists(path)
 
-def prefix(in_fn):
-    pref = '.'.join(('%s'%in_fn).split(".")[:-1])
+def prefix(in_fn, k=-1):
+    pref = '.'.join(('%s'%in_fn).split(".")[:k])
     if len(pref) != 0:
         return pref
     else:
@@ -146,8 +146,8 @@ def prefix(in_fn):
 def fname(in_fn):
     return ('%s'%in_fn).split("/")[-1]
 
-def name(in_fn):
-    return prefix(fname(in_fn))
+def name(in_fn, k=-1):
+    return prefix(fname(in_fn), k=k)
 
 def suffix(in_fn, k=-1):
     if k == -1:
