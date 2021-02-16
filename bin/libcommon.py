@@ -178,25 +178,6 @@ class Job(dict):
             else:
                 return X == Y
         #
-        # PREVIOUS VERSION
-        ##
-        #prev_exists = False
-        #for prev in self.task[method]:
-        #    input_status = True
-        #    for i in range(len(prev['input'])):
-        #        if not is_same(prev['input'][i], input_arg[i]):
-        #            input_status = False ; break
-        #    if input_status:
-        #        prev_exists = True
-        #    #
-        #    output_status = True
-        #    for i in range(len(prev['output'])):
-        #        if not is_same(prev['output'][i], output_arg[i]):
-        #            output_status = False ; break
-        #    if output_status:
-        #        prev['resource'][0] = 'DONE'
-        #if prev_exists: return
-        #
         # find there is an identical (both input&output) task exists
         for prev in self.task[method]:
             input_status = True
@@ -215,11 +196,17 @@ class Job(dict):
             return
         #
         # status allocated_resource use_gpu n_proc
+        use_gpu = kwarg.get("use_gpu", False)
+        n_proc = min(SUBMIT_MAX_PROC, kwarg.get("n_proc", 1))
+        for key in ['use_gpu', 'n_proc']:
+            if key in kwarg:
+                del kwarg[key]
+        #
         self.task[method].append({\
-                 'resource': ["WAIT", None, kwarg.get("use_gpu", False), min(SUBMIT_MAX_PROC, kwarg.get("n_proc", 1))],\
+                 'resource': ["WAIT", None, use_gpu, n_proc],\
                  'input': input_arg, \
                  'output': output_arg, \
-                 'etc': arg\
+                 'etc': kwarg, \
                  })
                  
     def get_task(self, method, host=None, status=None, not_status=None):

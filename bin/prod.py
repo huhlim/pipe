@@ -11,7 +11,7 @@ from libcommon import *
 METHOD = 'prod'
 EXEC = '%s/prod.py'%EXEC_HOME
 
-def prep(job, prod_index, input_equil, input_json, n_replica):
+def prep(job, prod_index, input_equil, input_json, n_replica, n_run_per_job=1, prod_runner=None):
     #if len(job.get_task(METHOD, not_status='DONE')) > 0:
     #    return
     #
@@ -31,7 +31,10 @@ def prep(job, prod_index, input_equil, input_json, n_replica):
         #
         input_s = [run_home, input_equil, input_json]
         output_s = [run_home.fn("solute.dcd")]
-        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
+        if prod_runner is None:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
+        else:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1, prod_runner=prod_runner)
     #
     job.to_json()
 
@@ -80,6 +83,8 @@ def run(job):
         #
         cmd = [EXEC, run_name]
         cmd.extend(["--input", run_json.short()])
+        if task['etc'].get("prod_runner", None) is not None:
+            cmd.extend(['--exec', task['etc'].get("prod_runner")])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         #
@@ -130,6 +135,8 @@ def submit(job):
         cmd_s.append("cd %s\n"%run_home)
         cmd = [EXEC, run_name]
         cmd.extend(["--input", run_json.short()])
+        if task['etc'].get("prod_runner", None) is not None:
+            cmd.extend(['--exec', task['etc'].get("prod_runner")])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         cmd_s.append(" ".join(cmd) + '\n')

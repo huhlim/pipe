@@ -43,7 +43,9 @@ def prep_meta(job, prod_task_s):
         output_s = [run_home.fn("statpot.dat"), run_home.fn("qual_init.dat")]
         etc_s = [index_fn, top_fn]
         #
-        job.add_task(METHOD, input_s, output_s, *etc_s, use_gpu=False, n_proc=16)
+        job.add_task(METHOD, input_s, output_s, \
+                index_fn=index_fn, top_fn=top_fn, \
+                use_gpu=False, n_proc=16)
     #
     job.to_json()
 
@@ -60,12 +62,14 @@ def run(job):
         if output_score.status() and output_qual.status():
             continue
         #
-        if len(task['etc']) > 0:    # meta
-            index_fn = task['etc'][0]
-            top_fn = task['etc'][1]
-        else:
-            index_fn = None
-            top_fn = job.top_fn
+        index_fn = task['etc'].get("index_fn", None)
+        index_fn = task['etc'].get("top_fn", job.top_fn)
+        #if len(task['etc']) > 0:    # meta
+        #    index_fn = task['etc'][0]
+        #    top_fn = task['etc'][1]
+        #else:
+        #    index_fn = None
+        #    top_fn = job.top_fn
         #
         run_home.chdir()
         #

@@ -39,7 +39,10 @@ def run(verbose):
         cmd.append(job_fn.path())
         #
         sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
-        system(cmd, verbose=False)
+        try:
+            system(cmd, verbose=False, errfile='/dev/null')
+        except:
+            pass
 
 def main():
     arg = argparse.ArgumentParser(prog='master_runner')

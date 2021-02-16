@@ -20,7 +20,7 @@ def prep(job, input_pdb, mutation_s):
         #
         input_s = [pdb_fn]
         output_s = [out_fn]
-        job.add_task(METHOD, input_s, output_s, mutation_s, use_gpu=False, n_proc=1)
+        job.add_task(METHOD, input_s, output_s, mutation_s=mutation_s, use_gpu=False, n_proc=1)
     #
     job.to_json()
 
@@ -35,7 +35,7 @@ def run(job):
         output_pdb = task['output'][0]
         if output_pdb.status():
             continue
-        mutation_s = task['etc'][0]
+        mutation_s = task['etc'].get("mutation_s", [])
         #
         run_home.chdir()
         #
@@ -60,7 +60,7 @@ def submit(job):
         output_pdb = task['output'][0]
         if output_pdb.status():
             continue
-        mutation_s = task['etc'][0]
+        mutation_s = task['etc'].get("mutation_s", [])
         #
         run_home.chdir()
         #

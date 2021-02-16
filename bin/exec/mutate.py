@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import tempfile
 import argparse
 
 WORK_HOME = os.getenv("PREFMD_HOME")
@@ -75,17 +76,15 @@ def main():
     #
     if len(arg.mutation_s) > 0:
         seq = write_fa(arg.input_pdb, arg.mutation_s)
-        fa_fn = path.Path(path.prefix(arg.input_pdb) + '.fa')
-        with fa_fn.open("wt") as fout:
-            fout.write(seq)
-        cmd.extend(['-s', fa_fn.short()])
+        out = tempfile.NamedTemporaryFile("wt", suffix='.fa')
+        out.write(seq)
+        out.flush()
+        cmd.extend(['-s', out.name])
     else:
         fa_fn = None
     #
     system(cmd, verbose=False, stdout=True, errfile='/dev/null')
     #
-    if fa_fn is not None:
-        fa_fn.remove()
 
 if __name__ == '__main__':
     main()

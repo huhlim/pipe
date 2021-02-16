@@ -31,10 +31,10 @@ def prep(job, equil_index, input_pdb, input_json):
             if not output.status():
                 status = False ; break
         #
-        if status: 
-            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
-        else:
-            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
+        #if status: 
+        #    job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
+        #else:
+        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
@@ -58,10 +58,10 @@ def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json)
             if not output.status():
                 status = False ; break
         #
-        if status: 
-            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
-        else:
-            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
+        #if status: 
+        #    job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
+        #else:
+        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
