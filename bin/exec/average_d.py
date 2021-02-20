@@ -69,11 +69,11 @@ def run_md(output_prefix, solv_fn, avrg, distr, psf_fn, crd_fn, options):
         simulation = Simulation(psf.topology, sys, integrator, platform)
         simulation.context.setPositions(crd.positions)
         if i == 0:
-            state = simulation.context.getState(getEnergy=True)
-            print (state.getPotentialEnergy())
+            #state = simulation.context.getState(getEnergy=True)
+            #print (state.getPotentialEnergy())
             simulation.minimizeEnergy(maxIterations=500)
-            state = simulation.context.getState(getEnergy=True)
-            print (state.getPotentialEnergy())
+            #state = simulation.context.getState(getEnergy=True)
+            #print (state.getPotentialEnergy())
             simulation.context.setVelocitiesToTemperature(temp*kelvin)
         else:
             with open(chk_fn, 'rb') as fp:
@@ -186,12 +186,18 @@ def get_input_structures_from_msm(arg, options):
     #
     traj_s = []
     score_s = []
-    for i,traj_fn in enumerate(arg.input_dcd_s):
+    #for i,traj_fn in enumerate(arg.input_dcd_s):
+    for i,traj_fn in enumerate(msm['traj_s']):
+        traj_fn = path.Path(traj_fn)
         traj = mdtraj.load(traj_fn.short(), top=top)
         traj_s.append(traj)
         n_frame = len(traj)
         #
-        score = read_score(arg.input_score_s[i], score_fn=options['rule'][1][0])
+        if arg.input_score_s is None:
+            score_fn = traj_fn.dirname().fn("statpot.dat")
+        else:
+            score_fn = arg.input_score_s[i]
+        score = read_score(score_fn, score_fn=options['rule'][1][0])
         assert n_frame == score.shape[0]
         score_s.append(score)
     #
@@ -258,6 +264,8 @@ def run(arg, options):
         #
         final_s = []
         for i, (avrg, cntr, distr) in enumerate(zip(avrg_s, cntr_s, distr_s)):
+            if avrg is None or cntr is None:
+                continue
             output_prefix = '%s.%04d'%(arg.output_prefix, i)
             #
             orient_fn, solv_fn = solvate_pdb(output_prefix, cntr, options, False)
@@ -278,7 +286,7 @@ def main():
     arg.add_argument(dest='output_prefix')
     arg.add_argument(dest='top_pdb')
     arg.add_argument('--input', dest='input_json', required=True)
-    arg.add_argument('--dcd', dest='input_dcd_s', nargs='*', default=None, required=True)
+    arg.add_argument('--dcd', dest='input_dcd_s', nargs='*', default=None)
     arg.add_argument('--score', dest='input_score_s', nargs='*', default=None)
     arg.add_argument('--qual', dest='input_qual_s', nargs='*', default=None)
     arg.add_argument('--msm', dest='msm_fn', default=None)

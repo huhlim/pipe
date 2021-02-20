@@ -63,7 +63,7 @@ def run(job):
             continue
         #
         index_fn = task['etc'].get("index_fn", None)
-        index_fn = task['etc'].get("top_fn", job.top_fn)
+        top_fn = task['etc'].get("top_fn", job.top_fn)
         #if len(task['etc']) > 0:    # meta
         #    index_fn = task['etc'][0]
         #    top_fn = task['etc'][1]
