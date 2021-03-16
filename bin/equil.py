@@ -40,8 +40,8 @@ def prep(job, equil_index, input_pdb, input_json):
     job.to_json()
 
 def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
-        return
+    #if len(job.get_task(METHOD, not_status='DONE')) > 0:
+    #    return
     #
     OUTs = ['%s.psf'%job.title, '%s.orient.pdb'%job.title, '%s.equil.restart.pkl'%job.title, '%s.equil.pdb'%job.title]
     #

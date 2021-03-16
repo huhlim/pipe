@@ -40,10 +40,16 @@ def read_pdb(fn):
             if resName in ['HIS']:
                 if atmName == 'HD1':    # HSD
                     resNo = line[22:26]
-                    his_s[(segName, resNo)] = 'HSD'
+                    if (segName, resNo) in his_s and his_s[(segName, resNo)] == 'HSE':
+                        his_s[(segName, resNo)] = 'HSP'
+                    else:
+                        his_s[(segName, resNo)] = 'HSD'
                 elif atmName == 'HE2':  # HSE
                     resNo = line[22:26]
-                    his_s[(segName, resNo)] = 'HSE'
+                    if (segName, resNo) in his_s and his_s[(segName, resNo)] == 'HSD':
+                        his_s[(segName, resNo)] = 'HSP'
+                    else:
+                        his_s[(segName, resNo)] = 'HSE'
                 #resName_new = resName_update[resName]
                 #line = line[:17] + resName_new + line[20:]
             if (resName in AAs) and (atmName in atmName_update):
@@ -135,8 +141,11 @@ def write_top_cmd(toppar):
     cmd.append("!\n")
     return cmd
 
-def split_seg(segName_s, seg_s):
-    tmpdir = mkdtemp(prefix='genPSF.')
+def split_seg(segName_s, seg_s, debug=False):
+    if debug:
+        tmpdir = mkdtemp(prefix='genPSF.', dir='.')
+    else:
+        tmpdir = mkdtemp(prefix='genPSF.')
     tmpdir = os.path.abspath(tmpdir)
     #
     for segName in segName_s:
@@ -235,6 +244,7 @@ def main():
     arg.add_argument('-patch', '--patch', dest='patch_s', default=[], nargs='*')
     arg.add_argument('-blocked', '--blocked', dest='blocked', default=False, action='store_true')
     arg.add_argument('-terminal', '--terminal', dest='terminal', default=['ACE', 'CT3'], nargs=2)
+    arg.add_argument('--debug', dest='debug', action='store_true', default=False)
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -245,7 +255,7 @@ def main():
     #
     patch_s = parse_patch(arg.patch_s)
     segName_s, seg_s, disu_s = read_pdb(arg.init_pdb)
-    tmpdir = split_seg(segName_s, seg_s)
+    tmpdir = split_seg(segName_s, seg_s, debug=arg.debug)
     pwd = os.getcwd()
     #
     cmd_s = []
@@ -276,7 +286,8 @@ def main():
                 sys.stdout.write("ERROR: %s\n"%tmpdir)
                 return
         #
-        os.system("rm -rf %s"%tmpdir)
+        if not arg.debug:
+            os.system("rm -rf %s"%tmpdir)
     else:
         sys.stdout.write("ERROR: %s\n"%tmpdir)
 

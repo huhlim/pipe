@@ -300,6 +300,9 @@ def main():
     if arg.msm_fn is not None:
         arg.msm_fn = path.Path(arg.msm_fn)
     #
+    if os.path.exists("%s.pdb_s"%arg.output_prefix):
+        return
+    #
     with open(arg.input_json) as fp:
         options = json.load(fp)
     #

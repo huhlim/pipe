@@ -63,6 +63,19 @@ def place_ions(pdb, ion_conc, net_charge):
         net_charge -= pdb.top.select("resname %s and name CA"%res).shape[0]
     for res in ['LYS', 'ARG']:
         net_charge += pdb.top.select("resname %s and name CA"%res).shape[0]
+    for residue in pdb.top.residues:
+        if residue.name not in ['HIS', 'HSP', 'HSE', 'HSD']:
+            continue
+        proton_HD1 = False
+        proton_HE2 = False
+        for atom in residue.atoms:
+            if atom.name in ['HD1']:
+                proton_HD1 = True
+            elif atom.name in ['HE2']:
+                proton_HE2 = True
+        if proton_HD1 and proton_HE2:
+            net_charge += 1
+
     unitCell = pdb.unitcell_lengths[0]
     volume = unitCell[0]*unitCell[1]*unitCell[2]
     #

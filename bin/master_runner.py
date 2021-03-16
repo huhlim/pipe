@@ -29,7 +29,7 @@ def run(verbose):
             continue
         job = Job.from_json(job_fn)
         #
-        if job.has("run_exec") and (job.run_type not in EXEC):
+        if job.has("run_exec"):
             run_exec = job.run_exec
         elif job.run_type in EXEC:
             run_exec = EXEC[job.run_type]
