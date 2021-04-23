@@ -12,6 +12,7 @@ WATERs = ('TIP')
 atmName_update = {"O":" OT1", "OXT":" OT2"}
 
 def read_pdb(fn):
+    n_atoms = 0
     segName_s = []
     seg_s = {}
     disu_s = []
@@ -59,6 +60,7 @@ def read_pdb(fn):
                 line = 'ATOM  %s'%line[6:]
 
             seg_s[segName][1].append(line)
+            n_atoms += 1
     #
     for segName in seg_s:
         if seg_s[segName][0] != 0: continue
@@ -90,7 +92,7 @@ def read_pdb(fn):
         seg_1 = find_seg(disu[1], seg_s)
         if seg_0 is not None and seg_1 is not None:
             disu_out.append((seg_0, disu[0][1], seg_1, disu[1][1]))
-    return segName_s, seg_s, disu_out
+    return segName_s, seg_s, disu_out, n_atoms
 
 def parse_patch(args):
     patch_s = []
@@ -254,7 +256,7 @@ def main():
     arg.toppar = [os.path.realpath(fn) for fn in arg.toppar]
     #
     patch_s = parse_patch(arg.patch_s)
-    segName_s, seg_s, disu_s = read_pdb(arg.init_pdb)
+    segName_s, seg_s, disu_s, n_atoms = read_pdb(arg.init_pdb)
     tmpdir = split_seg(segName_s, seg_s, debug=arg.debug)
     pwd = os.getcwd()
     #
@@ -271,7 +273,11 @@ def main():
     stdout = open('%s/genPSF.log'%tmpdir, 'wt')
     #
     os.chdir(tmpdir)
-    sp.call([os.environ['CHARMMEXEC']], stdin=stdin, stdout=stdout)
+    if n_atoms > 360000:
+        sp.call(os.environ['CHARMMEXEC'].split() + ['-chsize', '%d'%((1+int(n_atoms/1e5))*1e5)], \
+                stdin=stdin, stdout=stdout)
+    else:
+        sp.call(os.environ['CHARMMEXEC'].split(), stdin=stdin, stdout=stdout)
     os.chdir(pwd)
     #
     stdin.close()

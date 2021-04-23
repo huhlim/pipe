@@ -18,6 +18,12 @@ PARAM['casp12'] = ("RWplus", 0.5, 225., 45.)
 PARAM['cluster'] = (2.0, 20, 5) # rmsd_cutoff, subsample, max_run_md
 PARAM['msm'] = ('RWplus', 25.0)
 
+PARAM_big = {}
+PARAM_big['score'] = ("dDFIRE", 25.0)
+PARAM_big['casp12'] = ("dDFIRE", 0.5, 225., 45.)
+PARAM_big['cluster'] = (2.0, 20, 5) # rmsd_cutoff, subsample, max_run_md
+PARAM_big['msm'] = ('dDFIRE', 25.0)
+
 def prep(job, output_prefix, input_prod, input_json, rule='score'):
 #    if len(job.get_task(METHOD, not_status='DONE')) > 0:
 #        return
@@ -36,6 +42,8 @@ def prep(job, output_prefix, input_prod, input_json, rule='score'):
         input_s = [output_prefix, (rule, PARAM[rule]), input_json, [], [], []]
     elif rule == 'cluster':
         input_s = [output_prefix, (rule, PARAM[rule]), input_json, []]
+    if job.n_atom > 22400:
+        input_s[1] = (rule, PARAM_big[rule])
     #
     for prod in prod_s:
         if prod['resource'][0] != 'DONE':

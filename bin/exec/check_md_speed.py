@@ -51,6 +51,12 @@ def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, ver
 
     ff = CharmmParameterSet(*ff_file_s)
     platform = Platform.getPlatformByName(options['openmm']['platform'])
+    properties = {}
+    cuda_devices = os.getenv("CUDA_VISIBLE_DEVICES")
+    if cuda_devices is not None:
+        n_gpu = len(cuda_devices.split(","))
+    if n_gpu > 1:
+        properties['DeviceIndex'] = ",".join(['%d'%index for index in range(n_gpu)])
     #
     sys = psf.createSystem(ff, \
                            nonbondedMethod=PME, \
@@ -75,7 +81,7 @@ def check_speed(output_prefix, solv_fn, psf_fn, crd_fn, restart_fn, options, ver
     #
     integrator = LangevinIntegrator(temp*kelvin, 1.0/picosecond, 0.001*picosecond)
     #
-    simulation = Simulation(psf.topology, sys, integrator, platform)
+    simulation = Simulation(psf.topology, sys, integrator, platform, properties)
     simulation.context.setPositions(crd)
     #
     if restart_fn is None:

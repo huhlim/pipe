@@ -77,7 +77,9 @@ def run(arg, options):
         ligand_restraints = construct_ligand_restraint(ligand_restraint)
         sys.addForce(ligand_restraints)
     #
-    if arg.barostat == 'isotropic':
+    if arg.barostat is None:
+        pass
+    elif arg.barostat == 'isotropic':
         sys.addForce(MonteCarloBarostat(1.0*bar, options['md']['dyntemp']*kelvin))
     elif arg.barostat == 'XYisotropic':
         sys.addForce(MonteCarloMembraneBarostat(1.0*bar, \
@@ -86,6 +88,8 @@ def run(arg, options):
                                                 MonteCarloMembraneBarostat.XYIsotropic, \
                                                 MonteCarloMembraneBarostat.ZFree, \
                                                 100))
+    else:
+        sys.exit("ERROR: unknown barostat.\n")
     #
     integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
                                     options['md']['langfbeta']/picosecond, \
