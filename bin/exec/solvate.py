@@ -89,8 +89,10 @@ def place_ions(pdb, ion_conc, net_charge):
     return n_ion
 
 def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
-    top = pdb0.top.copy()
-    xyz = pdb0.xyz[0]
+    protein = pdb0.atom_slice(pdb0.top.select("protein"))
+    cryst_water = pdb0.atom_slice(pdb0.top.select("water"))
+    top = protein.top.copy()
+    xyz = protein.xyz[0]
     #
     segNo = 0 ; resNo_prev = None
     for i,chain in enumerate(top.chains):
@@ -148,7 +150,7 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
     #
     water_index = 0 
     segName = 'W%03d'%water_index
-    for i in range(n_water):
+    for i in range(cryst_water.top.n_residues + n_water):
         if chain.n_residues >= 9999:
             chain = top.add_chain()
             resNo = 0
@@ -166,7 +168,8 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
             atom_1 = atom_s[b[0]]
             atom_2 = atom_s[b[1]]
             top.add_bond(atom_1, atom_2)
-    xyz = np.append(xyz, np.concatenate(placed[ia:]), axis=0)
+    xyz = np.concatenate([xyz, cryst_water.xyz[0], np.concatenate(placed[ia:])])
+    #xyz = np.append(xyz, np.concatenate(placed[ia:]), axis=0)
     #
     pdb = mdtraj.Trajectory(xyz[None,:], top, \
             unitcell_lengths=pdb0.unitcell_lengths,\
