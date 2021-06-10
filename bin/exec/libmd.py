@@ -58,12 +58,34 @@ def solvate_pdb(output_prefix, pdb, options, verbose):
         #
         pdb.unitcell_vectors = (system_size * np.eye(3))[None,:]
         pdb.save(orient_fn.short())
+
+    solvate_cryst = options['md'].get('solvate_cryst', None)
+    if solvate_cryst is not None:
+        cryst_pdb = path.Path("%s.cryst_water.pdb"%output_prefix)
+        #
+        if not cryst_pdb.status():
+            cmd = []
+            cmd.append("%s/copy_water.py"%EXEC_HOME)
+            cmd.append(orient_fn.short())
+            cmd.append(solvate_cryst[0].short())
+            cmd.append(cryst_pdb.short())
+            cmd.extend(['--bfactor', '%10.2f'%solvate_cryst[1]])
+            system(cmd, verbose=verbose)
+        #
+        cryst_water = mdtraj.load(cryst_pdb.short())
+        n_cryst_water = cryst_water.top.select("water").shape[0]//3
+        options['md']['n_cryst_water'] = n_cryst_water
+        #
+        solv_input = cryst_pdb
+    else:
+        solv_input = orient_fn
     #
     solv_fn = path.Path('%s.solvate.pdb'%output_prefix)
     if not solv_fn.status():
+        #
         cmd = []
         cmd.append("%s/solvate.py"%EXEC_HOME)
-        cmd.append(orient_fn.short())
+        cmd.append(solv_input.short())
         cmd.append(solv_fn.short())
         cmd.append("%8.5f"%options['md']['ion_conc'])
         system(cmd, verbose=verbose)
@@ -167,6 +189,35 @@ def construct_restraint(psf, pdb, force_const):
         param = pdb.xyz[0,i].tolist()
         param.append(force_const * mass * kilocalories_per_mole/angstroms**2)
         rsr.addParticle(calphaIndex[k], param)
+    return rsr
+
+def construct_water_restraint(psf, pdb, n_water, force_const):
+    rsr = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
+    rsr.addPerParticleParameter("x0")
+    rsr.addPerParticleParameter("y0")
+    rsr.addPerParticleParameter("z0")
+    rsr.addPerParticleParameter('k0')
+    #
+    waterIndex = []
+    for residue in psf.topology.residues():
+        if residue.name not in ['TIP3']:
+            continue
+        for atom in residue.atoms():
+            if atom.name in ['OH2']:
+                waterIndex.append(atom.index)
+                break
+        if len(waterIndex) >= n_water:
+            break
+    #
+    pdb_water = pdb.atom_slice(pdb.top.select("water and element == O"))
+    k = -1
+    for i,atom in enumerate(pdb_water.top.atoms):
+        k += 1
+        mass = atom.element.mass
+        param = pdb_water.xyz[0,i].tolist()
+        param.append(force_const * mass * kilocalories_per_mole/angstroms**2)
+        rsr.addParticle(waterIndex[k], param)
+        if k+1 == n_water: break
     return rsr
 
 def construct_membrane_restraint(psf, pdb, force_const):

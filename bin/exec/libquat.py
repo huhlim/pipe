@@ -47,3 +47,24 @@ class Quaternion:
         psi = np.arctan2( 2.0*(q[0]*q[3] + q[1]+q[2]), 1.0-2.0*(q[2]**2+q[3]**2) )
         return np.array([phi, theta, psi], dtype=float)
 
+def sample_fibonacci_sphere(n_sample=1, randomize=True):
+    if randomize:
+        rnd = np.random.random() * n_sample
+    else:
+        rnd = 1.0
+    #
+    point_s = []
+    offset = 2.0 / n_sample
+    increment = np.pi * (3.0 - np.sqrt(5.0))
+    #
+    for i in range(n_sample):
+        z = (i*offset - 1.0) + (offset / 2.0)
+        r = np.sqrt(1 - z**2)
+        phi = ((i + rnd)%n_sample) * increment
+        x = np.cos(phi) * r
+        y = np.sin(phi) * r
+        point_s.append((x,y,z))
+    #
+    point_s = np.array(point_s, dtype=float)
+    #
+    return point_s

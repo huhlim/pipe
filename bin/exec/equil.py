@@ -24,8 +24,8 @@ from libcommon import *
 from libligand import read_ligand_json, add_ligand, update_ligand_name, get_ligand_restratint
 
 from libcustom import *
-from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint,\
-                    update_residue_name
+from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_water_restraint, \
+        construct_ligand_restraint, update_residue_name
 
 def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
@@ -55,6 +55,11 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                            constraints=HBonds)
     #
     sys.addForce(construct_restraint(psf, pdb, 0.5))
+    if options['md'].get("solvate_cryst", None) is not None:
+        n_cryst_water = options['md'].get("n_cryst_water", -1)
+        if n_cryst_water < 0:
+            raise NotImplementedError
+        sys.addForce(construct_water_restraint(psf, pdb, n_cryst_water, 0.5))
     #
     if 'custom' in options['ff'] and options['ff']['custom'] is not None:
         custom_restrains = read_custom_restraint(options['ff']['custom'])
