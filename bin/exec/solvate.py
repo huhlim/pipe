@@ -90,7 +90,10 @@ def place_ions(pdb, ion_conc, net_charge):
 
 def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
     protein = pdb0.atom_slice(pdb0.top.select("protein"))
-    cryst_water = pdb0.atom_slice(pdb0.top.select("water"))
+    if len(pdb0.top.select("water")) > 0:
+        cryst_water = pdb0.atom_slice(pdb0.top.select("water"))
+    else:
+        cryst_water = None
     top = protein.top.copy()
     xyz = protein.xyz[0]
     #
@@ -150,7 +153,9 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
     #
     water_index = 0 
     segName = 'W%03d'%water_index
-    for i in range(cryst_water.top.n_residues + n_water):
+    if cryst_water is not None:
+        n_water += cryst_water.top.n_residues
+    for i in range(n_water):
         if chain.n_residues >= 9999:
             chain = top.add_chain()
             resNo = 0
@@ -168,7 +173,10 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
             atom_1 = atom_s[b[0]]
             atom_2 = atom_s[b[1]]
             top.add_bond(atom_1, atom_2)
-    xyz = np.concatenate([xyz, cryst_water.xyz[0], np.concatenate(placed[ia:])])
+    if cryst_water is not None:
+        xyz = np.concatenate([xyz, cryst_water.xyz[0], np.concatenate(placed[ia:])])
+    else:
+        xyz = np.concatenate([xyz, np.concatenate(placed[ia:])])
     #xyz = np.append(xyz, np.concatenate(placed[ia:]), axis=0)
     #
     pdb = mdtraj.Trajectory(xyz[None,:], top, \

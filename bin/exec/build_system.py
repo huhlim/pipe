@@ -212,6 +212,7 @@ def calc_system_size(arg):
     if not status:
         sys.exit('ERROR: cannot determine the number of molecules.')
     n_place = n_place.astype(int)
+    box_volume = box_width**3       # nm^3 = 10^-24 L
     #
     sys.stdout.write("# INPUT arguments\n")
     sys.stdout.write("BOX_WIDTH   %9.4f [nm]\n"%(arg.box_width*0.1))
@@ -227,6 +228,7 @@ def calc_system_size(arg):
     sys.stdout.write("# FINAL compositions\n")
     sys.stdout.write("BOX_WIDTH   %9.4f [nm]\n"%box_width)
     sys.stdout.write("TOTAL_CONC  %9.4f [mM]    %9.4f [g/L]\n"%(conc.sum(), ((conc*1e-3)*mass).sum()))
+    sys.stdout.write("SYSTEM_SIZE   %7d [atoms]\n"%((box_width * 1e-9)**3 / 1e-6 / 18.01528 * N_AVOGADRO * 3))
     for i,in_fn in enumerate(arg.in_fn_s):
         wrt = []
         wrt.append("%5d"%n_place[i])
@@ -246,6 +248,7 @@ def main():
     arg.add_argument('--conc', dest='conc_total', type=float, default=0.0)
     arg.add_argument('--unit', dest='unit', type=str, choices=['mM', 'g/L'], default='mM')
     arg.add_argument('-b', '--box', dest='box_width', type=float, default=0.)
+    arg.add_argument('--check', dest='check_system_size', action='store_true', default=False)
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -262,6 +265,8 @@ def main():
     arg.in_fn_s = [os.path.abspath(fn) for fn in arg.in_fn_s]
     #
     n_place, box_width = calc_system_size(arg)
+    if arg.check_system_size:
+        return
     pdb = run(arg.in_fn_s, n_place, box_width)
     pdb.save(arg.out_fn)
 
