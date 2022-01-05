@@ -84,6 +84,7 @@ def main():
     arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
     arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
     arg.add_argument('--oligomer', dest='is_oligomer', action='store_true', default=False)
+    arg.add_argument('--qa', dest='use_qa', action='store_true', default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -222,17 +223,19 @@ def main():
         model_s.append(model_fn)
 
     # qa
-    import_module("qa").prep(job, model_s, path.Path("%s/qa.json"%DEFAULT_HOME))
-    if not run(job, arg.wait_after_run):
-        return
-    qa_out = get_outputs(job, 'qa')
+    if job.use_qa:
+        import_module("qa").prep(job, model_s, path.Path("%s/qa.json"%DEFAULT_HOME))
+        if not run(job, arg.wait_after_run):
+            return
+        qa_out = get_outputs(job, 'qa')
+        model_s = [out[0] for out in qa_out]
 
     # final
     final_home = job.work_home.subdir("final", build=True)
-    for i,out in enumerate(qa_out):
+    for i,out in enumerate(model_s):
         pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
         if not pdb_fn.status():
-            system(['cp', out[0].short(), pdb_fn.short()], verbose=job.verbose)
+            system(['cp', out.short(), pdb_fn.short()], verbose=job.verbose)
     #
     job.remove_from_joblist()
 

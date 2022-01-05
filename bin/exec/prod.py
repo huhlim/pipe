@@ -284,7 +284,7 @@ def run(output_prefix, input_json, options, verbose, prod_runner=EXEC, \
                     fout.write("#")
                 sys.exit("ERROR: failed to run %s\n"%run_home)
     #
-    if generate_solute_file:
+    if generate_solute_file and ('n_atom' in options['input']):
         system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\
                 (DONE.short(), options['input']['n_atom'], boxsize, \
                 ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))

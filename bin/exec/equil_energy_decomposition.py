@@ -29,8 +29,17 @@ from libcommon import *
 from libligand import read_ligand_json, add_ligand, update_ligand_name, get_ligand_restratint
 
 from libcustom import *
-from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_water_restraint, \
-        construct_ligand_restraint, update_residue_name
+from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_ligand_restraint,\
+                    update_residue_name
+
+def getEnergyDecomposition(system, simulation):
+    state = simulation.context.getState(getEnergy=True)
+    print ('Total energy: ', state.getPotentialEnergy())
+    #
+    for i,force in enumerate(system.getForces()):
+        force.setForceGroup(i)
+        energy = simulation.context.getState(getEnergy=True, groups=2**i).getPotentialEnergy()
+        print (i, force, energy)
 
 def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
@@ -38,7 +47,7 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     #
     pdb = mdtraj.load(solv_fn.short())
     #
-    if options['md']['solvate'] > 0.0 and options['md'].get("orient", True):  # solvated via libmd.solvate_pdb
+    if options['md']['solvate'] > 0.0:  # solvated via libmd.solvate_pdb
         box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
         boxsize = np.max(box, 0) - np.min(box, 0)
     else:   # solvated prior to the script
@@ -60,14 +69,9 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                            constraints=HBonds)
     #
     sys.addForce(construct_restraint(psf, pdb, 0.5))
-    if options['md'].get("solvate_cryst", None) is not None:
-        n_cryst_water = options['md'].get("n_cryst_water", -1)
-        if n_cryst_water < 0:
-            raise NotImplementedError
-        sys.addForce(construct_water_restraint(psf, pdb, n_cryst_water, 0.5))
     #
     if 'custom' in options['ff'] and options['ff']['custom'] is not None:
-        custom_restraints = read_custom_restraint(options['ff']['custom'])
+        custom_restrains = read_custom_restraint(options['ff']['custom'])
         custom_s = construct_custom_restraint(pdb, custom_restraints[1])
         for custom in custom_s:
             sys.addForce(custom)
@@ -90,12 +94,11 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         simulation = Simulation(psf.topology, sys, integrator, platform)
         simulation.context.setPositions(crd.positions)
         if i == 0:
-            #state = simulation.context.getState(getEnergy=True)
-            #print (state.getPotentialEnergy())
+            getEnergyDecomposition(sys, simulation)
             simulation.minimizeEnergy(maxIterations=500)
-            #state = simulation.context.getState(getEnergy=True)
-            #print (state.getPotentialEnergy())
+            getEnergyDecomposition(sys, simulation)
             simulation.context.setVelocitiesToTemperature(temp*kelvin)
+            sys.exit()
         else:
             with open(chk_fn, 'rb') as fp:
                 simulation.context.loadCheckpoint(fp.read())
@@ -112,11 +115,7 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         temp += temp_incr ; i += 1
         steps_left -= steps_heat
     #
-    if np.std(boxsize) < 0.1:
-        sys.addForce(MonteCarloBarostat(1.0*bar, options['md']['dyntemp']*kelvin))
-    else:
-        sys.addForce(MonteCarloAnisotropicBarostat([1.0*bar, 1.0*bar, 1.0*bar], \
-                options['md']['dyntemp']*kelvin))
+    sys.addForce(MonteCarloBarostat(1.0*bar, options['md']['dyntemp']*kelvin))
     integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
                                     options['md']['langfbeta']/picosecond, \
                                     options['md']['dyntstep']*picosecond)

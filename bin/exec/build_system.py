@@ -113,8 +113,8 @@ def convert_to_pdb(molecule_s, n_place, xyz, box_width):
             unitcell_angles=90.0*np.ones(3))
     return out
 
-def run(in_fn_s, n_place, box_width):
-    molecule_s = [mdtraj.load(fn) for fn in in_fn_s]
+def run(in_fn_s, n_place, box_width, keep_atom_name):
+    molecule_s = [mdtraj.load(fn, standard_names=(not keep_atom_name)) for fn in in_fn_s]
     xyz = place(molecule_s, n_place, box_width)
     out = convert_to_pdb(molecule_s, n_place, xyz, box_width)
     return out
@@ -249,6 +249,7 @@ def main():
     arg.add_argument('--unit', dest='unit', type=str, choices=['mM', 'g/L'], default='mM')
     arg.add_argument('-b', '--box', dest='box_width', type=float, default=0.)
     arg.add_argument('--check', dest='check_system_size', action='store_true', default=False)
+    arg.add_argument('--keep_atom_name', dest='keep_atom_name', default=False, action='store_true')
     #
     if len(sys.argv) == 1:
         arg.print_help()
@@ -267,7 +268,7 @@ def main():
     n_place, box_width = calc_system_size(arg)
     if arg.check_system_size:
         return
-    pdb = run(arg.in_fn_s, n_place, box_width)
+    pdb = run(arg.in_fn_s, n_place, box_width, arg.keep_atom_name)
     pdb.save(arg.out_fn)
 
 if __name__ == '__main__':

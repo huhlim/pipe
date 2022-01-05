@@ -11,9 +11,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import mdtraj
-from simtk.unit import *
-from simtk.openmm import *
-from simtk.openmm.app import *
+try:
+    from openmm.unit import *
+    from openmm.openmm import *
+    from openmm.app import *
+except:
+    from simtk.unit import *
+    from simtk.openmm import *
+    from simtk.openmm.app import *
 
 WORK_HOME = os.getenv("PREFMD_HOME")
 assert WORK_HOME is not None

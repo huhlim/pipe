@@ -198,8 +198,7 @@ def main():
         return
     arg = arg.parse_args()
     #
-    pdb0 = mdtraj.load(arg.in_pdb)
-    update_residue_name(path.Path(arg.in_pdb), pdb0)
+    pdb0 = mdtraj.load(arg.in_pdb, standard_names=False)
     #
     water0 = mdtraj.load(water_pdb_fn)
     water = water0.xyz[0].reshape((-1, 3, 3)) + water_box/2.0
@@ -209,6 +208,7 @@ def main():
     n_water = placed.shape[0] - sum(n_ion)
     #
     pdb = xyz_to_pdb(pdb0, water0, placed, n_ion, n_water)
+    update_residue_name(path.Path(arg.in_pdb), pdb)
     pdb.save(arg.out_pdb)
 
 if __name__ == '__main__':

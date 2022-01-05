@@ -32,13 +32,13 @@ from libcustom import *
 from libmd import solvate_pdb, generate_PSF, construct_restraint, construct_water_restraint, \
         construct_ligand_restraint, update_residue_name
 
-def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
+def minimize(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
     psf = CharmmPsfFile(psf_fn.short())
     crd = CharmmCrdFile(crd_fn.short())
     #
-    pdb = mdtraj.load(solv_fn.short())
+    pdb = mdtraj.load(solv_fn.short(), standard_names=False)
     #
-    if options['md']['solvate'] > 0.0 and options['md'].get("orient", True):  # solvated via libmd.solvate_pdb
+    if options['md'].get("solvate", -1) > 0.0 and options['md'].get("orient", True):  # solvated via libmd.solvate_pdb
         box = np.array(crd.positions.value_in_unit(nanometers), dtype=float)
         boxsize = np.max(box, 0) - np.min(box, 0)
     else:   # solvated prior to the script
@@ -76,61 +76,18 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         ligand_restraints = construct_ligand_restraint(options['ff']['ligand'])
         sys.addForce(ligand_restraints)
     #
-    steps_left = options['md']['equil'][0]
-    steps_heat = options['md']['heat'][0]
-    temp = options['md']['heat'][1]
-    temp_incr = options['md']['heat'][2]
-    #
-    i = 0
-    while (temp < options['md']['dyntemp']):
-        integrator = LangevinIntegrator(temp*kelvin, \
-                                        options['md']['langfbeta']/picosecond, \
-                                        options['md']['dyntstep']*picosecond)
-        #
-        simulation = Simulation(psf.topology, sys, integrator, platform)
-        simulation.context.setPositions(crd.positions)
-        if i == 0:
-            #state = simulation.context.getState(getEnergy=True)
-            #print (state.getPotentialEnergy())
-            simulation.minimizeEnergy(maxIterations=500)
-            #state = simulation.context.getState(getEnergy=True)
-            #print (state.getPotentialEnergy())
-            simulation.context.setVelocitiesToTemperature(temp*kelvin)
-        else:
-            with open(chk_fn, 'rb') as fp:
-                simulation.context.loadCheckpoint(fp.read())
-        simulation.reporters.append(StateDataReporter('%s.heat.%03d.log'%(output_prefix, temp), 500, step=True, \
-            time=True, kineticEnergy=True, potentialEnergy=True, temperature=True, progress=True, \
-            remainingTime=True, speed=True, volume=True, totalSteps=steps_heat, separator='\t'))
-        #
-        simulation.step(steps_heat)
-        #
-        chk_fn = '%s.heat.restart'%(output_prefix)
-        with open(chk_fn, 'wb') as fout:
-            fout.write(simulation.context.createCheckpoint())
-        simulation = None   # have to free CUDA-related variables
-        temp += temp_incr ; i += 1
-        steps_left -= steps_heat
-    #
-    if np.std(boxsize) < 0.1:
-        sys.addForce(MonteCarloBarostat(1.0*bar, options['md']['dyntemp']*kelvin))
-    else:
-        sys.addForce(MonteCarloAnisotropicBarostat([1.0*bar, 1.0*bar, 1.0*bar], \
-                options['md']['dyntemp']*kelvin))
-    integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
-                                    options['md']['langfbeta']/picosecond, \
-                                    options['md']['dyntstep']*picosecond)
+    integrator = LangevinIntegrator(298.15*kelvin, 1.0/picosecond, 0.002*picosecond)
     #
     simulation = Simulation(psf.topology, sys, integrator, platform)
     simulation.context.setPositions(crd.positions)
-    with open(chk_fn, 'rb') as fp:
-        simulation.context.loadCheckpoint(fp.read())
 
-    simulation.reporters.append(StateDataReporter('%s.equil.log'%output_prefix, 2500, step=True, \
-        time=True, kineticEnergy=True, potentialEnergy=True, temperature=True, progress=True, \
-        remainingTime=True, speed=True, volume=True, totalSteps=steps_left, separator='\t'))
-        #
-    simulation.step(steps_left)
+    state = simulation.context.getState(getEnergy=True)
+    print (state.getPotentialEnergy())
+
+    simulation.minimizeEnergy(maxIterations=500)
+
+    state = simulation.context.getState(getEnergy=True)
+    print (state.getPotentialEnergy())
     #
     state = simulation.context.getState(getPositions=True,\
                                         getVelocities=True,\
@@ -138,32 +95,34 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                                         getEnergy=True, \
                                         enforcePeriodicBox=True)
     #
-    chk_fn = '%s.equil.restart'%(output_prefix)
-    with open("%s.pkl"%chk_fn, 'wb') as fout:
-        pickle.dump(state, fout)
-    #
     boxinfo = state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer)
     #
-    equil_pdb_fn = path.Path('%s.equil.pdb'%output_prefix)
-    pdb.xyz = state.getPositions(asNumpy=True).value_in_unit(nanometer)[None,:]
-    pdb.unitcell_vectors = boxinfo[None,:]
-    pdb.save(equil_pdb_fn.short())
+    out_pdb_fn = path.Path('%s.pdb'%output_prefix)
+    xyz = state.getPositions(asNumpy=True).value_in_unit(nanometer)[None,:]
+    if pdb.xyz.shape[1] == xyz.shape[1]:
+        pdb.xyz = xyz
+        pdb.unitcell_vectors = boxinfo[None,:]
+        pdb.save(out_pdb_fn.short())
+    else:
+        with out_pdb_fn.open("wt") as fout:
+            PDBFile.writeFile(simulation.topology, state.getPositions(), fout)
+
     #
     cmd = []
     cmd.append("%s/update_water_name.py"%EXEC_HOME)
-    cmd.append(equil_pdb_fn.short())
+    cmd.append(out_pdb_fn.short())
     system(cmd, verbose=verbose)
     #
     if 'use_modified_CMAP' in options['ff'] and options['ff']['use_modified_CMAP']:
-        cmd = ['%s/resName_modified_CMAP.py'%EXEC_HOME, equil_pdb_fn.short()]
+        cmd = ['%s/resName_modified_CMAP.py'%EXEC_HOME, out_pdb_fn.short()]
         output = system(cmd, verbose=verbose, stdout=True)
-        with equil_pdb_fn.open('wt') as fout:
+        with out_pdb_fn.open('wt') as fout:
             if 'ssbond' in options:
                 for line in options['ssbond']:
                     fout.write("%s\n"%line)
             fout.write(output)
 
-def run(input_pdb, output_prefix, options, verbose, nonstd):
+def run(input_pdb, output_prefix, options, verbose):
     tempfile_s = []
     #
     if 'ligand' in options:
@@ -175,7 +134,7 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
     #
     pdb = mdtraj.load(init_pdb.short())
     update_residue_name(init_pdb, pdb)
-    if options['md']['solvate'] > 0.0:
+    if options['md'].get("solvate", -1) > 0.:
         orient_fn, solv_fn = solvate_pdb(output_prefix, pdb, options, verbose)
         tempfile_s.extend([orient_fn, solv_fn])
     else:
@@ -191,7 +150,7 @@ def run(input_pdb, output_prefix, options, verbose, nonstd):
         ligand_restraint = get_ligand_restratint(pdb, psf_fn, options['ligand'])
         options['ff']['ligand'] = ligand_restraint
     #
-    equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
+    minimize(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose)
     if 'ligand' in options:
         update_ligand_name(solv_fn, options['ligand']['ligand_s'])
 
@@ -202,8 +161,6 @@ def main():
     arg.add_argument('--input', dest='input_json', required=True)
     arg.add_argument('--toppar', dest='toppar', nargs='*', default=None)
     arg.add_argument('--custom', dest='custom_file', default=None)
-    arg.add_argument('--temp', dest='temp', default=None, type=float)
-    arg.add_argument('--non_standard', dest='non_standard', default=False, action='store_true')
     arg.add_argument('-v', '--verbose', default=False, action='store_true')
     arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
             help='set temporary file mode (default=False)')
@@ -226,10 +183,8 @@ def main():
         options['ff']['toppar']= arg.toppar
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
-    if arg.temp is not None:
-        options['md']['dyntemp'] = arg.temp
     #
-    run(input_pdb, arg.output_prefix, options, arg.verbose, arg.non_standard)
+    run(input_pdb, arg.output_prefix, options, arg.verbose)
 
 if __name__=='__main__':
     main()

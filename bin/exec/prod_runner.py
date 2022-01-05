@@ -10,10 +10,16 @@ import pickle
 import numpy as np
 
 import mdtraj
-from simtk.unit import *
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.openmm.app.internal.charmm.exceptions import CharmmPSFWarning
+try:
+    from openmm.unit import *
+    from openmm.openmm import *
+    from openmm.app import *
+    from openmm.app.internal.charmm.exceptions import CharmmPSFWarning
+except:
+    from simtk.unit import *
+    from simtk.openmm import *
+    from simtk.openmm.app import *
+    from simtk.openmm.app.internal.charmm.exceptions import CharmmPSFWarning
 import warnings
 warnings.filterwarnings("ignore", category=CharmmPSFWarning)
 
@@ -40,13 +46,18 @@ def run(arg, options):
         ff_file_s.extend([fn.short() for fn in options['ligand']['str_fn_s']])
 
     ff = CharmmParameterSet(*ff_file_s)
-    platform = Platform.getPlatformByName(options['openmm']['platform'])
     properties = {}
     cuda_devices = os.getenv("CUDA_VISIBLE_DEVICES")
     if cuda_devices is not None:
         n_gpu = len(cuda_devices.split(","))
+    else:
+        n_gpu = 0
+        options['openmm']['platform'] = 'CPU'
     if n_gpu > 1:
         properties['DeviceIndex'] = ",".join(['%d'%index for index in range(n_gpu)])
+    platform = Platform.getPlatformByName(options['openmm']['platform'])
+    if options['openmm']['platform'] == 'CPU':
+        properties = {}
     #
     switchDistance=options['ff'].get("switchDistance", 0.8)*nanometers
     nonbondedCutoff=options['ff'].get("nonbondedCutoff", 1.0)*nanometers
@@ -81,6 +92,9 @@ def run(arg, options):
         pass
     elif arg.barostat == 'isotropic':
         sys.addForce(MonteCarloBarostat(1.0*bar, options['md']['dyntemp']*kelvin))
+    elif arg.barostat == 'anisotropic':
+        sys.addForce(MonteCarloAnisotropicBarostat([1.0*bar, 1.0*bar, 1.0*bar], \
+                options['md']['dyntemp']*kelvin))
     elif arg.barostat == 'XYisotropic':
         sys.addForce(MonteCarloMembraneBarostat(1.0*bar, \
                                                 0.0*bar*nanometers, \

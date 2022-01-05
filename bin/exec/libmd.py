@@ -10,9 +10,14 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 import mdtraj
-from simtk.unit import *
-from simtk.openmm import *
-from simtk.openmm.app import *
+try:
+    from openmm.unit import *
+    from openmm.openmm import *
+    from openmm.app import *
+except:
+    from simtk.unit import *
+    from simtk.openmm import *
+    from simtk.openmm.app import *
 
 WORK_HOME = os.getenv("PREFMD_HOME")
 assert WORK_HOME is not None
@@ -25,6 +30,8 @@ from libquat import Quaternion
 
 def solvate_pdb(output_prefix, pdb, options, verbose):
     orient_fn = path.Path('%s.orient.pdb'%output_prefix)
+    if not options['md'].get("orient", True):
+        pdb.save(orient_fn.short())
     if not orient_fn.status():
         xyz = pdb.xyz[0]
         xyz -= xyz.mean(axis=0)
@@ -82,7 +89,6 @@ def solvate_pdb(output_prefix, pdb, options, verbose):
     #
     solv_fn = path.Path('%s.solvate.pdb'%output_prefix)
     if not solv_fn.status():
-        #
         cmd = []
         cmd.append("%s/solvate.py"%EXEC_HOME)
         cmd.append(solv_input.short())

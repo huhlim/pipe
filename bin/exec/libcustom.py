@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
-from simtk.unit import *
-from simtk.openmm import *
-from simtk.openmm.app import *
+try:
+    from openmm.unit import *
+    from openmm.openmm import *
+    from openmm.app import *
+except:
+    from simtk.unit import *
+    from simtk.openmm import *
+    from simtk.openmm.app import *
 
 class Custom:
     def __init__(self, r_type, n_atom, n_param, i_atm, prm):

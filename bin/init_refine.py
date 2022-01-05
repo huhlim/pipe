@@ -55,6 +55,8 @@ def prep(arg):
         job.is_oligomer = True
         if job.use_hybrid:
             job.use_hybrid = False
+    if hasattr(job, "use_qa"):
+        job.use_qa = arg.use_qa
     #
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
