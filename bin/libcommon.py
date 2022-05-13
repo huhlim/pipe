@@ -12,7 +12,7 @@ assert sys.version_info.major == 3
 
 HOSTNAME=os.getenv('HOSTNAME')
 
-WORK_HOME = os.getenv("PREFMD_HOME")
+WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
 
 BIN_HOME = '%s/bin'%WORK_HOME

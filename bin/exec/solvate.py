@@ -9,7 +9,7 @@ from multiprocessing import Pool
 from string import ascii_uppercase
 import argparse
 
-WORK_HOME = os.getenv("PREFMD_HOME")
+WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
 sys.path.insert(0, '%s/bin'%WORK_HOME)
 from libcommon import DEFAULT_HOME

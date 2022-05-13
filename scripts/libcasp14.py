@@ -9,7 +9,7 @@ import requests
 import numpy as np
 import subprocess as sp
 
-PREFMD_HOME = os.getenv("PREFMD_HOME")
+PIPE_HOME = os.getenv("PIPE_HOME")
 WORK_HOME = '/green/s2/huhlim/work/casp14'
 PARAM_N_MODEL = 5
 

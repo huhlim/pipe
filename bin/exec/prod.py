@@ -8,7 +8,7 @@ import argparse
 
 import numpy as np
 
-WORK_HOME = os.getenv("PREFMD_HOME")
+WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
 sys.path.insert(0, '%s/bin'%WORK_HOME)
 

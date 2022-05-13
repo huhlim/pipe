@@ -15,7 +15,7 @@ def initialize_TS_server(target, fa_fn, use_hybrid=False, use_extensive=False):
     if len(target['sequence']) > PARAM_BIG_TARGET:
         send_big_target_warning(target, fa_fn)
     #
-    EXEC = '%s/bin/casp14_sp.py'%PREFMD_HOME
+    EXEC = '%s/bin/casp14_sp.py'%PIPE_HOME
     #
     cmd = [EXEC]
     cmd.append(target['target_id'])
@@ -33,7 +33,7 @@ def initialize_TR_server(target, use_hybrid=False, use_extensive=False):
     if not os.path.exists(pdb_fn):
         sp.call(['wget', '-q', '-c', url, '-O', pdb_fn], stderr=sp.DEVNULL)
     #
-    EXEC = '%s/bin/casp14_refine.py'%PREFMD_HOME
+    EXEC = '%s/bin/casp14_refine.py'%PIPE_HOME
     #
     cmd = [EXEC]
     cmd.append(target['target_id'])
@@ -126,7 +126,7 @@ def initialize_server_target(target):
         initialize_TR_human(target)
 
 def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_extensive=False, human=None):
-    EXEC = '%s/bin/casp14_refine.py'%PREFMD_HOME
+    EXEC = '%s/bin/casp14_refine.py'%PIPE_HOME
     #
     cmd = [EXEC]
     cmd.append(target_id)
@@ -142,7 +142,7 @@ def initialize_human_target(target_id, meta, pdb_fn, use_hybrid=False, use_exten
     sp.call(cmd)
 
 def initialize_meta_target(target):
-    EXEC = '%s/bin/casp14_meta.py'%PREFMD_HOME
+    EXEC = '%s/bin/casp14_meta.py'%PIPE_HOME
     #
     cmd = [EXEC]
     cmd.append(target['target_id'])
@@ -168,14 +168,14 @@ def update_target(target, predictor):
     job_fn = '%s/job.json'%run_home
     if os.path.exists(job_fn):
         out_s = []
-        cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check']
+        cmd = ['%s/bin/status.py'%PIPE_HOME, 'check']
         cmd.append(job_fn)
         out_s.append(sp.check_output(cmd).decode("utf8"))
         if predictor in ['FEIG-S', 'FEIG']:
             refine_s = glob.glob("%s/refine/*/job.json"%run_home)
             refine_s.sort(key=lambda x: x.split("/")[-2])
             for refine in refine_s:
-                cmd = ['%s/bin/status.py'%PREFMD_HOME, 'check', refine]
+                cmd = ['%s/bin/status.py'%PIPE_HOME, 'check', refine]
                 out_s.append(sp.check_output(cmd).decode("utf8"))
         with open("%s/status.dat"%(run_home), 'wt') as fout:
             fout.write("Updated: %s\n\n"%time.ctime())
