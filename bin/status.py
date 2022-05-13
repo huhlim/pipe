@@ -16,7 +16,7 @@ METHODs = ['trRosetta', 'hybrid', \
         'average', 'average_meta', \
         'scwrl', 'mutate', \
         'qa',\
-        'calc_diffusion',
+        'diffusion',
         ]
 INPUTs = {}
 INPUTs['trRosetta'] = 2
@@ -31,7 +31,7 @@ INPUTs['average_meta'] = 1
 INPUTs['qa'] = 0
 INPUTs['scwrl'] = 0
 INPUTs['mutate'] = 0
-INPUTs['calc_diffusion'] = 0
+INPUTs['diffusion'] = 0
 
 
 def get_prod_info(run_home):

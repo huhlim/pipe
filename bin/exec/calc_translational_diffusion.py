@@ -59,7 +59,7 @@ def run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX, \
     diffusion_s = {}
     for molecule_name in msd_s:
         diffusion = np.polyfit(t_lag, msd_s[molecule_name][1].T, 1)[0] / 6.
-        diffusion_s[molecule_name] = np.mean(diffusion)
+        diffusion_s[molecule_name] = diffusion
 
     return msd_s, diffusion_s
 
