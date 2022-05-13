@@ -199,7 +199,7 @@ def submit_task(job, updated):
     job.to_json()
     return updated
 
-def run(job, wait_after_run, sleep=30):
+def run(job, wait_after_run=False, sleep=30):
     while True:
         updated, status, released = check_status(job)
         if updated: job.to_json()

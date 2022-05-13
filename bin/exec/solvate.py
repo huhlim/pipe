@@ -89,26 +89,35 @@ def place_ions(pdb, ion_conc, net_charge):
     return n_ion
 
 def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
-    protein = pdb0.atom_slice(pdb0.top.select("protein"))
+    protein_index = pdb0.top.select("protein")
+    if len(protein_index) > 0:
+        protein = pdb0.atom_slice(protein_index)
+    else:
+        protein = None
     if len(pdb0.top.select("water")) > 0:
         cryst_water = pdb0.atom_slice(pdb0.top.select("water"))
     else:
         cryst_water = None
-    top = protein.top.copy()
-    xyz = protein.xyz[0]
     #
-    segNo = 0 ; resNo_prev = None
-    for i,chain in enumerate(top.chains):
-        for residue in chain.residues:
-            if residue.segment_id == '':
-                residue.segment_id='P%03d'%segNo
-            #
-            chain_break = False
-            for atom in residue.atoms:
-                if atom.name in ['OXT', 'OT2', 'OT1']:
-                    chain_break = True
-            if chain_break:
-                segNo += 1
+    if protein is not None:
+        top = protein.top.copy()
+        xyz = protein.xyz[0]
+        #
+        segNo = 0 ; resNo_prev = None
+        for i,chain in enumerate(top.chains):
+            for residue in chain.residues:
+                if residue.segment_id == '':
+                    residue.segment_id='P%03d'%segNo
+                #
+                chain_break = False
+                for atom in residue.atoms:
+                    if atom.name in ['OXT', 'OT2', 'OT1']:
+                        chain_break = True
+                if chain_break:
+                    segNo += 1
+    else:
+        top = mdtraj.Topology()
+        xyz = np.zeros((0, 3), dtype=float)
     #
     ia = 0
     chain = top.add_chain() ; resNo = 0

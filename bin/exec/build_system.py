@@ -128,13 +128,13 @@ def get_mass(fn):
 
 def calc_system_size(arg):
     n_molecules = len(arg.in_fn_s)
-    n_place = np.array(arg.n_place, dtype=np.int)
+    n_place = np.array(arg.n_place, dtype=int)
     if len(arg.conc) == n_molecules:
-        conc = np.array(arg.conc, dtype=np.float)
+        conc = np.array(arg.conc, dtype=float)
     else:
-        conc = np.zeros(n_molecules, dtype=np.float)
+        conc = np.zeros(n_molecules, dtype=float)
     conc_total = arg.conc_total
-    mass = np.array([get_mass(fn) for fn in arg.in_fn_s], dtype=np.float)
+    mass = np.array([get_mass(fn) for fn in arg.in_fn_s], dtype=float)
     if arg.unit == 'g/L':
         conc /= mass*0.001
     box_width = arg.box_width*0.1   # nm
@@ -152,7 +152,7 @@ def calc_system_size(arg):
             box_width = box_width.mean()
         elif conc_total > 0.:
             if arg.unit == 'mM':
-                n = n_place.astype(np.float).sum()
+                n = n_place.astype(float).sum()
                 v = n / N_AVOGADRO / (conc_total * 1e-3)   # Liter
             else:
                 m = (n_place * mass).sum() / N_AVOGADRO  # gram
@@ -162,7 +162,7 @@ def calc_system_size(arg):
             status = False
         box_volume = box_width**3       # nm^3 = 10^-24 L
         if status:
-            conc = n_place.astype(np.float) / N_AVOGADRO / (box_volume*1e-24) * 1e3
+            conc = n_place.astype(float) / N_AVOGADRO / (box_volume*1e-24) * 1e3
     elif np.any(n_place > 0):
         if np.any(conc[n_place > 0] > 0.):
             subset = (n_place > 0) & (conc > 0.)
@@ -174,7 +174,7 @@ def calc_system_size(arg):
             box_volume = box_width**3       # nm^3 = 10^-24 L
 
             subset = (n_place > 0) & (conc <= 0.0)
-            conc[subset] = n_place[subset].astype(np.float) / N_AVOGADRO / box_volume * 1e3
+            conc[subset] = n_place[subset].astype(float) / N_AVOGADRO / box_volume * 1e3
             if np.all(conc > 0.):
                 n = (conc * 1e-3) * (box_volume * 1e-24) * N_AVOGADRO
                 n_place[n_place <= 0] = np.round(n[n_place <= 0])

@@ -281,13 +281,19 @@ def run(output_prefix, input_json, options, verbose, prod_runner=EXEC, \
             system("mv %s.err %s.err.%d"%(output_prefix, output_prefix, n_error))
             if n_error >= MAX_ERROR:
                 with run_home.fn("ERROR").open("wt") as fout:
-                    fout.write("#")
+                    system("env", outfile=fout)
                 sys.exit("ERROR: failed to run %s\n"%run_home)
     #
     if generate_solute_file and ('n_atom' in options['input']):
         system("mdconv -out %s -atoms 1:%d -unwrap -box %s %s"%\
                 (DONE.short(), options['input']['n_atom'], boxsize, \
                 ' '.join([dcd_fn.short() for dcd_fn in out_dcd_fn_s])))
+    else:
+        with DONE.open("wt") as fout:
+            for k_iter in range(options['md']['iter']):
+                out_dcd_fn = run_home.fn("%s.%d.dcd"%(output_prefix, k_iter))
+                fout.write(f"{out_dcd_fn.path()}\n")
+
 
 def check_speed(output_prefix, input_json, options, verbose):
     if 'time_limit' in options['md'] and options['md']['time_limit'] > 0.0:
@@ -338,6 +344,7 @@ def main():
         options['ff']['toppar']= arg.toppar
     if arg.custom_file is not None:
         options['ff']['custom'] = arg.custom_file
+    arg.generate_solute_file = options.get("generate_solute_file", arg.generate_solute_file)
 
     options = check_speed(arg.output_prefix, arg.input_json, options, arg.verbose)
     run(arg.output_prefix, arg.input_json, options, arg.verbose, \

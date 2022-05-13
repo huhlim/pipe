@@ -119,6 +119,7 @@ def run(arg, options):
     else:
         simulation.context.setVelocitiesToTemperature(options['md']['dyntemp']*kelvin)
     simulation.context.setTime(0.0)
+    simulation.context.setStepCount(0)
     #
     if 'n_atom' in options['input']:
         simulation.reporters.append(mdtraj.reporters.DCDReporter(arg.out_dcd_fn, options['md']['dynoutfrq'],\

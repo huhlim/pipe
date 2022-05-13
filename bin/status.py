@@ -9,7 +9,15 @@ import argparse
 
 from libcommon import *
 
-METHODs = ['trRosetta', 'hybrid', 'locPREFMD', 'equil', 'prod', 'prod_meta', 'score', 'average', 'average_meta', 'scwrl', 'mutate', 'qa']
+METHODs = ['trRosetta', 'hybrid', \
+        'locPREFMD', \
+        'equil', 'prod', 'prod_meta', \
+        'score', \
+        'average', 'average_meta', \
+        'scwrl', 'mutate', \
+        'qa',\
+        'calc_diffusion',
+        ]
 INPUTs = {}
 INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
@@ -23,6 +31,8 @@ INPUTs['average_meta'] = 1
 INPUTs['qa'] = 0
 INPUTs['scwrl'] = 0
 INPUTs['mutate'] = 0
+INPUTs['calc_diffusion'] = 0
+
 
 def get_prod_info(run_home):
     input_json_fn = run_home.fn("input.json")
@@ -110,7 +120,7 @@ def check_status(job):
             for _,task in task_s:
                 status = task['resource'][0]
                 host = task['resource'][1]
-                if method != 'average':
+                if method in ['average']:
                     input = task['input'][INPUTs[method]].short()
                 else:
                     input = task['output'][INPUTs[method]].short()
@@ -146,7 +156,7 @@ def check_resource(host_s, json_job_s):
             for index, task in task_s:
                 host = task['resource'][1]
                 is_gpu = task['resource'][2]
-                if method != 'average':
+                if method in ['average']:
                     input = task['input'][INPUTs[method]].short()
                 else:
                     input = task['input'][INPUTs[method]]

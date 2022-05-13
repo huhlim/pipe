@@ -51,7 +51,18 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         ff_file_s.extend([fn.short() for fn in options['ligand']['str_fn_s']])
 
     ff = CharmmParameterSet(*ff_file_s)
+    properties = {}
+    cuda_devices = os.getenv("CUDA_VISIBLE_DEVICES")
+    if cuda_devices is not None:
+        n_gpu = len(cuda_devices.split(","))
+    else:
+        n_gpu = 0
+        options['openmm']['platform'] = 'CPU'
+    if n_gpu > 1:
+        properties['DeviceIndex'] = ",".join(['%d'%index for index in range(n_gpu)])
     platform = Platform.getPlatformByName(options['openmm']['platform'])
+    if options['openmm']['platform'] == 'CPU':
+        properties = {}
     #
     sys = psf.createSystem(ff, \
                            nonbondedMethod=PME, \
@@ -87,7 +98,7 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                                         options['md']['langfbeta']/picosecond, \
                                         options['md']['dyntstep']*picosecond)
         #
-        simulation = Simulation(psf.topology, sys, integrator, platform)
+        simulation = Simulation(psf.topology, sys, integrator, platform, properties)
         simulation.context.setPositions(crd.positions)
         if i == 0:
             #state = simulation.context.getState(getEnergy=True)
@@ -121,7 +132,7 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                                     options['md']['langfbeta']/picosecond, \
                                     options['md']['dyntstep']*picosecond)
     #
-    simulation = Simulation(psf.topology, sys, integrator, platform)
+    simulation = Simulation(psf.topology, sys, integrator, platform, properties)
     simulation.context.setPositions(crd.positions)
     with open(chk_fn, 'rb') as fp:
         simulation.context.loadCheckpoint(fp.read())
