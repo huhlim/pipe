@@ -11,7 +11,7 @@ from libcommon import *
 METHOD = 'prod'
 EXEC = '%s/prod.py'%EXEC_HOME
 
-def prep(job, prod_index, input_equil, input_json, n_replica, n_run_per_job=1, prod_runner=None):
+def prep(job, prod_index, input_equil, input_json, n_replica, n_run_per_job=1, prod_runner=None, update={}):
     #if len(job.get_task(METHOD, not_status='DONE')) > 0:
     #    return
     #
@@ -23,13 +23,15 @@ def prep(job, prod_index, input_equil, input_json, n_replica, n_run_per_job=1, p
     options['input_equil'] = input_equil
     options['input_json'] = input_json.path()
     options['n_replica'] = n_replica
+    options['update'] = update
     with iter_home.fn("input.json").open("wt") as fout:
         fout.write(json.dumps(options, indent=2))
     #
     for i in range(n_replica):
         run_home = iter_home.subdir("%d"%i)
         #
-        input_s = [run_home, input_equil, input_json]
+        #input_s = [run_home, input_equil, input_json]
+        input_s = [run_home, input_equil, iter_home.fn("input.json")]
         output_s = [run_home.fn("solute.dcd")]
         if prod_runner is None:
             job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
@@ -60,6 +62,10 @@ def run(job):
         if status: continue
         #
         with input_json.open() as fp:
+            X = json.load(fp)
+            json_fn = path.Path(X['input_json'])
+            update = X['update']
+        with json_fn.open() as fp:
             options = json.load(fp)
         #
         run_home.build()
@@ -77,6 +83,13 @@ def run(job):
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
         if job.has("has_ligand"):
             options['ligand_json'] = job.ligand_json.short()
+        #
+        for key,value in update.items():
+            if isinstance(value, dict):
+                for k,v in value.items():
+                    options[key][k] = v
+            else:
+                options[key] = value
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:
@@ -111,6 +124,10 @@ def submit(job):
         if status: continue
         #
         with input_json.open() as fp:
+            X = json.load(fp)
+            json_fn = path.Path(X['input_json'])
+            update = X['update']
+        with json_fn.open() as fp:
             options = json.load(fp)
         #
         run_home.build()
@@ -128,6 +145,13 @@ def submit(job):
             options['input']['restart'] = equil_home.fn("%s.equil.restart.pkl"%job.title).short()
         if job.has("has_ligand"):
             options['ligand_json'] = job.ligand_json.short()
+        #
+        for key,value in update.items():
+            if isinstance(value, dict):
+                for k,v in value.items():
+                    options[key][k] = v
+            else:
+                options[key] = value
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:

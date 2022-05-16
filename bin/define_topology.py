@@ -8,27 +8,31 @@ import argparse
 
 from libcommon import *
 
-def prep(job, input_pdb):
+def prep(job, input_pdb, n_atom=None, update=True):
     job.top_fn = job.init_home.fn("solute.pdb")
-    n_atom = 0
-    if (not job.top_fn.status()) or (not job.has("n_atom") or not job.has("ssbond")):
+    n_atom_pdb = 0
+    if (not job.top_fn.status()) or (not job.has("n_atom") or not job.has("ssbond")) or update:
         pdb = [] ; ssbond = []
         with input_pdb.open() as fp:
             for line in fp:
-                if line.startswith("ATOM"):
-                    n_atom += 1
+                if line.startswith("ATOM") and (n_atom is not None and n_atom_pdb < n_atom):
+                    n_atom_pdb += 1
                     pdb.append(line)
                 elif line.startswith("SSBOND"):
                     pdb.append(line)
                     ssbond.append(line.rstrip())
+                elif line.startswith("TER"):
+                    pdb.append(line)
+                elif line.startswith("END"):
+                    pdb.append(line)
+                    break
+
         with job.top_fn.open("wt") as fout:
             fout.writelines(pdb)
-            fout.write("TER\n")
-            fout.write("END\n")
     else:
         return
 
-    job.n_atom = n_atom
+    job.n_atom = n_atom_pdb
     job.ssbond = ssbond
     #
     job.to_json()

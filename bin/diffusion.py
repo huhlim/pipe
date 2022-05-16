@@ -64,9 +64,9 @@ def read_pkl(pkl_fn_s, group_s):
             diffusion_s[group].append(diffusion)
     return t_lag, msd_s, diffusion_s
 
-def plot(out_home, t_lag, msd_s):
+def plot(out_home, prefix, t_lag, msd_s):
     for group,msd in msd_s.items():
-        png_fn = out_home.fn(f"translational_diffusion.{group}.png")
+        png_fn = out_home.fn(f"translational_diffusion.{prefix}.{group}.png")
         #
         m = np.mean(msd, 0)
         s = np.std(msd, 0) / np.sqrt(len(msd))
@@ -76,8 +76,7 @@ def plot(out_home, t_lag, msd_s):
         ax.plot(t_lag, m, 'r-', linewidth=1.5)
         ax.fill_between(t_lag, m-s, m+s, color='red', alpha=0.2)
         #
-        ax.set_xlim((0, 100))
-        ax.set_xticks(np.arange(0, 101, 20))
+        ax.set_xlim((0, t_lag[-1]))
         ax.set_ylim(bottom=0)
         #
         fig.tight_layout()
@@ -85,17 +84,17 @@ def plot(out_home, t_lag, msd_s):
         plt.savefig(png_fn.short())
         plt.close("all")
 
-def summarize(job, pkl_fn_s, group_s):
-    out_fn = job.analysis_home.fn("translational_diffusion.summary.pkl")
+def summarize(job, prefix, pkl_fn_s, group_s):
+    out_fn = job.analysis_home.fn(f"translational_diffusion.{prefix}.summary.pkl")
     status = out_fn.status()
     for group in group_s:
-        png_fn = job.analysis_home.fn(f"translational_diffusion.{group}.png")
+        png_fn = job.analysis_home.fn(f"translational_diffusion.{prefix}.{group}.png")
         if not png_fn.status():
             status = False ; break
     if status: return
     #
     t_lag, msd_s, diffusion_s = read_pkl(pkl_fn_s, group_s)
-    plot(job.analysis_home, t_lag, msd_s)
+    plot(job.analysis_home, prefix, t_lag, msd_s)
     #
     with out_fn.open("wb") as fout:
         pickle.dump({"msd": (t_lag, msd_s), "diffusion": diffusion_s}, fout)

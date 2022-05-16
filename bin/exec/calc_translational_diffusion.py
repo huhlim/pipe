@@ -10,7 +10,7 @@ import argparse
 
 from libanalysis import get_molecules, calc_center_of_mass, calc_average_boxsize, unwrap_PBC
 
-def run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX, \
+def run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX, T_LAG_STEP, \
         include_s=[], exclude_s=[], overwrite=False):
     cntr_s = {}
     pbc = []
@@ -42,7 +42,8 @@ def run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX, \
         cntr = np.concatenate(cntr_s[molecule_name], axis=-2)[:,T_SKIP:]
         cntr_s[molecule_name] = unwrap_PBC(cntr, pbc)
     #
-    T_LAG = np.array([int(t/T_STEP) for t in range(1, T_MAX+1)], dtype=int)
+    T_LAG = np.array([int(t/T_STEP) for t in np.arange(T_LAG_STEP, T_MAX+T_LAG_STEP, T_LAG_STEP)], dtype=int)
+    T_LAG = np.unique(T_LAG)
     t_lag = T_LAG.astype(float) * T_STEP
     #
     msd_s = {}
@@ -71,6 +72,7 @@ def main():
     arg.add_argument('--time_step', dest='time_step', required=True, type=float)
     arg.add_argument('--stride', dest='stride', default=1, type=int)
     arg.add_argument('--skip', dest='skip_first', default=0., type=float)
+    arg.add_argument('--lag_time', dest='lag_time', default=1., type=float)
     arg.add_argument('--max_time', dest='max_time', default=100., type=float)
     arg.add_argument('--max_water', dest='max_water', default=-1, type=int)
     arg.add_argument('--include', dest='include_s', default=[], nargs='?')
@@ -85,7 +87,8 @@ def main():
     T_STEP = arg.time_step  # in ns
     T_STRIDE = arg.stride
     T_SKIP = int(arg.skip_first // T_STEP)
-    T_MAX = int(arg.max_time)
+    T_MAX = arg.max_time
+    T_LAG_STEP = arg.lag_time
     #
     top = mdtraj.load(arg.top_fn)
     molecule_s = get_molecules(top, exclude_s=arg.exclude_s, max_water=arg.max_water)
@@ -99,7 +102,7 @@ def main():
         except:
             dcd_fn_s = [traj_fn]
         #
-        msd, diffusion = run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX,\
+        msd, diffusion = run(molecule_s, top, dcd_fn_s, T_STEP, T_STRIDE, T_SKIP, T_MAX, T_LAG_STEP, \
                 include_s=arg.include_s, exclude_s=arg.exclude_s, overwrite=arg.overwrite)
         #
         for molecule_name in diffusion:
