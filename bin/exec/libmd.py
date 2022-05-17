@@ -270,7 +270,7 @@ class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
 
         self.addGlobalVariable("tau", timestep / risetime)
         self.addGlobalVariable("ke2", 0)    # Twice the kinetic energy
-        self.addGlobalVariable("Tcurr", 0)
+        self.addGlobalVariable("kTcurr", 0)
         self.addGlobalVariable("kB", kB)
         self.addGlobalVariable("lambda", 1.0)
         self.addGlobalVariable("ndf", 0)      # number of degrees of freedom
@@ -279,8 +279,8 @@ class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
         ##
         self.addComputeSum("ndf", "ones")
         self.addComputeSum("ke2", "m*v*v")
-        self.addComputeGlobal("Tcurr", "ke2/ndf")
-        self.addComputeGlobal("lambda", "sqrt(1+tau*(kT/Tcurr - 1))")
+        self.addComputeGlobal("kTcurr", "ke2/ndf*1.5")
+        self.addComputeGlobal("lambda", "sqrt(1+tau*(kT/kTcurr - 1))")
         #
         self.addComputePerDof("v", "v*lambda")
         #
