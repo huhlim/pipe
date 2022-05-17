@@ -192,4 +192,3 @@ def submit(job):
         cmd_s.append(" ".join(cmd) + '\n')
         #
         job.write_submit_script(METHOD, index, cmd_s)
-

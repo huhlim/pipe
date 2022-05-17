@@ -257,6 +257,9 @@ def run(output_prefix, input_json, options, verbose, prod_runner=EXEC, \
         if 'use_barostat' in options['md']:
             cmd.append("--barostat")
             cmd.append(options['md']['use_barostat'])
+        if 'integrator' in options['md']:
+            cmd.append("--integrator")
+            cmd.append(options['md']['integrator'])
         #
         t_begin = time.time()
         with open("%s.err"%output_prefix, 'wt') as ferr:

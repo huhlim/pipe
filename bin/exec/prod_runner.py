@@ -20,11 +20,15 @@ except:
     from simtk.openmm import *
     from simtk.openmm.app import *
     from simtk.openmm.app.internal.charmm.exceptions import CharmmPSFWarning
+#
+from importlib import import_module
+#
 import warnings
 warnings.filterwarnings("ignore", category=CharmmPSFWarning)
 
 from libcustom import *
 from libmd import construct_ligand_restraint
+from libmd import BerendsenVelocityVerletIntegrator
 from libligand import read_ligand_json, get_ligand_restratint
 
 import warnings
@@ -105,9 +109,15 @@ def run(arg, options):
     else:
         sys.exit("ERROR: unknown barostat.\n")
     #
-    integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
-                                    options['md']['langfbeta']/picosecond, \
-                                    options['md']['dyntstep']*picosecond)
+    if arg.integrator == 'Langevin':
+        integrator = LangevinIntegrator(options['md']['dyntemp']*kelvin, \
+                                        options['md']['langfbeta']/picosecond, \
+                                        options['md']['dyntstep']*picosecond)
+    elif arg.integrator == 'Berendsen':
+        integrator = BerendsenVelocityVerletIntegrator(\
+            options['md']['dyntemp']*kelvin, options['md']['dyntstep']*picosecond) 
+    else:
+        raise ValueError(arg.integrator)
     #
     simulation = Simulation(psf.topology, sys, integrator, platform, properties)
     simulation.context.setPositions(crd)
@@ -162,6 +172,7 @@ def main():
     arg.add_argument('--restart', dest='restart_fn')
     arg.add_argument('--hmr', dest='use_hmr', default=False, action='store_true')
     arg.add_argument('--barostat', dest='barostat', default=None)
+    arg.add_argument('--integrator', dest='integrator', default='Langevin')
     #
     if len(sys.argv) == 1:
         arg.print_help()

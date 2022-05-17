@@ -18,6 +18,8 @@ except:
     from simtk.unit import *
     from simtk.openmm import *
     from simtk.openmm.app import *
+from openmmtools.integrators import ThermostatedIntegrator
+from openmmtools.constants import kB
 
 WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
@@ -261,3 +263,36 @@ def construct_ligand_restraint(pair_s):
         bond.addBond(pair[0], pair[1], \
                 (pair[2]*kilocalories_per_mole/angstroms**2, pair[3]*nanometers))
     return bond
+
+class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
+    def __init__(self, temperature=298*kelvin, timestep=1.0*femtoseconds, risetime=1.0*picoseconds):
+        super().__init__(temperature, timestep)
+
+        self.addGlobalVariable("tau", timestep / risetime)
+        self.addGlobalVariable("ke2", 0)    # Twice the kinetic energy
+        self.addGlobalVariable("Tcurr", 0)
+        self.addGlobalVariable("kB", kB)
+        self.addGlobalVariable("lambda", 1.0)
+        self.addGlobalVariable("ndf", 0)      # number of degrees of freedom
+        self.addPerDofVariable("ones", 1.0)
+        self.addPerDofVariable("x1", 0)
+        ##
+        self.addComputeSum("ndf", "ones")
+        self.addComputeSum("ke2", "m*v*v")
+        self.addComputeGlobal("Tcurr", "ke2/ndf")
+        self.addComputeGlobal("lambda", "sqrt(1+tau*(kT/Tcurr - 1))")
+        #
+        self.addComputePerDof("v", "v*lambda")
+        #
+        # Velocity Verlet step
+        #
+        self.addUpdateContextState()
+        self.addComputePerDof("v", "v+0.5*dt*f/m")
+        self.addComputePerDof("x", "x+dt*v")
+        self.addComputePerDof("x1", "x")
+        self.addConstrainPositions()
+        self.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt")
+        self.addConstrainVelocities()
+        #
+
+
