@@ -12,7 +12,7 @@ METHOD = 'equil'
 EXEC_SOLUBLE = '%s/equil.py'%EXEC_HOME
 EXEC_MEMBRANE = '%s/equil_membrane.py'%EXEC_HOME
 
-def prep(job, equil_index, input_pdb, input_json):
+def prep(job, equil_index, input_pdb, input_json, update={}):
 #    if len(job.get_task(METHOD, not_status='DONE')) > 0:
 #        return
     #
@@ -34,12 +34,15 @@ def prep(job, equil_index, input_pdb, input_json):
         #if status: 
         #    job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
         #else:
-        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
+        if len(update) > 0:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, update=update)
+        else:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
 
-def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json):
+def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json, update={}):
     #if len(job.get_task(METHOD, not_status='DONE')) > 0:
     #    return
     #
@@ -61,7 +64,10 @@ def prep_membrane(job, equil_index, input_pdb, input_psf, input_crd, input_json)
         #if status: 
         #    job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, status='DONE')
         #else:
-        job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
+        if len(update) > 0:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12, update=update)
+        else:
+            job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=12)
         equil_index += 1
     #
     job.to_json()
@@ -96,6 +102,11 @@ def run(job):
                 status = False ; break
         if status: continue
         #
+        if 'update' in task['etc']:
+            update = task['etc']['update']
+        else:
+            update = {}
+        #
         with input_json.open() as fp:
             options = json.load(fp)
         options['ssbond'] = []
@@ -110,6 +121,13 @@ def run(job):
         options['input_json'] = input_json
         if job.has("has_ligand"):
             options['ligand_json'] = job.ligand_json
+        #
+        for key,value in update.items():
+            if isinstance(value, dict):
+                for k,v in value.items():
+                    options[key][k] = v
+            else:
+                options[key] = value
         #
         run_home.build()
         run_home.chdir()
@@ -155,6 +173,11 @@ def submit(job):
                 status = False ; break
         if status: continue
         #
+        if 'update' in task['etc']:
+            update = task['etc']['update']
+        else:
+            update = {}
+        #
         with input_json.open() as fp:
             options = json.load(fp)
         options['ssbond'] = []
@@ -169,6 +192,13 @@ def submit(job):
         options['input_json'] = input_json
         if job.has("has_ligand"):
             options['ligand_json'] = job.ligand_json
+        #
+        for key,value in update.items():
+            if isinstance(value, dict):
+                for k,v in value.items():
+                    options[key][k] = v
+            else:
+                options[key] = value
         #
         run_home.build()
         run_home.chdir()
