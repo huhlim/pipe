@@ -16,9 +16,10 @@ METHODs = ['trRosetta', 'hybrid', \
         'average', 'average_meta', \
         'scwrl', 'mutate', \
         'qa',\
-        'diffusion',
+        'diffusion', 'g_r', \
         ]
 INPUTs = {}
+INPUTs['default'] = 0
 INPUTs['trRosetta'] = 2
 INPUTs['hybrid'] = 2
 INPUTs['locPREFMD'] = 0
@@ -120,10 +121,11 @@ def check_status(job):
             for _,task in task_s:
                 status = task['resource'][0]
                 host = task['resource'][1]
+                index = INPUTs.get(method, INPUTs['default'])
                 if method in ['average']:
-                    input = task['input'][INPUTs[method]].short()
+                    input = task['input'][index].short()
                 else:
-                    input = task['output'][INPUTs[method]].short()
+                    input = task['output'][index].short()
                 #
                 wrt = []
                 wrt.append("%-10s"%job.title)
@@ -156,10 +158,11 @@ def check_resource(host_s, json_job_s):
             for index, task in task_s:
                 host = task['resource'][1]
                 is_gpu = task['resource'][2]
+                index = INPUTs.get(method, INPUTs['default'])
                 if method in ['average']:
-                    input = task['input'][INPUTs[method]].short()
+                    input = task['input'][index].short()
                 else:
-                    input = task['input'][INPUTs[method]]
+                    input = task['output'][index].short()
                 if is_gpu:
                     host_name = host.split("/")[0]
                     gpu_id = int(host.split("/")[1])

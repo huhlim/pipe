@@ -295,4 +295,51 @@ class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
         self.addConstrainVelocities()
         #
 
+class PressureTensorReporter(object):
+    def __init__(self, file, system, reportInterval, cacheInterval=None, enforcePeriodicBox=None, fmt='%.3f'):
+        self._reportInterval = reportInterval
+        if cacheInterval is not None:
+            self._cacheInterval = cacheInterval
+        else:
+            self._cacheInterval = reportInterval
+        self._fmt = fmt
+        self._enforcePeriodicBox = enforcePeriodicBox
+        self._out = open(file, 'wt')
+        self._m = np.array([system.getParticleMass(i).value_in_unit(dalton) \
+                        for i in range(system.getNumParticles())]) # dalton = g/mol
+        self._cache = []
+    def describeNextReport(self, simulation):
+        steps = self._reportInterval - simulation.currentStep%self._reportInterval
+        return (steps, True, True, True, False, self._enforcePeriodicBox)
+    def report(self, simulation, state):
+        F = state.getForces(asNumpy=True)       # kJ/mol/nm
+        r = state.getPositions(asNumpy=True)    # nm
+        v = state.getVelocities(asNumpy=True)   # nm/ps
+        V = state.getPeriodicBoxVolume()._value
+        #
+        values = []
+        values.append(str(simulation.currentStep))
+        values.append(f'{state.getTime().value_in_unit(picosecond):.3f}')
+        for (i,j) in [(0,0), (0,1), (0,2), (1,1), (1,2), (2,2)]:
+            p_ij_0 = np.dot(self._m*v[:,i], v[:,j])       # kJ/mol
+            p_ij_1 = np.dot(r[:,i], F[:,j])         # kJ/mol
+            p_ij = (p_ij_0 + p_ij_1) / V    # kJ/mol/nm^3
+            values.append(self._fmt%p_ij)
+        self._cache.append(values)
+        if len(self._cache) >= self._cacheInterval:
+            self.report_cache()
+    def report_cache(self):
+        if len(self._cache) >= self._cacheInterval:
+            for values in self._cache:
+                print(','.join(str(v) for v in values), file=self._out)
+            try:
+                self._out.flush()
+            except AttributeError:
+                pass
+            self._cache = []
+    def __del__(self):
+        if len(self._cache) != 0:
+            self.report_cache()
+        self._out.close()
+
 

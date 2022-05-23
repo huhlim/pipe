@@ -10,9 +10,6 @@ import matplotlib.pyplot as plt
 
 from libcommon import *
 
-sys.path.append('%s/bin/exec'%os.getenv("PIPE_HOME"))
-from libanalysis import get_molecules
-
 METHOD = 'diffusion'
 EXEC = f'{EXEC_HOME}/calc_translational_diffusion.py'
 
