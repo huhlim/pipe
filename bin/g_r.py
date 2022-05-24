@@ -15,7 +15,7 @@ EXEC = f'{EXEC_HOME}/calc_g_r.py'
 
 def prep(job, top_fn, dcd_fn_s, *arg, **kwarg):
     job.analysis_home = job.work_home.subdir("analysis", build=True)
-    n_proc=kwarg.get("n_proc", 4)
+    n_proc=kwarg.get("n_proc", 8)
     #
     for dcd_fn in dcd_fn_s:
         run_name = '/'.join(dcd_fn.dirname().split("/")[-2:])
@@ -31,6 +31,7 @@ def read_pkl(pkl_fn_s, group_s):
     dist_bin = []
     _random_distr = []
     _distr_s = {}
+    valid_group_s = []
     #
     for pkl_fn in pkl_fn_s:
         with pkl_fn.open("rb") as fp:
@@ -53,8 +54,14 @@ def read_pkl(pkl_fn_s, group_s):
                 group_pair = (group_i, group_j)
                 if group_pair not in _distr_s:
                     _distr_s[group_pair] = []
+                if group_i not in valid_group_s:
+                    valid_group_s.append(group_i)
+                if group_j not in valid_group_s:
+                    valid_group_s.append(group_j)
                 #
                 _distr_s[group_pair].append(distr)
+    #
+    valid_group_s.sort(key=lambda x: list(group_s).index(x))
     #
     n_bin = [b.shape[0] for b in dist_bin]
     max_bin = max(n_bin)-1
@@ -82,14 +89,14 @@ def read_pkl(pkl_fn_s, group_s):
     g_r = {}
     for group_pair, distr in distr_s.items():
         n = len(distr)
-        X = np.array(distr)[:,nz] / random_distr[nz][None,:]
+        X = np.array(distr)
+        X[:,nz] /= random_distr[nz][None,:]
         g_r[group_pair] = (np.mean(X, 0), np.std(X, 0)/np.sqrt(n))
-    return dist_bin, g_r
+    return valid_group_s, dist_bin, g_r
 
-def plot(out_home, prefix, group_s, dist_bin, g_r, **kwarg):
+def plot(out_home, prefix, group_name_s, dist_bin, g_r, **kwarg):
     png_fn = out_home.fn(f"g_r.{prefix}.summary.png")
     #
-    group_name_s = list(group_s)
     n_group = len(group_name_s)
     fig, axes = plt.subplots(n_group, n_group, figsize=(n_group*3.2, n_group*2.4), sharex=True, sharey=True)
     #
@@ -105,6 +112,10 @@ def plot(out_home, prefix, group_s, dist_bin, g_r, **kwarg):
         axes[i,j].plot(dist_cntr, m, 'r-', linewidth=1.5)
         axes[i,j].fill_between(dist_cntr, m-s, m+s, color='red', alpha=0.2)
         axes[i,j].plot((0, dist_bin[-1]), (1., 1.), 'k--')
+        #
+        axes[j,i].plot(dist_cntr, m, 'r-', linewidth=1.5)
+        axes[j,i].fill_between(dist_cntr, m-s, m+s, color='red', alpha=0.2)
+        axes[j,i].plot((0, dist_bin[-1]), (1., 1.), 'k--')
     #
     xlim = kwarg.get("xlim")
     ylim = kwarg.get("ylim")
@@ -133,8 +144,8 @@ def summarize(job, prefix, pkl_fn_s, group_s, **kwarg):
     status = (out_fn.status() and png_fn.status())
     if status: return
     #
-    dist_bin, g_r = read_pkl(pkl_fn_s, group_s)
-    plot(job.analysis_home, prefix, group_s, dist_bin, g_r, **kwarg)
+    valid_group_s, dist_bin, g_r = read_pkl(pkl_fn_s, group_s)
+    plot(job.analysis_home, prefix, valid_group_s, dist_bin, g_r, **kwarg)
     #
     with out_fn.open("wb") as fout:
         pickle.dump({"dist_bin": dist_bin, "g_r": g_r}, fout)

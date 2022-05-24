@@ -14,6 +14,8 @@ class Path:
         self._isdir = os.path.isdir(self._path)
     def __repr__(self):
         return self._path
+    def __str__(self):
+        return self.__repr__()
     def __len__(self):
         return len(self._path)
     def __getitem__(self, *args, **kwargs):

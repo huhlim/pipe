@@ -162,7 +162,7 @@ def submit(job):
         cmd = [EXEC, run_name]
         cmd.extend(["--input", run_json.short()])
         if task['etc'].get("prod_runner", None) is not None:
-            cmd.extend(['--exec', task['etc'].get("prod_runner").path()])
+            cmd.extend(['--exec', str(task['etc'].get("prod_runner"))])
         if job.verbose:  cmd.append('--verbose')
         if job.keep_tmp: cmd.append('--keep')
         cmd_s.append(" ".join(cmd) + '\n')

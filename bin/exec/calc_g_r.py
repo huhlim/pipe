@@ -10,8 +10,6 @@ import argparse
 
 from libanalysis import get_molecules, calc_center_of_mass, calc_average_boxsize
 
-N_PROC = int(os.getenv("SLURM_CPUS_PER_TASK", '8'))
-
 def get_random_distr(pbc, N=1000000):
     box = np.random.random(size=(N, 3)) * pbc - pbc/2.0
     d = np.sqrt(np.sum(box**2, axis=1))
