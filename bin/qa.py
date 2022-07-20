@@ -8,8 +8,9 @@ import argparse
 
 from libcommon import *
 
-METHOD = 'qa'
-EXEC = '%s/local_qa.py'%EXEC_HOME
+METHOD = "qa"
+EXEC = "%s/local_qa.py" % EXEC_HOME
+
 
 def get_ssbond(pdb_fn):
     ssbond = []
@@ -19,8 +20,9 @@ def get_ssbond(pdb_fn):
                 ssbond.append(line.rstrip())
     return ssbond
 
+
 def prep(job, input_pdb, input_json):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+    if len(job.get_task(METHOD, not_status="DONE")) > 0:
         return
     #
     job.qa_home = job.work_home.subdir("qa", build=True)
@@ -31,46 +33,50 @@ def prep(job, input_pdb, input_json):
         run_home = job.qa_home.subdir(name)
         #
         input_s = [run_home, fn, input_json]
-        output_s = [run_home.fn('%s.qa.pdb'%name)]
+        output_s = [run_home.fn("%s.qa.pdb" % name)]
         #
         job.add_task(METHOD, input_s, output_s, use_gpu=True, n_proc=1)
     #
     job.to_json()
 
+
 def run(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
+    task_s = job.get_task(METHOD, host=HOSTNAME, status="RUN")
     if len(task_s) == 0:
         return
-    gpu_id = os.environ['CUDA_VISIBLE_DEVICES']
+    gpu_id = os.environ["CUDA_VISIBLE_DEVICES"]
     #
-    for index,task in task_s:
-        if task['resource'][1].split("/")[1] != gpu_id: continue
-        run_home = task['input'][0]
-        input_pdb  = task['input'][1]
-        input_json = task['input'][2]
+    for index, task in task_s:
+        if task["resource"][1].split("/")[1] != gpu_id:
+            continue
+        run_home = task["input"][0]
+        input_pdb = task["input"][1]
+        input_json = task["input"][2]
         #
-        output_s = task['output']
+        output_s = task["output"]
         status = True
         for output in output_s:
             if not output.status():
-                status = False ; break
-        if status: continue
+                status = False
+                break
+        if status:
+            continue
         #
         with input_json.open() as fp:
             options = json.load(fp)
-        options['ssbond'] = []
+        options["ssbond"] = []
         for line in get_ssbond(input_pdb):
             chain_1 = line[15]
             chain_2 = line[29]
-            if chain_1 == ' ' and chain_2 == ' ':
-                line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
-            options['ssbond'].append(line)
+            if chain_1 == " " and chain_2 == " ":
+                line = "%sA%sA%s" % (line[:15], line[16:29], line[30:])
+            options["ssbond"].append(line)
         #
         run_home.build()
         run_home.chdir()
         #
-        options['input_pdb'] = input_pdb.short()
-        options['input_json'] = input_json.short()
+        options["input_pdb"] = input_pdb.short()
+        options["input_json"] = input_json.short()
         #
         run_json = run_home.fn("input.json")
         if not run_json.status():
@@ -78,44 +84,49 @@ def run(job):
                 fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd = [EXEC, input_pdb.name()]
-        cmd.extend(['--input', run_json.short()])
-        if job.verbose:  cmd.append('--verbose')
-        if job.keep_tmp: cmd.append('--keep')
+        cmd.extend(["--input", run_json.short()])
+        if job.verbose:
+            cmd.append("--verbose")
+        if job.keep_tmp:
+            cmd.append("--keep")
         #
         system(cmd, verbose=job.verbose)
 
+
 def submit(job):
-    task_s = job.get_task(METHOD, status='SUBMIT')
+    task_s = job.get_task(METHOD, status="SUBMIT")
     if len(task_s) == 0:
         return
     #
-    for index,task in task_s:
-        run_home = task['input'][0]
-        input_pdb  = task['input'][1]
-        input_json = task['input'][2]
+    for index, task in task_s:
+        run_home = task["input"][0]
+        input_pdb = task["input"][1]
+        input_json = task["input"][2]
         #
-        output_s = task['output']
+        output_s = task["output"]
         status = True
         for output in output_s:
             if not output.status():
-                status = False ; break
-        if status: continue
+                status = False
+                break
+        if status:
+            continue
         #
         with input_json.open() as fp:
             options = json.load(fp)
-        options['ssbond'] = []
+        options["ssbond"] = []
         for line in job.ssbond:
             chain_1 = line[15]
             chain_2 = line[29]
-            if chain_1 == ' ' and chain_2 == ' ':
-                line = '%sA%sA%s'%(line[:15], line[16:29], line[30:])
-            options['ssbond'].append(line)
+            if chain_1 == " " and chain_2 == " ":
+                line = "%sA%sA%s" % (line[:15], line[16:29], line[30:])
+            options["ssbond"].append(line)
         #
         run_home.build()
         run_home.chdir()
         #
-        options['input_pdb'] = input_pdb.short()
-        options['input_json'] = input_json.short()
+        options["input_pdb"] = input_pdb.short()
+        options["input_json"] = input_json.short()
         #
         run_json = run_home.fn("input.json")
         if not run_json.status():
@@ -123,28 +134,34 @@ def submit(job):
                 fout.write(json.dumps(options, indent=2, default=JSONserialize))
         #
         cmd_s = []
-        cmd_s.append("cd %s\n"%run_home)
+        cmd_s.append("cd %s\n" % run_home)
         #
         cmd = [EXEC, input_pdb.name()]
-        cmd.extend(['--input', run_json.short()])
-        if job.verbose:  cmd.append('--verbose')
-        if job.keep_tmp: cmd.append('--keep')
-        cmd_s.append(" ".join(cmd) + '\n')
+        cmd.extend(["--input", run_json.short()])
+        if job.verbose:
+            cmd.append("--verbose")
+        if job.keep_tmp:
+            cmd.append("--keep")
+        cmd_s.append(" ".join(cmd) + "\n")
         #
         job.write_submit_script(METHOD, index, cmd_s)
         #
 
+
 def status(job):
     pass
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='qa')
-    arg.add_argument(dest='command', choices=['prep', 'run'], help='exec type')
-    arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
-    arg.add_argument('-i', '--input', dest='input_pdb', nargs='*', \
-            help='input PDB file, mandatory for "prep"')  
-    arg.add_argument('-j', '--json', dest='input_json', \
-            help='input JSON file, mandatory for "prep"')  
+    arg = argparse.ArgumentParser(prog="qa")
+    arg.add_argument(dest="command", choices=["prep", "run"], help="exec type")
+    arg.add_argument(dest="work_dir", help="work_dir, which has a JSON file")
+    arg.add_argument(
+        "-i", "--input", dest="input_pdb", nargs="*", help='input PDB file, mandatory for "prep"'
+    )
+    arg.add_argument(
+        "-j", "--json", dest="input_json", help='input JSON file, mandatory for "prep"'
+    )
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -159,7 +176,7 @@ def main():
     #
     job = Job.from_json(arg.json_job)
     #
-    if arg.command == 'prep':
+    if arg.command == "prep":
         if arg.input_pdb is None:
             sys.exit("Error: input_pdb required\n")
         if arg.input_json is None:
@@ -168,8 +185,9 @@ def main():
         #
         prep(job, arg.input_pdb)
 
-    elif arg.command == 'run':
+    elif arg.command == "run":
         run(job)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -10,8 +10,9 @@ from importlib import import_module
 from libcommon import *
 from libmain import *
 
+
 def init_refine_meta(arg):
-    work_home = path.Dir("%s/%s"%(arg.work_dir, arg.title))
+    work_home = path.Dir("%s/%s" % (arg.work_dir, arg.title))
     json_job = work_home.fn("job.json")
     if json_job.status():
         job = Job.from_json(json_job)
@@ -25,7 +26,7 @@ def init_refine_meta(arg):
     assert arg.input_pdb is not None
     #
     job = Job(arg.work_dir, arg.title, build=True)
-    job.run_type = 'refine_meta'
+    job.run_type = "refine_meta"
     #
     job.init_home = job.work_home.subdir("init", build=True)
     job.verbose = arg.verbose
@@ -33,7 +34,7 @@ def init_refine_meta(arg):
     #
     out = job.init_home.fn("init.pdb")
     if not out.status():
-        cmd = ['convpdb.pl', '-out', 'generic', arg.input_pdb.short()]
+        cmd = ["convpdb.pl", "-out", "generic", arg.input_pdb.short()]
         output = system(cmd, stdout=True, verbose=job.verbose)
         with out.open("wt") as fout:
             fout.write(output)
@@ -49,6 +50,7 @@ def init_refine_meta(arg):
     job.to_json()
     job.append_to_joblist()
     return job, sp_refine_job, refine_job_s
+
 
 def match_topology(job, sp_refine_job, refine_job_s):
     mdtraj = import_module("mdtraj")
@@ -71,52 +73,75 @@ def match_topology(job, sp_refine_job, refine_job_s):
     #
     def get_index_sp(common_s, atom_s):
         select = []
-        for i,atom in enumerate(atom_s):
+        for i, atom in enumerate(atom_s):
             if atom in common_s:
                 select.append(i)
         select = np.array(select, dtype=int)
         return select
+
     def get_index(common_s, atom_s):
-        select = [] ; k = -1
+        select = []
+        k = -1
         index = np.zeros(len(common_s), dtype=int)
-        for i,atom in enumerate(atom_s):
+        for i, atom in enumerate(atom_s):
             if atom not in common_s:
                 continue
-            select.append(i) ; k += 1
+            select.append(i)
+            k += 1
             index[common_s.index(atom)] = k
         select = np.array(select, dtype=int)
         return select, index
+
     #
     #
     job.top_index_s = []
-    top_index_fn = job.init_home.fn("top_index.0.npz") 
+    top_index_fn = job.init_home.fn("top_index.0.npz")
     job.top_index_s.append(top_index_fn)
     sp_refine_top_select = get_index_sp(common_atom_s, atom_s[0])
     sp_refine_top_index = np.arange(sp_refine_top_select.shape[0]).astype(int)
     np.savez(top_index_fn.short(), select=sp_refine_top_select, index=sp_refine_top_index)
     #
-    common_top = [atom_s[0][i] for i in sp_refine_top_select]    # -> will be final common top
+    common_top = [atom_s[0][i] for i in sp_refine_top_select]  # -> will be final common top
     #
-    for i,atom in enumerate(atom_s[1:]):
-        select,index = get_index(common_top, atom)
-        top_index_fn = job.init_home.fn("top_index.%d.npz"%(i+1)) 
+    for i, atom in enumerate(atom_s[1:]):
+        select, index = get_index(common_top, atom)
+        top_index_fn = job.init_home.fn("top_index.%d.npz" % (i + 1))
         job.top_index_s.append(top_index_fn)
         np.savez(top_index_fn.short(), select=select, index=index)
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='PREFMD')
-    arg.add_argument(dest='title', help='Job title')
-    arg.add_argument('-i', '--input', dest='input_pdb', help='input PDB file')
-    arg.add_argument('--sp', dest='sp_refine_job_fn')
-    arg.add_argument('--meta', dest='refine_job_fn_s', nargs='*')
-    arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
-            help='working directory (default=./)')
-    arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
-            help='set temporary file mode (default=False)')
-    arg.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,\
-            help='set verbose mode (default=False)')
-    arg.add_argument('-w', '--wait', dest='wait_after_run', action='store_true', default=False,\
-            help='set running type (default=False)')
+    arg = argparse.ArgumentParser(prog="PREFMD")
+    arg.add_argument(dest="title", help="Job title")
+    arg.add_argument("-i", "--input", dest="input_pdb", help="input PDB file")
+    arg.add_argument("--sp", dest="sp_refine_job_fn")
+    arg.add_argument("--meta", dest="refine_job_fn_s", nargs="*")
+    arg.add_argument(
+        "-d", "--dir", dest="work_dir", default="./", help="working directory (default=./)"
+    )
+    arg.add_argument(
+        "--keep",
+        dest="keep",
+        action="store_true",
+        default=False,
+        help="set temporary file mode (default=False)",
+    )
+    arg.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="set verbose mode (default=False)",
+    )
+    arg.add_argument(
+        "-w",
+        "--wait",
+        dest="wait_after_run",
+        action="store_true",
+        default=False,
+        help="set running type (default=False)",
+    )
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -137,20 +162,20 @@ def main():
         refine_job_s = [Job.from_json(path.Path(fn)) for fn in job.refine_job_fn_s]
     else:
         job, sp_refine_job, refine_job_s = init_refine_meta(arg)
-    
+
     n_meta = 1 + len(refine_job_s)
 
     # define topology
     locPREFMD_out = get_outputs(sp_refine_job, "locPREFMD")[:1]
     import_module("define_topology").prep(job, locPREFMD_out[0][0])
-    
+
     # prod
     import_module("prod_meta").prep(job, 0, sp_refine_job)
-    for i,refine_job in enumerate(refine_job_s):
-        import_module("prod_meta").prep(job, i+1, refine_job)
+    for i, refine_job in enumerate(refine_job_s):
+        import_module("prod_meta").prep(job, i + 1, refine_job)
     if not run(job, arg.wait_after_run):
         return
-    prod_out = get_outputs(job, 'prod_meta')
+    prod_out = get_outputs(job, "prod_meta")
     #
     # score
     import_module("score").prep_meta(job, job.get_task("prod_meta"))
@@ -158,14 +183,24 @@ def main():
         return
 
     # average
-    import_module("average_meta").prep(job, '%s.meta'%job.title, [i for i in range(n_meta)],\
-            path.Path("%s/average.json"%DEFAULT_HOME), rule='casp12')
-    import_module("average_meta").prep(job, '%s.cluster'%job.title, [i for i in range(n_meta)],\
-            path.Path("%s/average.json"%DEFAULT_HOME), rule='cluster')
+    import_module("average_meta").prep(
+        job,
+        "%s.meta" % job.title,
+        [i for i in range(n_meta)],
+        path.Path("%s/average.json" % DEFAULT_HOME),
+        rule="casp12",
+    )
+    import_module("average_meta").prep(
+        job,
+        "%s.cluster" % job.title,
+        [i for i in range(n_meta)],
+        path.Path("%s/average.json" % DEFAULT_HOME),
+        rule="cluster",
+    )
     if not run(job, arg.wait_after_run):
         return
     average_out = []
-    for output in get_outputs(job, 'average_meta', expand='pdb_s'):
+    for output in get_outputs(job, "average_meta", expand="pdb_s"):
         average_out.extend(output[0])
     average_out = average_out[:N_MODEL]
 
@@ -173,47 +208,47 @@ def main():
     job.work_home.chdir()
     model_home = job.work_home.subdir("model", build=True)
     prep_s = []
-    for i,out in enumerate(average_out):
-        prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+    for i, out in enumerate(average_out):
+        prep_fn = model_home.fn("prep_%d.pdb" % (i + 1))
         if not prep_fn.status():
-            system(['cp', out.short(), prep_fn.short()], verbose=job.verbose)
+            system(["cp", out.short(), prep_fn.short()], verbose=job.verbose)
         prep_s.append(prep_fn)
     #
     import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):
         return
-    scwrl_out = get_outputs(job, 'scwrl')
+    scwrl_out = get_outputs(job, "scwrl")
     #
     import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
     if not run(job, arg.wait_after_run):
-        return 
+        return
     locPREFMD_out = get_outputs(job, "locPREFMD")[-N_MODEL:]
     #
     model_s = []
-    for i,out in enumerate(locPREFMD_out):
-        model_fn = model_home.fn("model_%d.pdb"%(i+1))
+    for i, out in enumerate(locPREFMD_out):
+        model_fn = model_home.fn("model_%d.pdb" % (i + 1))
         if not model_fn.status():
-            system(['cp', out[0].short(), model_fn.short()], verbose=job.verbose)
+            system(["cp", out[0].short(), model_fn.short()], verbose=job.verbose)
         model_s.append(model_fn)
 
     # qa
-    import_module("qa").prep(job, model_s, path.Path("%s/qa.json"%DEFAULT_HOME))
+    import_module("qa").prep(job, model_s, path.Path("%s/qa.json" % DEFAULT_HOME))
     if not run(job, arg.wait_after_run):
         return
-    qa_out = get_outputs(job, 'qa')
+    qa_out = get_outputs(job, "qa")
 
     # final
     final_home = job.work_home.subdir("final", build=True)
-    for i,out in enumerate(qa_out):
-        pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
+    for i, out in enumerate(qa_out):
+        pdb_fn = final_home.fn("model_%d.pdb" % (i + 1))
         if not pdb_fn.status():
-            system(['cp', out[0].short(), pdb_fn.short()], verbose=job.verbose)
+            system(["cp", out[0].short(), pdb_fn.short()], verbose=job.verbose)
     #
     job.remove_from_joblist()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         sys.exit()
-

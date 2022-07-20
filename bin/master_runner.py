@@ -11,16 +11,17 @@ import path
 from libcommon import *
 
 EXEC = {}
-EXEC['refine'] = '%s/casp14_refine.py'%BIN_HOME
-EXEC['sp'] = '%s/casp14_sp.py'%BIN_HOME
-EXEC['meta'] = '%s/casp14_meta.py'%BIN_HOME
-EXEC['refine_meta'] = '%s/casp14_refine_meta.py'%BIN_HOME
+EXEC["refine"] = "%s/casp14_refine.py" % BIN_HOME
+EXEC["sp"] = "%s/casp14_sp.py" % BIN_HOME
+EXEC["meta"] = "%s/casp14_meta.py" % BIN_HOME
+EXEC["refine_meta"] = "%s/casp14_refine_meta.py" % BIN_HOME
+
 
 def run(verbose):
-    with open("%s/bin/hosts/job_s.json"%WORK_HOME) as fp:
+    with open("%s/bin/hosts/job_s.json" % WORK_HOME) as fp:
         job_fn_s = json.load(fp)
     #
-    sys.stdout.write("TIME: %s\n"%time.ctime())
+    sys.stdout.write("TIME: %s\n" % time.ctime())
     #
     proc_s = []
     for job_fn in job_fn_s:
@@ -38,17 +39,18 @@ def run(verbose):
         cmd = [run_exec]
         cmd.append(job_fn.path())
         #
-        sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
+        sys.stdout.write("PROC: %s\n" % (" ".join(cmd)))
         try:
-            system(cmd, verbose=False, errfile='/dev/null')
+            system(cmd, verbose=False, errfile="/dev/null")
         except:
             pass
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='master_runner')
-    arg.add_argument('--iter', dest='run_iterative', default=False, action='store_true')
-    arg.add_argument('--interval', dest='time_interval', default=60, type=int)
-    arg.add_argument('--verbose', dest='verbose', action='store_true', default=False)
+    arg = argparse.ArgumentParser(prog="master_runner")
+    arg.add_argument("--iter", dest="run_iterative", default=False, action="store_true")
+    arg.add_argument("--interval", dest="time_interval", default=60, type=int)
+    arg.add_argument("--verbose", dest="verbose", action="store_true", default=False)
     #
     arg = arg.parse_args()
     #
@@ -59,7 +61,8 @@ def main():
     else:
         run(arg.verbose)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:

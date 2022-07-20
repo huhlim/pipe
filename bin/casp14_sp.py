@@ -11,13 +11,14 @@ from importlib import import_module
 from libcommon import *
 from libmain import *
 
-EXEC_REFINE = '%s/casp14_refine.py'%BIN_HOME
-EXEC_PASTE = '%s/trRosetta/paste_domains.py'%EXEC_HOME
+EXEC_REFINE = "%s/casp14_refine.py" % BIN_HOME
+EXEC_PASTE = "%s/trRosetta/paste_domains.py" % EXEC_HOME
 
 N_MODEL_REFINE = 5
 N_MODEL = 5
 
 PARAM_HYBRID_REFINE_MAX_RES = 300
+
 
 def run_refine(title, input_pdb, work_home, **kwargs):
     def get_num_residues(pdb_fn):
@@ -27,9 +28,10 @@ def run_refine(title, input_pdb, work_home, **kwargs):
                 if not line.startswith("ATOM"):
                     continue
                 atmName = line[12:16].strip()
-                if atmName == 'CA':
+                if atmName == "CA":
                     n_res += 1
         return n_res
+
     def is_continuous_domain(pdb_fn):
         R = []
         with pdb_fn.open() as fp:
@@ -37,20 +39,21 @@ def run_refine(title, input_pdb, work_home, **kwargs):
                 if not line.startswith("ATOM"):
                     continue
                 atmName = line[12:16].strip()
-                if atmName == 'CA':
+                if atmName == "CA":
                     R.append([line[30:38], line[38:46], line[46:54]])
         R = np.array(R, dtype=float)
-        b = np.sqrt(np.sum((R[1:] - R[:-1])**2, -1))
+        b = np.sqrt(np.sum((R[1:] - R[:-1]) ** 2, -1))
         b_max = np.max(b)
         return b_max < 5.0
+
     #
     n_residue = get_num_residues(input_pdb)
     #
     cmd = []
     cmd.append(EXEC_REFINE)
     cmd.append(title)
-    cmd.extend(['--input', input_pdb.short()])
-    cmd.extend(['--dir', work_home.short()])
+    cmd.extend(["--input", input_pdb.short()])
+    cmd.extend(["--dir", work_home.short()])
     if kwargs.get("verbose", False):
         cmd.append("--verbose")
     if kwargs.get("wait_after_run", False):
@@ -61,14 +64,17 @@ def run_refine(title, input_pdb, work_home, **kwargs):
         cmd.append("--ligand")
     if kwargs.get("is_oligomer", False):
         cmd.append("--oligomer")
-    if kwargs.get("use_hybrid", False) and \
-            is_continuous_domain(input_pdb) and \
-            (n_residue < PARAM_HYBRID_REFINE_MAX_RES):
+    if (
+        kwargs.get("use_hybrid", False)
+        and is_continuous_domain(input_pdb)
+        and (n_residue < PARAM_HYBRID_REFINE_MAX_RES)
+    ):
         cmd.append("--hybrid")
     #
     proc = sp.Popen(cmd)
     time.sleep(60)
     return proc
+
 
 def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
     # check proc_s
@@ -102,6 +108,7 @@ def wait_refine(refine_proc_s, refine_home_s, wait_after_run, sleep=30):
 
     return status, refined
 
+
 def paste_refined(model_home, framework, refined_s, verbose=False):
     product = import_module("itertools").product
     #
@@ -111,7 +118,7 @@ def paste_refined(model_home, framework, refined_s, verbose=False):
     #
     prep_s = []
     for i in range(N_MODEL):
-        prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+        prep_fn = model_home.fn("prep_%d.pdb" % (i + 1))
         prep_s.append(prep_fn)
         if prep_fn.status():
             continue
@@ -120,7 +127,7 @@ def paste_refined(model_home, framework, refined_s, verbose=False):
         cmd.append("--init")
         cmd.append(framework.short())
         cmd.append("--refined")
-        for k,refined in zip(product_s[i], refined_s):
+        for k, refined in zip(product_s[i], refined_s):
             cmd.append(refined[k].short())
         cmd.append("--output")
         cmd.append(prep_fn.short())
@@ -129,6 +136,7 @@ def paste_refined(model_home, framework, refined_s, verbose=False):
             sys.exit("ERROR: Failed to paste models\n")
     return prep_s
 
+
 def update_bfactor(out_fn, model_fn, bfac_fn):
     bfac_s = {}
     with bfac_fn.open() as fp:
@@ -136,7 +144,7 @@ def update_bfactor(out_fn, model_fn, bfac_fn):
             if not line.startswith("ATOM") and not line.startswith("HETATM"):
                 continue
             atmName = line[12:16].strip()
-            if atmName != 'CA':
+            if atmName != "CA":
                 continue
             resNo = int(line[22:26])
             bfac = float(line[60:66])
@@ -150,29 +158,48 @@ def update_bfactor(out_fn, model_fn, bfac_fn):
                 continue
             resNo = int(line[22:26])
             bfac = bfac_s[resNo]
-            wrt.append('%s%6.2f\n'%(line[:60], bfac))
+            wrt.append("%s%6.2f\n" % (line[:60], bfac))
     #
-    with out_fn.open('wt') as fout:
+    with out_fn.open("wt") as fout:
         fout.writelines(wrt)
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='trRosetta+PREFMD')
-    arg.add_argument(dest='title', help='Job title')
-    arg.add_argument('-i', '--input', dest='input_fa', \
-            help='input FA file')
-    arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
-            help='working directory (default=./)')
-    arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
-            help='set temporary file mode (default=False)')
-    arg.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,\
-            help='set verbose mode (default=False)')
-    arg.add_argument('-w', '--wait', dest='wait_after_run', action='store_true', default=False,\
-            help='set running type (default=False)')
-    arg.add_argument('--hybrid', dest='use_hybrid', action='store_true', default=False, \
-            help='use hybrid')
-    arg.add_argument('--membrane', dest='is_membrane_protein', action='store_true', default=False)
-    arg.add_argument('--ligand', dest='has_ligand', action='store_true', default=False)
-    arg.add_argument('--oligomer', dest='is_oligomer', action='store_true', default=False)
+    arg = argparse.ArgumentParser(prog="trRosetta+PREFMD")
+    arg.add_argument(dest="title", help="Job title")
+    arg.add_argument("-i", "--input", dest="input_fa", help="input FA file")
+    arg.add_argument(
+        "-d", "--dir", dest="work_dir", default="./", help="working directory (default=./)"
+    )
+    arg.add_argument(
+        "--keep",
+        dest="keep",
+        action="store_true",
+        default=False,
+        help="set temporary file mode (default=False)",
+    )
+    arg.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="set verbose mode (default=False)",
+    )
+    arg.add_argument(
+        "-w",
+        "--wait",
+        dest="wait_after_run",
+        action="store_true",
+        default=False,
+        help="set running type (default=False)",
+    )
+    arg.add_argument(
+        "--hybrid", dest="use_hybrid", action="store_true", default=False, help="use hybrid"
+    )
+    arg.add_argument("--membrane", dest="is_membrane_protein", action="store_true", default=False)
+    arg.add_argument("--ligand", dest="has_ligand", action="store_true", default=False)
+    arg.add_argument("--oligomer", dest="is_oligomer", action="store_true", default=False)
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -190,12 +217,12 @@ def main():
         job.append_to_joblist()
     else:
         job = import_module("init_sp").prep(arg)
-    
+
     # trRosetta
     import_module("trRosetta").prep(job, job.init_fa)
     if not run(job, arg.wait_after_run):
-        return 
-    domain_pdb_s, trRosetta_min = get_outputs(job, 'trRosetta', expand='model_s')[0]
+        return
+    domain_pdb_s, trRosetta_min = get_outputs(job, "trRosetta", expand="model_s")[0]
     # temporarily now allow to split domain for oligomers
     if job.has("is_oligomer"):
         domain_pdb_s = [trRosetta_min]
@@ -207,7 +234,8 @@ def main():
     if has_refine:
         for refine_home in job.refine_s:
             if not refine_home.fn("job.json").status():
-                has_refine = False ; break
+                has_refine = False
+                break
     #
     if not has_refine:
         refine_proc_s = []
@@ -216,14 +244,19 @@ def main():
             if not job.has("is_oligomer"):
                 domain_id = pdb_fn.name()
             else:
-                domain_id = '%s_d0'%job.title
+                domain_id = "%s_d0" % job.title
             #
-            refine_proc = run_refine(domain_id, pdb_fn, job.refine_home, verbose=job.verbose, \
-                                     use_hybrid=job.use_hybrid, \
-                                     is_membrane_protein=job.has("is_membrane_protein"), \
-                                     has_ligand=job.has("has_ligand"), \
-                                     is_oligomer=job.has("is_oligomer"),\
-                                     wait_after_run=arg.wait_after_run)
+            refine_proc = run_refine(
+                domain_id,
+                pdb_fn,
+                job.refine_home,
+                verbose=job.verbose,
+                use_hybrid=job.use_hybrid,
+                is_membrane_protein=job.has("is_membrane_protein"),
+                has_ligand=job.has("has_ligand"),
+                is_oligomer=job.has("is_oligomer"),
+                wait_after_run=arg.wait_after_run,
+            )
             refine_home = job.refine_home.subdir(domain_id)
             #
             refine_proc_s.append(refine_proc)
@@ -244,32 +277,32 @@ def main():
     else:
         prep_s = []
         for i in range(N_MODEL):
-            prep_fn = model_home.fn("prep_%d.pdb"%(i+1))
+            prep_fn = model_home.fn("prep_%d.pdb" % (i + 1))
             prep_s.append(prep_fn)
-            system(['cp', refined[0][i].short(), prep_fn.short()], verbose=job.verbose)
+            system(["cp", refined[0][i].short(), prep_fn.short()], verbose=job.verbose)
     #
     import_module("scwrl").prep(job, prep_s)
     if not run(job, arg.wait_after_run):
         return
-    scwrl_out = get_outputs(job, 'scwrl')
+    scwrl_out = get_outputs(job, "scwrl")
     #
     import_module("locPREFMD").prep(job, [out[0] for out in scwrl_out])
     if not run(job, arg.wait_after_run):
-        return 
+        return
     locPREFMD_out = get_outputs(job, "locPREFMD")
 
     # final
     final_home = job.work_home.subdir("final", build=True)
-    for i,out in enumerate(locPREFMD_out):
-        pdb_fn = final_home.fn("model_%d.pdb"%(i+1))
+    for i, out in enumerate(locPREFMD_out):
+        pdb_fn = final_home.fn("model_%d.pdb" % (i + 1))
         if not pdb_fn.status():
             update_bfactor(pdb_fn, out[0], prep_s[i])
     #
     job.remove_from_joblist()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         sys.exit()
-

@@ -2,6 +2,7 @@
 
 import sys
 
+
 def read_resNo(pdb_fn):
     ssbond = []
     resNo_s = []
@@ -15,12 +16,13 @@ def read_resNo(pdb_fn):
                 elif line.startswith("SSBOND"):
                     ssbond.append(line)
                 continue
-            #resNo = line[22:26]
+            # resNo = line[22:26]
             resNo = line[21:26]
             if resNo != resNo_prev:
                 resNo_prev = resNo
                 resNo_s.append(resNo)
     return resNo_s, ssbond
+
 
 def update_resNo(pdb_fn, resNo_s, ssbond):
     k = -1
@@ -42,7 +44,7 @@ def update_resNo(pdb_fn, resNo_s, ssbond):
                 else:
                     sys.stdout.write(line)
                 continue
-            #resNo = line[22:26]
+            # resNo = line[22:26]
             resNo = line[21:26]
             if resNo != resNo_prev:
                 k += 1
@@ -51,15 +53,16 @@ def update_resNo(pdb_fn, resNo_s, ssbond):
                     resNo_new = resNo_s[k]
                 else:
                     break
-            #new = 'ATOM  %s %4s%s'%(line[6:21], resNo_new, line[26:])
-            new = 'ATOM  %s%4s%s'%(line[6:21], resNo_new, line[26:])
+            # new = 'ATOM  %s %4s%s'%(line[6:21], resNo_new, line[26:])
+            new = "ATOM  %s%4s%s" % (line[6:21], resNo_new, line[26:])
             sys.stdout.write(new)
-    #sys.stdout.write("TER\n")
+    # sys.stdout.write("TER\n")
     sys.stdout.write("END\n")
+
 
 def main():
     if len(sys.argv) < 3:
-        sys.stderr.write("USAGE: %s [REFERENCE] [PDB]\n"%__file__)
+        sys.stderr.write("USAGE: %s [REFERENCE] [PDB]\n" % __file__)
         return
     #
     ref_fn = sys.argv[1]
@@ -68,5 +71,6 @@ def main():
     resNo_s, ssbond = read_resNo(ref_fn)
     update_resNo(pdb_fn, resNo_s, ssbond)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     main()

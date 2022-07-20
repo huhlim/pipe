@@ -9,10 +9,10 @@ WORK_HOME = "/home/huhlim/work/prot.str/contact/pred/trRosetta_tbm"
 VERBOSE = True
 PARAM_N_PROC = 16
 
-#TBM_EXCLUDE = '%s/exclude.casp13'%WORK_HOME
+# TBM_EXCLUDE = '%s/exclude.casp13'%WORK_HOME
 TBM_EXCLUDE = None
 
-EXEC_PSIPRED = '/home/huhlim/apps/psipred/current/run_psipred'
+EXEC_PSIPRED = "/home/huhlim/apps/psipred/current/run_psipred"
 
 PARAM_SEGMENT_SIZE = 4
 PARAM_PROB_CUTOFF = 0.9
@@ -22,18 +22,23 @@ PARAM_DOMAIN_MIN_SEG = 10
 PARAM_DOMAIN_MIN_RES = 30
 PARAM_TBM_DOMAIN = 90.0
 
+
 class GracefulExit(Exception):
     pass
+
+
 def listen_signal():
     def gracefulExit(*arg):
         raise GracefulExit()
+
     signal.signal(signal.SIGTERM, gracefulExit)
+
 
 def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=None, redirect=False):
     if type(cmd) == type(""):
         cmd = cmd.strip().split()
     if verbose:
-        sys.stdout.write("CMD: " + " ".join(cmd) + '\n')
+        sys.stdout.write("CMD: " + " ".join(cmd) + "\n")
     #
     if stdout or (outfile is not None):
         STDOUT = sp.PIPE
@@ -41,7 +46,7 @@ def system(cmd, verbose=True, stdout=False, stdin=None, outfile=None, errfile=No
         STDOUT = None
     if errfile is None:
         STDERR = None
-    elif errfile == '/dev/null':
+    elif errfile == "/dev/null":
         STDERR = sp.DEVNULL
     elif redirect:
         STDERR = sp.STDOUT

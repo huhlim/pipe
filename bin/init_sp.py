@@ -8,8 +8,9 @@ import argparse
 
 from libcommon import *
 
+
 def prep(arg):
-    work_home = path.Dir("%s/%s"%(arg.work_dir, arg.title))
+    work_home = path.Dir("%s/%s" % (arg.work_dir, arg.title))
     json_job = work_home.fn("job.json")
     if json_job.status():
         job = Job.from_json(json_job)
@@ -21,7 +22,7 @@ def prep(arg):
     assert arg.input_fa is not None
     #
     job = Job(arg.work_dir, arg.title, build=True)
-    job.run_type = 'sp'
+    job.run_type = "sp"
     job.use_hybrid = arg.use_hybrid
     job.verbose = arg.verbose
     job.keep_tmp = arg.keep
@@ -30,40 +31,54 @@ def prep(arg):
     if arg.is_oligomer:
         job.is_oligomer = True
     #
-    out = job.work_home.fn("%s.fa"%job.title)
+    out = job.work_home.fn("%s.fa" % job.title)
     if not out.status():
-        cmd = ['cp', arg.input_fa.short(), out.short()]
+        cmd = ["cp", arg.input_fa.short(), out.short()]
         system(cmd, verbose=job.verbose)
     job.init_fa = out
     job.to_json()
     job.append_to_joblist()
     return job
 
+
 def override(arg):
     pass
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='init')
-    arg.add_argument(dest='command', choices=['prep', 'override'], help='exec type')
-    arg.add_argument(dest='title', help='Job title')
-    arg.add_argument('-i', '--input', dest='input_fa', required=True, \
-            help='input PDB file')
-    arg.add_argument('-d', '--dir', dest='work_dir', default='./',\
-            help='working directory (default=./)')
-    arg.add_argument('--keep', dest='keep', action='store_true', default=False,\
-            help='set temporary file mode (default=False)')
-    arg.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,\
-            help='set verbose mode (default=False)')
+    arg = argparse.ArgumentParser(prog="init")
+    arg.add_argument(dest="command", choices=["prep", "override"], help="exec type")
+    arg.add_argument(dest="title", help="Job title")
+    arg.add_argument("-i", "--input", dest="input_fa", required=True, help="input PDB file")
+    arg.add_argument(
+        "-d", "--dir", dest="work_dir", default="./", help="working directory (default=./)"
+    )
+    arg.add_argument(
+        "--keep",
+        dest="keep",
+        action="store_true",
+        default=False,
+        help="set temporary file mode (default=False)",
+    )
+    arg.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="set verbose mode (default=False)",
+    )
 
     if len(sys.argv) == 1:
         return arg.print_help()
     arg = arg.parse_args()
     #
-    if arg.command == 'prep':
+    if arg.command == "prep":
         arg.input_fa = path.Path(arg.input_fa)
         prep(arg)
-    elif arg.command == 'override':
+    elif arg.command == "override":
         override(arg)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

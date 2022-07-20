@@ -11,29 +11,32 @@ import subprocess as sp
 from libgpu import GPU
 from libcommon import *
 
+
 class Task(object):
     def __init__(self, id, json_job, method, index, gpu, output):
-        self.status = 'WAIT'
+        self.status = "WAIT"
         self.id = id
         self.json_job = json_job
         self.method = method
         self.index = index
         self.gpu = gpu
         self.output = output
+
     def __repr__(self):
         wrt = []
-        wrt.append("%d"%self.id)
+        wrt.append("%d" % self.id)
         wrt.append(self.status)
         wrt.append(self.json_job.path())
         wrt.append(self.method)
-        wrt.append("%d"%self.index)
+        wrt.append("%d" % self.index)
         if self.gpu[0]:
-            wrt.append("GPU/%d"%self.gpu[1])
+            wrt.append("GPU/%d" % self.gpu[1])
         else:
             wrt.append("CPU  ")
-        return ' '.join(wrt)
+        return " ".join(wrt)
+
     def __eq__(self, othr):
-        if self.status == 'KILLED' or othr.status == 'KILLED':
+        if self.status == "KILLED" or othr.status == "KILLED":
             return False
         if self.json_job != othr.json_job:
             return False
@@ -46,15 +49,19 @@ class Task(object):
         elif self.gpu[0] and (self.gpu[1] != othr.gpu[1]):
             return False
         return True
+
     def check_output(self):
         for out in self.output:
             if not out.status():
                 return False
         return True
+
     def update_status(self, status):
         self.status = status
+
     def to_json(self):
         return self.__repr__()
+
     @classmethod
     def from_json(cls, X, prev_s):
         X = X.split()
@@ -70,15 +77,16 @@ class Task(object):
             return curr
         #
         job = Job.from_json(curr.json_job)
-        task_s = job.get_task(curr.method, host=HOSTNAME, status='RUN')
-        for index,task in task_s:
+        task_s = job.get_task(curr.method, host=HOSTNAME, status="RUN")
+        for index, task in task_s:
             if index == curr.index:
-                curr.output = task['output']
+                curr.output = task["output"]
                 break
         if curr.output is None:
-            #sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%curr)
+            # sys.stderr.write("ERROR: failed to retrieve a task, %s\n"%curr)
             return None
         return curr
+
 
 class Queue(object):
     def __init__(self, host_json, gpu, time_interval, verbose):
@@ -88,8 +96,10 @@ class Queue(object):
         self.time_interval = time_interval
         self.verbose = verbose
         self.task_no = 0
+
     def wait(self):
         time.sleep(self.time_interval)
+
     def update_tasks(self):
         if not JOBs_json.status():
             return
@@ -97,23 +107,26 @@ class Queue(object):
             json_job_s = [path.Path(fn) for fn in json.load(fp)]
             #
         for json_job in json_job_s:
-            if not json_job.status(): continue
+            if not json_job.status():
+                continue
             job = Job.from_json(json_job)
             for method in job.task:
-                task = job.get_task(method, host=HOSTNAME, status='RUN')
-                for index,X in task:
-                    is_gpu_job = X['resource'][2]
+                task = job.get_task(method, host=HOSTNAME, status="RUN")
+                for index, X in task:
+                    is_gpu_job = X["resource"][2]
                     if is_gpu_job:
-                        gpu_id = int(X['resource'][1].split("/")[-1])
+                        gpu_id = int(X["resource"][1].split("/")[-1])
                     else:
                         gpu_id = None
-                    t = Task(self.task_no, \
-                            json_job, method, index, (is_gpu_job, gpu_id), X['output'])
+                    t = Task(
+                        self.task_no, json_job, method, index, (is_gpu_job, gpu_id), X["output"]
+                    )
                     if t not in self.task_s:
                         self.task_s.append(t)
                         self.task_no += 1
-        for i,task in enumerate(self.task_s):
-            if task.status != 'CHECK': continue
+        for i, task in enumerate(self.task_s):
+            if task.status != "CHECK":
+                continue
             if task.check_output():
                 task.update_status("FINISHED")
             else:
@@ -122,18 +135,19 @@ class Queue(object):
         if len(self.task_s) > 100:
             task_s = []
             for task in self.task_s:
-                if task.status not in ['FINISHED', 'KILLED']:
+                if task.status not in ["FINISHED", "KILLED"]:
                     task_s.append(task)
             self.task_s = task_s
 
     def from_json(self):
         task_s = []
         with self.host_json.open("r") as fp:
-            for X in json.load(fp)['task']:
+            for X in json.load(fp)["task"]:
                 task = Task.from_json(X, self.task_s)
                 if task is not None:
                     task_s.append(task)
         return task_s
+
     def to_json(self, resource):
         if self.host_json.status():
             try:
@@ -141,27 +155,32 @@ class Queue(object):
             except:
                 comm_s = []
             for task in self.task_s:
-                if task.status in ['FINISHED', 'KILLED']:
+                if task.status in ["FINISHED", "KILLED"]:
                     continue
                 if task not in comm_s:
                     continue
                 comm = comm_s[comm_s.index(task)]
-                if comm.status in ['TERMINATE']:    # getting TERM signal
+                if comm.status in ["TERMINATE"]:  # getting TERM signal
                     task.update_status(comm.status)
 
         with self.host_json.open("wt") as fout:
-            fout.write(json.dumps({"resource": resource, \
-                    "task": [task.to_json() for task in self.task_s]}, indent=2))
+            fout.write(
+                json.dumps(
+                    {"resource": resource, "task": [task.to_json() for task in self.task_s]},
+                    indent=2,
+                )
+            )
 
     def check_resources(self, proc_s):
         cpu_status = True
         if self.gpu is not None:
-            gpu_status = {} ; self.gpu.check()
+            gpu_status = {}
+            self.gpu.check()
             for gpu_id in self.gpu.usable(update=True):
                 gpu_status[gpu_id] = True
         else:
             gpu_status = {}
-        for _,task in proc_s:
+        for _, task in proc_s:
             use_gpu, gpu_id = task.gpu
             if use_gpu:
                 gpu_status[gpu_id] = False
@@ -186,26 +205,29 @@ class Queue(object):
                     pass
                 #
                 for task in self.task_s:
-                    if task.status in ['RUNNING', 'CHECK', 'FINISHED', 'KILLED']:
+                    if task.status in ["RUNNING", "CHECK", "FINISHED", "KILLED"]:
                         continue
                     #
                     cmd = self.get_cmd(task)
                     use_gpu, gpu_id = task.gpu
                     if use_gpu:
-                        if gpu_id not in gpu_status: continue
-                        if not gpu_status[gpu_id]: continue
+                        if gpu_id not in gpu_status:
+                            continue
+                        if not gpu_status[gpu_id]:
+                            continue
                         gpu_status[gpu_id] = False
                         #
                         env = os.environ.copy()
-                        env['CUDA_VISIBLE_DEVICES'] = '%d'%gpu_id
+                        env["CUDA_VISIBLE_DEVICES"] = "%d" % gpu_id
                         proc = sp.Popen(cmd, env=env)
                     else:
-                        if not cpu_status: continue
+                        if not cpu_status:
+                            continue
                         cpu_status = False
                         proc = sp.Popen(cmd)
                     if self.verbose:
-                        sys.stdout.write("PROC: %s\n"%(" ".join(cmd)))
-                    time.sleep(1.)
+                        sys.stdout.write("PROC: %s\n" % (" ".join(cmd)))
+                    time.sleep(1.0)
                     #
                     if proc.poll() is None:
                         task.update_status("RUNNING")
@@ -215,9 +237,10 @@ class Queue(object):
             #
             proc_status, proc_running = self.check_proc_status(proc_s)
             for status, proc in zip(proc_status, proc_s):
-                if not status: continue
+                if not status:
+                    continue
                 #
-                _,task = proc
+                _, task = proc
                 task.update_status("CHECK")
                 if task.gpu[0]:
                     gpu_status[task.gpu[1]] = True
@@ -227,24 +250,26 @@ class Queue(object):
             self.to_json([cpu_status, gpu_status])
             #
             proc_s = []
-            for proc,task in proc_running:
+            for proc, task in proc_running:
                 t = self.task_s[self.task_s.index(task)]
-                if t.status == 'TERMINATE':
-                    print ("killing... %d"%proc.pid)
+                if t.status == "TERMINATE":
+                    print("killing... %d" % proc.pid)
                     proc.terminate()
                     proc.wait()
                 else:
                     proc_s.append((proc, task))
             for task in self.task_s:
-                if task.status == 'TERMINATE':
+                if task.status == "TERMINATE":
                     task.update_status("KILLED")
             #
             self.wait()
 
     def get_cmd(self, task):
-        return ["%s/%s.py"%(BIN_HOME, task.method), 'run', task.json_job.short()]
+        return ["%s/%s.py" % (BIN_HOME, task.method), "run", task.json_job.short()]
+
     def check_proc_status(self, proc_s):
-        status = [] ; proc_running = []
+        status = []
+        proc_running = []
         for proc in proc_s:
             if proc[0].poll() is not None:
                 status.append(True)
@@ -253,8 +278,9 @@ class Queue(object):
                 proc_running.append(proc)
         return status, proc_running
 
+
 def register_host(gpu, exclude_s):
-    host_json = path.Path("%s/%s.json"%(HOST_HOME, HOSTNAME))
+    host_json = path.Path("%s/%s.json" % (HOST_HOME, HOSTNAME))
     #
     if HOSTs_json.status():
         with HOSTs_json.open() as fp:
@@ -267,14 +293,15 @@ def register_host(gpu, exclude_s):
             host_s[HOSTNAME] = (False, [], exclude_s)
         else:
             host_s[HOSTNAME] = (True, gpu.CUDA_VISIBLE_DEVICES, exclude_s)
-        with HOSTs_json.open('wt') as fout:
+        with HOSTs_json.open("wt") as fout:
             fout.write(json.dumps(host_s, indent=2))
     else:
-        sys.exit("%s is already in the host list\n"%HOSTNAME)
+        sys.exit("%s is already in the host list\n" % HOSTNAME)
     return host_json, gpu
 
+
 def unregister_host():
-    host_json = path.Path("%s/%s.json"%(HOST_HOME, HOSTNAME))
+    host_json = path.Path("%s/%s.json" % (HOST_HOME, HOSTNAME))
     if host_json.status():
         host_json.remove()
     if not HOSTs_json.status():
@@ -286,12 +313,13 @@ def unregister_host():
     with HOSTs_json.open("wt") as fout:
         fout.write(json.dumps(host_s, indent=2))
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='slave_runner')
-    arg.add_argument('--gpu', dest='use_gpu', action='store_true', default=False)
-    arg.add_argument('--interval', dest='time_interval', default=60, type=int)
-    arg.add_argument('--verbose', dest='verbose', action='store_true', default=False)
-    arg.add_argument('--exclude', dest='exclude_s', nargs='*', default=[])
+    arg = argparse.ArgumentParser(prog="slave_runner")
+    arg.add_argument("--gpu", dest="use_gpu", action="store_true", default=False)
+    arg.add_argument("--interval", dest="time_interval", default=60, type=int)
+    arg.add_argument("--verbose", dest="verbose", action="store_true", default=False)
+    arg.add_argument("--exclude", dest="exclude_s", nargs="*", default=[])
     #
     arg = arg.parse_args()
     #
@@ -306,7 +334,8 @@ def main():
     Queue(host_json, gpu, arg.time_interval, arg.verbose).run()
     unregister_host()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:

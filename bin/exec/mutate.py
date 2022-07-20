@@ -8,11 +8,12 @@ import argparse
 
 WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
-sys.path.insert(0, '%s/bin'%WORK_HOME)
+sys.path.insert(0, "%s/bin" % WORK_HOME)
 
 from libcommon import *
 
 import seqName
+
 
 def write_fa(pdb_fn, mutation_s):
     residue_s = []
@@ -23,9 +24,9 @@ def write_fa(pdb_fn, mutation_s):
                 if line.startswith("END"):
                     break
                 continue
-            if line[12:16].strip() != 'CA':
+            if line[12:16].strip() != "CA":
                 continue
-            if line[16] not in [' ', 'A']:
+            if line[16] not in [" ", "A"]:
                 continue
             resNo = line[22:26].strip()
             chain_id = line[21].strip()
@@ -34,7 +35,7 @@ def write_fa(pdb_fn, mutation_s):
     #
     for mut in mutation_s:
         try:
-            key,aa = mut.split(":")
+            key, aa = mut.split(":")
             key = key.split(".")
             resNo = key[0]
             if len(key) == 1:
@@ -44,7 +45,7 @@ def write_fa(pdb_fn, mutation_s):
             else:
                 raise
         except:
-            sys.exit("Incorrect mutation argument %s\n"%mut)
+            sys.exit("Incorrect mutation argument %s\n" % mut)
         #
         if (resNo, chain) in residue_s:
             index = residue_s.index((resNo, chain))
@@ -53,15 +54,16 @@ def write_fa(pdb_fn, mutation_s):
             index = residue_s.index((resNo, ""))
             seq[index] = aa
         else:
-            sys.exit("Failed to find %s\n"%mut)
+            sys.exit("Failed to find %s\n" % mut)
 
-    return ''.join(seq)
+    return "".join(seq)
+
 
 def main():
-    arg = argparse.ArgumentParser(prog='mutate')
-    arg.add_argument('-i', '--input', dest='input_pdb', required=True)
-    arg.add_argument('-o', '--output', dest='output_pdb', required=True)
-    arg.add_argument('-m', '--mutate', dest='mutation_s', nargs='+', default=[])
+    arg = argparse.ArgumentParser(prog="mutate")
+    arg.add_argument("-i", "--input", dest="input_pdb", required=True)
+    arg.add_argument("-o", "--output", dest="output_pdb", required=True)
+    arg.add_argument("-m", "--mutate", dest="mutation_s", nargs="+", default=[])
     # --mutate 12:F or --mutate 12.A:F
     #
     if len(sys.argv) == 1:
@@ -71,20 +73,21 @@ def main():
     #
     cmd = []
     cmd.append("scwrl4")
-    cmd.extend(['-i', arg.input_pdb])
-    cmd.extend(['-o', arg.output_pdb])
+    cmd.extend(["-i", arg.input_pdb])
+    cmd.extend(["-o", arg.output_pdb])
     #
     if len(arg.mutation_s) > 0:
         seq = write_fa(arg.input_pdb, arg.mutation_s)
-        out = tempfile.NamedTemporaryFile("wt", suffix='.fa')
+        out = tempfile.NamedTemporaryFile("wt", suffix=".fa")
         out.write(seq)
         out.flush()
-        cmd.extend(['-s', out.name])
+        cmd.extend(["-s", out.name])
     else:
         fa_fn = None
     #
-    system(cmd, verbose=False, stdout=True, errfile='/dev/null')
+    system(cmd, verbose=False, stdout=True, errfile="/dev/null")
     #
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

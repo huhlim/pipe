@@ -8,10 +8,11 @@ import argparse
 
 from libcommon import *
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='set_membrane_protein')
-    arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
-    arg.add_argument('--unset', dest='unset_membrane_protein', default=False, action='store_true')
+    arg = argparse.ArgumentParser(prog="set_membrane_protein")
+    arg.add_argument(dest="work_dir", help="work_dir, which has a JSON file")
+    arg.add_argument("--unset", dest="unset_membrane_protein", default=False, action="store_true")
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -33,5 +34,6 @@ def main():
     #
     job.to_json()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

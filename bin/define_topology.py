@@ -8,14 +8,18 @@ import argparse
 
 from libcommon import *
 
+
 def prep(job, input_pdb, n_atom=None, update=False):
     job.top_fn = job.init_home.fn("solute.pdb")
     n_atom_pdb = 0
     if (not job.top_fn.status()) or (not job.has("n_atom") or not job.has("ssbond")) or update:
-        pdb = [] ; ssbond = []
+        pdb = []
+        ssbond = []
         with input_pdb.open() as fp:
             for line in fp:
-                if line.startswith("ATOM") and (n_atom is None or (n_atom is not None and n_atom_pdb < n_atom)):
+                if line.startswith("ATOM") and (
+                    n_atom is None or (n_atom is not None and n_atom_pdb < n_atom)
+                ):
                     n_atom_pdb += 1
                     pdb.append(line)
                 elif line.startswith("SSBOND"):
@@ -37,12 +41,14 @@ def prep(job, input_pdb, n_atom=None, update=False):
     #
     job.to_json()
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='define_topology')
-    arg.add_argument(dest='command', choices=['prep'], help='exec type')
-    arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
-    arg.add_argument('-i', '--input', dest='input_pdb', nargs='?', required=True, \
-            help='input PDB file')
+    arg = argparse.ArgumentParser(prog="define_topology")
+    arg.add_argument(dest="command", choices=["prep"], help="exec type")
+    arg.add_argument(dest="work_dir", help="work_dir, which has a JSON file")
+    arg.add_argument(
+        "-i", "--input", dest="input_pdb", nargs="?", required=True, help="input PDB file"
+    )
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -56,9 +62,10 @@ def main():
     #
     job = Job.from_json(arg.json_job)
     #
-    if arg.command == 'prep':
+    if arg.command == "prep":
         arg.input_pdb = path.Path(arg.input_pdb)
         prep(job, arg.input_pdb)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

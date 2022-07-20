@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from libmd_contact import get_dist_distr
 
+
 def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
     if subsample > 0:
         subsampled = np.zeros(len(frame_s), dtype=bool)
@@ -19,15 +20,15 @@ def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
         frame_x = frame_s0[notsampled]
     #
     dmtx = np.array([mdtraj.rmsd(frame_s, frame) for frame in frame_s], dtype=float)
-    dbscan = DBSCAN(eps=rmsd_cutoff*0.1, min_samples=1, metric='precomputed', n_jobs=-1)
+    dbscan = DBSCAN(eps=rmsd_cutoff * 0.1, min_samples=1, metric="precomputed", n_jobs=-1)
     labels = dbscan.fit_predict(dmtx)
-    n_cluster = labels.max()+1
+    n_cluster = labels.max() + 1
     #
     if subsample > 0:
         rmsd_to_center = []
         for i in range(n_cluster):
-            c = (labels == i)
-            index = np.ix_(c,c)
+            c = labels == i
+            index = np.ix_(c, c)
             d = dmtx[index].sum(axis=0)
             #
             member = frame_s[c]
@@ -38,14 +39,14 @@ def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
     #
     cluster_s = []
     for i in range(n_cluster):
-        c = (labels == i)
-        index = np.ix_(c,c)
+        c = labels == i
+        index = np.ix_(c, c)
         d = dmtx[index].sum(axis=0)
         #
         member = frame_s[c]
         center = member[np.argmin(d)]
         if subsample > 0:
-            x = (label_x == i)
+            x = label_x == i
             member = mdtraj.join([member, frame_x[x]])
         n_member = len(member)
         #
@@ -61,7 +62,8 @@ def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
     cluster_s.sort(key=lambda x: x[0], reverse=True)
     return cluster_s
 
-#def main():
+
+# def main():
 #    arg = argparse.ArgumentParser(prog='cluster_models')
 #    arg.add_argument(dest='output_prefix')
 #    arg.add_argument(dest='init_pdb')
@@ -76,5 +78,5 @@ def get_clusters(frame_s, rmsd_cutoff=2.0, subsample=0, get_distr=False):
 #    #
 #    run(arg)
 #
-#if __name__ == '__main__':
+# if __name__ == '__main__':
 #    main()

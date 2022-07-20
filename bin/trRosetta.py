@@ -8,11 +8,12 @@ import argparse
 
 from libcommon import *
 
-METHOD = 'trRosetta'
-EXEC = '%s/trRosetta/predict.py'%EXEC_HOME
+METHOD = "trRosetta"
+EXEC = "%s/trRosetta/predict.py" % EXEC_HOME
+
 
 def prep(job, input_fa):
-    if len(job.get_task(METHOD, not_status='DONE')) > 0:
+    if len(job.get_task(METHOD, not_status="DONE")) > 0:
         return
     #
     job.trRosetta_home = job.work_home.subdir("trRosetta", build=True)
@@ -20,58 +21,64 @@ def prep(job, input_fa):
     min_pdb = job.trRosetta_home.fn("build/min.pdb")
     out = job.trRosetta_home.fn("model_s")
     #
-    job.add_task(METHOD, [job.title, input_fa, job.trRosetta_home], [out, min_pdb], use_gpu=False, n_proc=16)
+    job.add_task(
+        METHOD, [job.title, input_fa, job.trRosetta_home], [out, min_pdb], use_gpu=False, n_proc=16
+    )
     #
     job.to_json()
 
+
 def run(job):
-    task_s = job.get_task(METHOD, host=HOSTNAME, status='RUN') 
+    task_s = job.get_task(METHOD, host=HOSTNAME, status="RUN")
     if len(task_s) == 0:
         return
     #
-    for index,task in task_s:
-        title = task['input'][0]
-        input_fa = task['input'][1]
-        run_home = task['input'][2]
-        output_list = task['output'][0]
-        min_pdb = task['output'][1]
+    for index, task in task_s:
+        title = task["input"][0]
+        input_fa = task["input"][1]
+        run_home = task["input"][2]
+        output_list = task["output"][0]
+        min_pdb = task["output"][1]
         if min_pdb.status() and output_list.status():
             continue
-        n_proc = task['resource'][3]
+        n_proc = task["resource"][3]
         #
         run_home.chdir()
-        cmd = [EXEC, input_fa.short(), '%d'%n_proc]
+        cmd = [EXEC, input_fa.short(), "%d" % n_proc]
         system(cmd, verbose=job.verbose)
 
+
 def submit(job):
-    task_s = job.get_task(METHOD, status='SUBMIT') 
+    task_s = job.get_task(METHOD, status="SUBMIT")
     if len(task_s) == 0:
         return
     #
-    for index,task in task_s:
-        title = task['input'][0]
-        input_fa = task['input'][1]
-        run_home = task['input'][2]
-        output_list = task['output'][0]
-        min_pdb = task['output'][1]
+    for index, task in task_s:
+        title = task["input"][0]
+        input_fa = task["input"][1]
+        run_home = task["input"][2]
+        output_list = task["output"][0]
+        min_pdb = task["output"][1]
         if min_pdb.status() and output_list.status():
             continue
-        n_proc = task['resource'][3]
+        n_proc = task["resource"][3]
         #
         run_home.chdir()
         #
         cmd = []
-        cmd.append("cd %s\n"%run_home)
-        cmd.append(" ".join([EXEC, input_fa.short(), '%d'%n_proc]) + '\n')
+        cmd.append("cd %s\n" % run_home)
+        cmd.append(" ".join([EXEC, input_fa.short(), "%d" % n_proc]) + "\n")
         #
         job.write_submit_script(METHOD, index, cmd)
 
+
 def main():
-    arg = argparse.ArgumentParser(prog='trRosetta')
-    arg.add_argument(dest='command', choices=['prep', 'run'], help='exec type')
-    arg.add_argument(dest='work_dir', help='work_dir, which has a JSON file')
-    arg.add_argument('-i', '--input', dest='input_fa', \
-            help='input FASTA file, mandatory for "prep"')  
+    arg = argparse.ArgumentParser(prog="trRosetta")
+    arg.add_argument(dest="command", choices=["prep", "run"], help="exec type")
+    arg.add_argument(dest="work_dir", help="work_dir, which has a JSON file")
+    arg.add_argument(
+        "-i", "--input", dest="input_fa", help='input FASTA file, mandatory for "prep"'
+    )
 
     if len(sys.argv) == 1:
         return arg.print_help()
@@ -86,15 +93,16 @@ def main():
     #
     job = Job.from_json(arg.json_job)
     #
-    if arg.command == 'prep':
+    if arg.command == "prep":
         if arg.input_fa is None:
             sys.exit("Error: input_fa required\n")
         arg.input_fa = path.Path(arg.input_fa)
         #
         prep(job, arg.input_fa)
 
-    elif arg.command == 'run':
+    elif arg.command == "run":
         run(job)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
