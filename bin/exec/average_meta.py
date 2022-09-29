@@ -15,14 +15,9 @@ from importlib import import_module
 
 import mdtraj
 
-try:
-    from openmm.unit import *
-    from openmm.openmm import *
-    from openmm.app import *
-except:
-    from simtk.unit import *
-    from simtk.openmm import *
-    from simtk.openmm.app import *
+from openmm.unit import *
+from openmm.openmm import *
+from openmm.app import *
 
 WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None

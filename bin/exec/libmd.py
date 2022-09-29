@@ -12,14 +12,10 @@ from sklearn.decomposition import PCA
 
 import mdtraj
 
-try:
-    from openmm.unit import *
-    from openmm.openmm import *
-    from openmm.app import *
-except:
-    from simtk.unit import *
-    from simtk.openmm import *
-    from simtk.openmm.app import *
+from openmm.unit import *
+from openmm.openmm import *
+from openmm.app import *
+
 from openmmtools.integrators import ThermostatedIntegrator
 from openmmtools.constants import kB
 

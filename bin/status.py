@@ -23,23 +23,14 @@ METHODs = [
     "mutate",
     "qa",
     "diffusion",
+    "diffusion_distance",
     "g_r",
 ]
 INPUTs = {}
 INPUTs["default"] = 0
 INPUTs["trRosetta"] = 2
 INPUTs["hybrid"] = 2
-INPUTs["locPREFMD"] = 0
-INPUTs["equil"] = 0
-INPUTs["prod"] = 0
-INPUTs["prod_meta"] = 0
-INPUTs["score"] = 0
-INPUTs["average"] = 0
 INPUTs["average_meta"] = 1
-INPUTs["qa"] = 0
-INPUTs["scwrl"] = 0
-INPUTs["mutate"] = 0
-INPUTs["diffusion"] = 0
 
 
 def get_prod_info(run_home):
