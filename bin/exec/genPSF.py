@@ -137,14 +137,39 @@ def parse_patch(args):
     return patch_s
 
 
+def read_toppar(toppar_fn):
+    rtf_s = []
+    prm_s = []
+    str_s = []
+    base = os.path.dirname(toppar_fn)
+    with open(toppar_fn) as fp:
+        for line in fp:
+            if line.startswith("open") or line.startswith("stream"):
+                fn = "%s/%s" % (base, line.strip().split()[-1])
+                if not os.path.exists(fn):
+                    continue
+                if fn.endswith("rtf"):
+                    rtf_s.append(fn)
+                elif fn.endswith("prm"):
+                    prm_s.append(fn)
+                else:
+                    str_s.append(fn)
+    return (rtf_s, prm_s, str_s)
+
+
 def write_top_cmd(toppar):
     rtf_s = []
     prm_s = []
     str_s = []
     for fn in toppar:
-        if fn.endswith("rtf"):
+        if fn.split("/")[-1] == "toppar.str":
+            toppar = read_toppar(fn)
+            rtf_s.extend(toppar[0])
+            prm_s.extend(toppar[1])
+            str_s.extend(toppar[2])
+        elif fn.endswith("rtf"):
             rtf_s.append(fn)
-        elif fn.endswith("prm"):
+        elif fn.endswith("prm") or fn.endswith("par"):
             prm_s.append(fn)
         else:
             str_s.append(fn)
@@ -207,6 +232,7 @@ def write_pdb_cmd(
     write_crd=False,
     blocked=False,
     terminal=["ACE", "CT3"],
+    build_all=True,
 ):
     cmd = []
     for segName in segName_s:
@@ -273,8 +299,13 @@ def write_pdb_cmd(
     #
     cmd.append("!\n")
     cmd.append("bomlev -2\n")
-    cmd.append("ic param\n")
-    cmd.append("ic build\n")
+    if build_all:
+        cmd.append("ic param\n")
+        cmd.append("ic build\n")
+        cmd.append("!\n")
+    #
+    cmd.append("!\n")
+    cmd.append("IOFOrmat EXTE\n")
     cmd.append("!\n")
     cmd.append('open unit 10 write form name "out.psf"\n')
     cmd.append("write psf card unit 10\n")
@@ -301,6 +332,7 @@ def main():
     arg.add_argument("-patch", "--patch", dest="patch_s", default=[], nargs="*")
     arg.add_argument("-blocked", "--blocked", dest="blocked", default=False, action="store_true")
     arg.add_argument("-terminal", "--terminal", dest="terminal", default=["ACE", "CT3"], nargs=2)
+    arg.add_argument("--nobuildall", dest="build_all", default=True, action="store_false")
     arg.add_argument("--debug", dest="debug", action="store_true", default=False)
     #
     if len(sys.argv) == 1:
@@ -327,6 +359,7 @@ def main():
             write_crd=(arg.crdout is not None),
             blocked=arg.blocked,
             terminal=arg.terminal,
+            build_all=arg.build_all,
         )
     )
     cmd_s.append("stop\n")

@@ -16,8 +16,13 @@ from openmm.unit import *
 from openmm.openmm import *
 from openmm.app import *
 
-from openmmtools.integrators import ThermostatedIntegrator
-from openmmtools.constants import kB
+try:
+    from openmmtools.integrators import ThermostatedIntegrator
+    from openmmtools.constants import kB
+
+    openmmtools_available = True
+except:
+    openmmtools_available = False
 
 WORK_HOME = os.getenv("PIPE_HOME")
 assert WORK_HOME is not None
@@ -179,7 +184,7 @@ def update_residue_name(pdb_fn, pdb):
             residue.name = resName
 
 
-def construct_restraint(psf, pdb, force_const):
+def construct_restraint(psf, pdb, force_const, atom_s=["CA"]):
     rsr = CustomExternalForce("k0*d^2 ; d=periodicdistance(x,y,z, x0,y0,z0)")
     rsr.addPerParticleParameter("x0")
     rsr.addPerParticleParameter("y0")
@@ -188,12 +193,12 @@ def construct_restraint(psf, pdb, force_const):
     #
     calphaIndex = []
     for i, atom in enumerate(psf.topology.atoms()):
-        if atom.name == "CA":
+        if atom.name in atom_s:
             calphaIndex.append(i)
     #
     k = -1
     for i, atom in enumerate(pdb.top.atoms):
-        if atom.name != "CA":
+        if atom.name not in atom_s:
             continue
         #
         k += 1
@@ -276,38 +281,39 @@ def construct_ligand_restraint(pair_s):
     return bond
 
 
-class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
-    def __init__(
-        self, temperature=298 * kelvin, timestep=1.0 * femtoseconds, risetime=1.0 * picoseconds
-    ):
-        super().__init__(temperature, timestep)
+if openmmtools_available:
+    class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
+        def __init__(
+            self, temperature=298 * kelvin, timestep=1.0 * femtoseconds, risetime=1.0 * picoseconds
+        ):
+            super().__init__(temperature, timestep)
 
-        self.addGlobalVariable("tau", timestep / risetime)
-        self.addGlobalVariable("ke2", 0)  # Twice the kinetic energy
-        self.addGlobalVariable("kTcurr", 0)
-        self.addGlobalVariable("kB", kB)
-        self.addGlobalVariable("lambda", 1.0)
-        self.addGlobalVariable("ndf", 0)  # number of degrees of freedom
-        self.addPerDofVariable("ones", 1.0)
-        self.addPerDofVariable("x1", 0)
-        ##
-        self.addComputeSum("ndf", "ones")
-        self.addComputeSum("ke2", "m*v*v")
-        self.addComputeGlobal("kTcurr", "ke2/ndf*1.5")
-        self.addComputeGlobal("lambda", "sqrt(1+tau*(kT/kTcurr - 1))")
-        #
-        self.addComputePerDof("v", "v*lambda")
-        #
-        # Velocity Verlet step
-        #
-        self.addUpdateContextState()
-        self.addComputePerDof("v", "v+0.5*dt*f/m")
-        self.addComputePerDof("x", "x+dt*v")
-        self.addComputePerDof("x1", "x")
-        self.addConstrainPositions()
-        self.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt")
-        self.addConstrainVelocities()
-        #
+            self.addGlobalVariable("tau", timestep / risetime)
+            self.addGlobalVariable("ke2", 0)  # Twice the kinetic energy
+            self.addGlobalVariable("kTcurr", 0)
+            self.addGlobalVariable("kB", kB)
+            self.addGlobalVariable("lambda", 1.0)
+            self.addGlobalVariable("ndf", 0)  # number of degrees of freedom
+            self.addPerDofVariable("ones", 1.0)
+            self.addPerDofVariable("x1", 0)
+            ##
+            self.addComputeSum("ndf", "ones")
+            self.addComputeSum("ke2", "m*v*v")
+            self.addComputeGlobal("kTcurr", "ke2/ndf*1.5")
+            self.addComputeGlobal("lambda", "sqrt(1+tau*(kT/kTcurr - 1))")
+            #
+            self.addComputePerDof("v", "v*lambda")
+            #
+            # Velocity Verlet step
+            #
+            self.addUpdateContextState()
+            self.addComputePerDof("v", "v+0.5*dt*f/m")
+            self.addComputePerDof("x", "x+dt*v")
+            self.addComputePerDof("x1", "x")
+            self.addConstrainPositions()
+            self.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt")
+            self.addConstrainVelocities()
+            #
 
 
 class PressureTensorReporter(object):
