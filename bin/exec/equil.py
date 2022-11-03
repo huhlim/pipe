@@ -95,32 +95,30 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         ligand_restraints = construct_ligand_restraint(options["ff"]["ligand"])
         sys.addForce(ligand_restraints)
     #
+    steps_total = options["md"]["equil"][0]
     steps_left = options["md"]["equil"][0]
     steps_heat = options["md"]["heat"][0]
     temp = options["md"]["heat"][1]
     temp_incr = options["md"]["heat"][2]
     #
+    integrator = LangevinIntegrator(
+        temp * kelvin,
+        options["md"]["langfbeta"] / picosecond,
+        options["md"]["dyntstep"] * picosecond,
+    )
+    #
+    simulation = Simulation(psf.topology, sys, integrator, platform, properties)
+    simulation.context.setPositions(crd.positions)
+    # state = simulation.context.getState(getEnergy=True)
+    # print (state.getPotentialEnergy())
+    simulation.minimizeEnergy(maxIterations=500)
+    # state = simulation.context.getState(getEnergy=True)
+    # print (state.getPotentialEnergy())
+    simulation.context.setVelocitiesToTemperature(temp * kelvin)
+    #
     i = 0
     while temp < options["md"]["dyntemp"]:
-        integrator = LangevinIntegrator(
-            temp * kelvin,
-            options["md"]["langfbeta"] / picosecond,
-            options["md"]["dyntstep"] * picosecond,
-        )
-        #
-        simulation = Simulation(psf.topology, sys, integrator, platform, properties)
-        simulation.context.setPositions(crd.positions)
-        if i == 0:
-            # state = simulation.context.getState(getEnergy=True)
-            # print (state.getPotentialEnergy())
-            simulation.minimizeEnergy(maxIterations=500)
-            # state = simulation.context.getState(getEnergy=True)
-            # print (state.getPotentialEnergy())
-            simulation.context.setVelocitiesToTemperature(temp * kelvin)
-        else:
-            with open(chk_fn, "rb") as fp:
-                simulation.context.loadCheckpoint(fp.read())
-        simulation.reporters.append(
+        simulation.reporters = [
             StateDataReporter(
                 "%s.heat.%03d.log" % (output_prefix, temp),
                 500,
@@ -133,20 +131,22 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
                 remainingTime=True,
                 speed=True,
                 volume=True,
-                totalSteps=steps_heat,
+                totalSteps=steps_total,
                 separator="\t",
             )
-        )
+        ]
         #
         simulation.step(steps_heat)
         #
-        chk_fn = "%s.heat.restart" % (output_prefix)
-        with open(chk_fn, "wb") as fout:
-            fout.write(simulation.context.createCheckpoint())
-        simulation = None  # have to free CUDA-related variables
-        temp += temp_incr
         i += 1
         steps_left -= steps_heat
+        temp += temp_incr
+        integrator.setTemperature(temp)
+    #
+    chk_fn = "%s.heat.restart" % (output_prefix)
+    with open(chk_fn, "wb") as fout:
+        fout.write(simulation.context.createCheckpoint())
+    simulation = None  # have to free CUDA-related variables
     #
     if np.std(boxsize) < 0.1:
         sys.addForce(MonteCarloBarostat(1.0 * bar, options["md"]["dyntemp"] * kelvin))
@@ -180,7 +180,7 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
             remainingTime=True,
             speed=True,
             volume=True,
-            totalSteps=steps_left,
+            totalSteps=steps_total,
             separator="\t",
         )
     )
