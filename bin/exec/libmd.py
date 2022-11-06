@@ -160,15 +160,15 @@ def update_residue_name(pdb_fn, pdb):
         for line in fp:
             if not line.startswith("ATOM") and not line.startswith("HETA"):
                 continue
-            resName = line[17:20]
-            if resName not in resName_s:
-                continue
             atmName = line[12:16].strip()
             if atmName != "CA":
                 continue
             chain = line[21].strip()
             if chain not in chain_s:
                 chain_s.append(chain)
+            resName = line[17:20]
+            if resName not in resName_s:
+                continue
             resNo = line[22:27].strip()
             chain_index = chain_s.index(chain)
             try:
@@ -282,6 +282,7 @@ def construct_ligand_restraint(pair_s):
 
 
 if openmmtools_available:
+
     class BerendsenVelocityVerletIntegrator(ThermostatedIntegrator):
         def __init__(
             self, temperature=298 * kelvin, timestep=1.0 * femtoseconds, risetime=1.0 * picoseconds
