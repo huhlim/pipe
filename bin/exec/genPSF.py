@@ -49,11 +49,12 @@ def read_pdb(fn):
             if (not line.startswith("ATOM")) and (not line.startswith("HETA")):
                 if line.startswith("SSBOND"):
                     chain_1 = line[15]
-                    resNo_1 = int(line[17:21])
+                    resNo_1 = line[17:22].strip()
                     chain_2 = line[29]
-                    resNo_2 = int(line[31:35])
+                    resNo_2 = line[31:36].strip()
                     disu_s.append([[chain_1, resNo_1], [chain_2, resNo_2]])
                 continue
+
             segName = line[72:76].strip()
             if segName not in segName_s:
                 is_aa = line[17:20].strip() in AAs
@@ -113,7 +114,7 @@ def read_pdb(fn):
                 continue
             for line in seg_s[segName][1]:
                 chain_id = line[21]
-                resNo = int(line[22:26])
+                resNo = line[22:27].strip()
                 if chain_id == cys[0] and resNo == cys[1]:
                     return segName
         return seg
@@ -208,9 +209,9 @@ def write_top_cmd(toppar):
 
 def split_seg(segName_s, seg_s, debug=False):
     if debug:
-        tmpdir = mkdtemp(prefix="genPSF.", dir=".")
+        tmpdir = mkdtemp(prefix="charmm.", dir=".")
     else:
-        tmpdir = mkdtemp(prefix="genPSF.")
+        tmpdir = mkdtemp(prefix="charmm.")
     tmpdir = os.path.abspath(tmpdir)
     #
     for segName in segName_s:
@@ -229,10 +230,8 @@ def write_pdb_cmd(
     seg_s,
     disu_s,
     patch_s,
-    write_crd=False,
     blocked=False,
     terminal=["ACE", "CT3"],
-    build_all=True,
 ):
     cmd = []
     for segName in segName_s:
@@ -248,7 +247,7 @@ def write_pdb_cmd(
             cmd.append("generate %s setup warn\n" % segName)
         cmd.append("close unit 10\n")
     for disu in disu_s:
-        cmd.append("patch DISU %s %d %s %d\n" % (disu))
+        cmd.append("patch DISU %s %s %s %s\n" % (disu))
     for patch in patch_s:
         cmd.append("patch %s %s %s setup\n" % patch)
     cmd.append("auto angle dihe\n")
@@ -298,6 +297,11 @@ def write_pdb_cmd(
         cmd.append("close unit 10\n")
     #
     cmd.append("!\n")
+    return cmd
+
+
+def write_psf_cmd(build_all=True, write_crd=False):
+    cmd = []
     cmd.append("bomlev -2\n")
     if build_all:
         cmd.append("ic param\n")
@@ -356,12 +360,11 @@ def main():
             seg_s,
             disu_s,
             patch_s,
-            write_crd=(arg.crdout is not None),
             blocked=arg.blocked,
             terminal=arg.terminal,
-            build_all=arg.build_all,
         )
     )
+    cmd_s.extend(write_psf_cmd(build_all=arg.build_all, write_crd=(arg.crdout is not None)))
     cmd_s.append("stop\n")
     #
     with open("%s/genPSF.cmd" % tmpdir, "wt") as fout:

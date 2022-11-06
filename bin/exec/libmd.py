@@ -32,6 +32,7 @@ import path
 from libcommon import *
 
 from libquat import Quaternion
+from seqName import stdres_ext
 
 
 def solvate_pdb(output_prefix, pdb, options, verbose):
@@ -182,6 +183,89 @@ def update_residue_name(pdb_fn, pdb):
         if (chain_index, resNo) in residue_s:
             resName = residue_s[(chain_index, resNo)]
             residue.name = resName
+
+
+def put_segnames(in_pdb, CHAIN_BREAKs=2.0):
+    seg_no = -1
+    #
+    segName_s = {}
+    chain_prev = None
+    R_prev = None
+    with open(in_pdb) as fp:
+        for line in fp:
+            if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                continue
+            #
+            resName = line[17:20]
+            if resName not in stdres_ext:
+                continue
+            #
+            atmName = line[12:16].strip()
+            if atmName not in ["N", "C"]:
+                continue
+            #
+            chain_id = line[21]
+            resSeq = line[22:27].strip()
+            key = (chain_id, resSeq)
+            if key not in segName_s:
+                segName_s[key] = None
+                R = [None, None]
+            #
+            if chain_id != chain_prev:
+                seg_no += 1
+                xyz_prev = None
+                chain_prev = chain_id
+            #
+            R[["N", "C"].index(atmName)] = np.array(
+                [line[30:38], line[38:46], line[46:54]], dtype=float
+            )
+            if (R[0] is not None) and (R[1] is not None):
+                xyz_curr = R[0]
+                if xyz_prev is not None:
+                    d = np.linalg.norm(xyz_curr - xyz_prev)
+                    if d > CHAIN_BREAKs:
+                        seg_no += 1
+                xyz_prev = R[1]
+                #
+                segName_s[key] = f"P{seg_no:03d}"
+    #
+    out = []
+    n_residue = {}
+    key_prev = None
+    with open(in_pdb) as fp:
+        for line in fp:
+            if not (line.startswith("ATOM") or line.startswith("HETATM")):
+                out.append(line)
+                continue
+            #
+            chain_id = line[21]
+            resSeq = line[22:27].strip()
+            key = (chain_id, resSeq)
+            #
+            resName = line[17:20]
+            if resName in stdres_ext:
+                segName = segName_s.get(key, None)
+                if segName is None:
+                    sys.exit(f"Failed to assign a segName to {chain_id}{resSeq}")
+            else:
+                if key != key_prev:
+                    key_prev = key
+                    if resName not in n_residue:
+                        n_residue[resName] = 0
+                    n_residue[resName] += 1
+                    i_seg = n_residue[resName] // 10000
+
+                if resName in ["SOD", "CLA", "POT"]:
+                    segName = f"{resName}{i_seg:1d}"
+                elif resName in ["TIP", "HOH"]:
+                    segName = f"W{i_seg:03d}"
+                else:
+                    segName = f"{resName}{i_seg:1d}"
+            #
+            line = f"{line[:72]:<72s}{segName:<4s}{line[76:]}"
+            out.append(line)
+
+    return out
 
 
 def construct_restraint(psf, pdb, force_const, atom_s=["CA"]):
