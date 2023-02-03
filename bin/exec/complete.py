@@ -38,7 +38,7 @@ close unit 10"""
 
 def update_pdb(tmp_pdb, out_pdb, seg_s, ssbond_s):
     chain_id = {}
-    for segName, (segType, lines) in seg_s.items():
+    for segName, (segType, lines, _) in seg_s.items():
         chain_id[segName] = {}
         for line in lines:
             resNo = line[22:27].strip()
@@ -96,8 +96,6 @@ def main():
     #
     patch_s = parse_patch(arg.patch_s)
     segName_s, seg_s, disu_s, n_atoms = read_pdb(arg.init_pdb)
-    update_pdb("tmp.pdb", arg.pdbout, seg_s, disu_s)
-    return
     tmpdir = split_seg(segName_s, seg_s, debug=arg.debug)
     pwd = os.getcwd()
     #

@@ -51,6 +51,7 @@ def select_water(pdblines, bfactor_cutoff=-1):
     #
     water_pdb = tempfile.NamedTemporaryFile("wt", suffix=".pdb")
     water_pdb.writelines(wrt)
+    water_pdb.flush()
     #
     pdb = mdtraj.load(water_pdb.name)
     return pdb
@@ -88,7 +89,7 @@ def place_water(r_o, xyz, water_cutoff):
     min_index = min_index[1][0]
     r_h2 = r_h2[min_index]
     #
-    xyz = np.concatenate([xyz, np.array([r_o, r_h1, r_h2], dtype=np.float)])
+    xyz = np.concatenate([xyz, np.array([r_o, r_h1, r_h2], dtype=float)])
     return xyz
 
 
@@ -136,7 +137,7 @@ def append_water(in_pdb, water, water_cutoff=0.2):
 
 
 def main():
-    arg = argparse.ArgumentParser(prog="convert_figure")
+    arg = argparse.ArgumentParser(prog="copy_water")
     arg.add_argument(dest="in_pdb")
     arg.add_argument(dest="ref_pdb")
     arg.add_argument(dest="out_pdb")

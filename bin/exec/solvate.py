@@ -194,7 +194,6 @@ def xyz_to_pdb(pdb0, water0, placed, n_ion, n_water):
         xyz = np.concatenate([xyz, cryst_water.xyz[0], np.concatenate(placed[ia:])])
     else:
         xyz = np.concatenate([xyz, np.concatenate(placed[ia:])])
-    # xyz = np.append(xyz, np.concatenate(placed[ia:]), axis=0)
     #
     pdb = mdtraj.Trajectory(
         xyz[None, :],

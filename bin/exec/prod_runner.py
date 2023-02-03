@@ -25,7 +25,6 @@ warnings.filterwarnings("ignore", category=CharmmPSFWarning)
 
 from libcustom import *
 from libmd import construct_ligand_restraint
-from libmd import BerendsenVelocityVerletIntegrator
 from libligand import read_ligand_json, get_ligand_restratint
 
 import warnings
@@ -126,6 +125,7 @@ def run(arg, options):
             options["md"]["dyntstep"] * picosecond,
         )
     elif arg.integrator == "Berendsen":
+        from libmd import BerendsenVelocityVerletIntegrator
         integrator = BerendsenVelocityVerletIntegrator(
             options["md"]["dyntemp"] * kelvin, options["md"]["dyntstep"] * picosecond
         )

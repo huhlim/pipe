@@ -3,8 +3,8 @@
 import os
 import sys
 import mdtraj
+import openmm.app
 import argparse
-import numpy as np
 
 def main():
     arg = argparse.ArgumentParser(prog='extract_pdb')
@@ -13,27 +13,31 @@ def main():
     arg.add_argument('--dir', dest='out_dir', default='.')
     arg.add_argument('--name', dest='out_prefix', default='sample')
     arg.add_argument('--select', dest='selection', default=None)
-    arg.add_argument('--topIndex', dest='topIndex_fn', default=None)
     arg.add_argument('--stride', dest='stride', default=None, type=int)
     arg.add_argument('--frame', dest='frame', default=None, type=int, nargs='*')
     arg.add_argument('--structured', dest='structured', default=False, action='store_true')
     arg.add_argument('--split_chain', dest='split_chain', default=False, action='store_true')
     arg.add_argument('--center', dest='center', default=False, action='store_true')
+    arg.add_argument('--superpose', dest='superpose', default=False, action='store_true')
     arg.add_argument('--init_number', dest='init_number', default=0, type=int)
+    arg.add_argument('--keep_atom_name', dest='keep_atom_name', default=False, action='store_true')
     if len(sys.argv) == 1:
         return arg.print_help()
     arg = arg.parse_args()
     #
-    top = mdtraj.load(arg.ref_fn)
-    if arg.topIndex_fn is not None:
-        topIndex = np.load(arg.topIndex_fn)['select']
-        top = top.atom_slice(topIndex)
+    if arg.ref_fn.endswith("pdb"):
+        top_pdb = mdtraj.load(arg.ref_fn, standard_names=(not arg.keep_atom_name))
+        top = top_pdb.topology
+    else:
+        psf = openmm.app.CharmmPsfFile(arg.ref_fn)
+        top = mdtraj.Topology.from_openmm(psf.topology)
+
     if arg.selection is None:
         atomIndex = None
     else:
-        atomIndex = top.topology.select(arg.selection)
+        atomIndex = top.select(arg.selection)
     if arg.split_chain:
-        n_chain = top.topology.n_chains
+        n_chain = top.n_chains
     #
     if not os.path.exists(arg.out_dir):
         os.makedirs(arg.out_dir)
@@ -62,6 +66,10 @@ def main():
                     out_fn = '%s/%s.%d.pdb'%(arg.out_dir, arg.out_prefix, model_no)
             if arg.center:
                 pdb.center_coordinates(mass_weighted=True)
+            elif arg.superpose:
+                calphaIndex = pdb_s.top.select("name CA")
+                pdb_s = pdb_s.superpose(top_pdb, atom_indices=calphaIndex)
+
             if arg.split_chain:
                 for i in range(n_chain):
                     sys.stdout.write("%s\n"%out_fn_s[i])

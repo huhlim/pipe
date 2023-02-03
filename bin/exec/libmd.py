@@ -265,7 +265,7 @@ def put_segnames(in_pdb, CHAIN_BREAKs=2.0):
             line = f"{line[:72]:<72s}{segName:<4s}{line[76:]}"
             out.append(line)
 
-    return out
+    return out, segName_s
 
 
 def construct_restraint(psf, pdb, force_const, atom_s=["CA"]):
