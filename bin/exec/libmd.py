@@ -302,10 +302,10 @@ def construct_water_restraint(psf, pdb, n_water, force_const):
     #
     waterIndex = []
     for residue in psf.topology.residues():
-        if residue.name not in ["TIP3"]:
+        if residue.name not in ["TIP3", "HOH"]:
             continue
         for atom in residue.atoms():
-            if atom.name in ["OH2"]:
+            if atom.name in ["OH2", "O"]:
                 waterIndex.append(atom.index)
                 break
         if len(waterIndex) >= n_water:
