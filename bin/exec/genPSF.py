@@ -207,12 +207,13 @@ def write_top_cmd(toppar):
     return cmd
 
 
-def split_seg(segName_s, seg_s, debug=False):
-    if debug:
-        tmpdir = mkdtemp(prefix="charmm.", dir=".")
-    else:
-        tmpdir = mkdtemp(prefix="charmm.")
-    tmpdir = os.path.abspath(tmpdir)
+def split_seg(segName_s, seg_s, tmpdir=None, debug=False):
+    if tmpdir is None:
+        if debug:
+            tmpdir = mkdtemp(prefix="charmm.", dir=".")
+        else:
+            tmpdir = mkdtemp(prefix="charmm.")
+        tmpdir = os.path.abspath(tmpdir)
     #
     for segName in segName_s:
         out = "%s/%s" % (tmpdir, segName)
