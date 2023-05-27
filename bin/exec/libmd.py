@@ -238,6 +238,7 @@ def put_segnames(in_pdb, CHAIN_BREAKs=2.0):
                 out.append(line)
                 continue
             #
+            line = line.rstrip()
             chain_id = line[21]
             resSeq = line[22:27].strip()
             key = (chain_id, resSeq)
@@ -262,7 +263,7 @@ def put_segnames(in_pdb, CHAIN_BREAKs=2.0):
                 else:
                     segName = f"{resName}{i_seg:1d}"
             #
-            line = f"{line[:72]:<72s}{segName:<4s}{line[76:]}"
+            line = f"{line[:72]:<72s}{segName:<4s}{line[76:]}\n"
             out.append(line)
 
     return out, segName_s

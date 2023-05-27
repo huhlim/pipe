@@ -25,7 +25,15 @@ import path
 from libcommon import *
 
 from libcustom import *
-from libmd import construct_restraint, construct_membrane_restraint
+from libmd import construct_restraint, construct_membrane_restraint, construct_water_restraint
+
+
+def count_cryst_water(pdb):
+    n_cryst_water = 0
+    for r in pdb.top.residues:
+        if r.segment_id.startswith("WAT"):
+            n_cryst_water += 1
+    return n_cryst_water
 
 
 def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
@@ -52,39 +60,41 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
     sys.addForce(construct_restraint(psf, pdb, 0.5))
     sys.addForce(construct_membrane_restraint(psf, pdb, 0.1))
     #
+    if options["md"].get("solvate_cryst", None) is not None:
+        n_cryst_water = count_cryst_water(pdb)
+        if n_cryst_water > 0:
+            sys.addForce(construct_water_restraint(psf, pdb, n_cryst_water, 0.5))
+    #
     if "custom" in options["ff"] and options["ff"]["custom"] is not None:
         custom_restrains = read_custom_restraint(options["ff"]["custom"])
         custom_s = construct_custom_restraint(pdb, custom_restraints[1])
         for custom in custom_s:
             sys.addForce(custom)
     #
+    steps_total = options["md"]["equil"][0]
     steps_left = options["md"]["equil"][0]
     steps_heat = options["md"]["heat"][0]
     temp = options["md"]["heat"][1]
     temp_incr = options["md"]["heat"][2]
     #
+    integrator = LangevinIntegrator(
+        temp * kelvin,
+        options["md"]["langfbeta"] / picosecond,
+        options["md"]["dyntstep"] * picosecond,
+    )
+    #
+    simulation = Simulation(psf.topology, sys, integrator, platform)
+    simulation.context.setPositions(crd.positions)
+    # state = simulation.context.getState(getEnergy=True)
+    # print (state.getPotentialEnergy())
+    simulation.minimizeEnergy(maxIterations=500)
+    # state = simulation.context.getState(getEnergy=True)
+    # print (state.getPotentialEnergy())
+    simulation.context.setVelocitiesToTemperature(temp * kelvin)
+    #
     i = 0
     while temp < options["md"]["dyntemp"]:
-        integrator = LangevinIntegrator(
-            temp * kelvin,
-            options["md"]["langfbeta"] / picosecond,
-            options["md"]["dyntstep"] * picosecond,
-        )
-        #
-        simulation = Simulation(psf.topology, sys, integrator, platform)
-        simulation.context.setPositions(crd.positions)
-        if i == 0:
-            # state = simulation.context.getState(getEnergy=True)
-            # print (state.getPotentialEnergy())
-
-            simulation.minimizeEnergy(maxIterations=500)
-            # state = simulation.context.getState(getEnergy=True)
-            # print (state.getPotentialEnergy())
-            simulation.context.setVelocitiesToTemperature(temp * kelvin)
-        else:
-            with open(chk_fn, "rb") as fp:
-                simulation.context.loadCheckpoint(fp.read())
-        simulation.reporters.append(
+        simulation.reporters = [
             StateDataReporter(
                 "%s.heat.%03d.log" % (output_prefix, temp),
                 500,
@@ -97,20 +107,22 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
                 remainingTime=True,
                 speed=True,
                 volume=True,
-                totalSteps=steps_heat,
+                totalSteps=steps_total,
                 separator="\t",
             )
-        )
+        ]
         #
         simulation.step(steps_heat)
         #
-        chk_fn = "%s.heat.restart" % (output_prefix)
-        with open(chk_fn, "wb") as fout:
-            fout.write(simulation.context.createCheckpoint())
-        simulation = None  # have to free CUDA-related variables
-        temp += temp_incr
         i += 1
         steps_left -= steps_heat
+        temp += temp_incr
+        integrator.setTemperature(temp)
+    #
+    chk_fn = "%s.heat.restart" % (output_prefix)
+    with open(chk_fn, "wb") as fout:
+        fout.write(simulation.context.createCheckpoint())
+    simulation = None  # have to free CUDA-related variables
     #
     sys.addForce(
         MonteCarloMembraneBarostat(
@@ -146,7 +158,7 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
             remainingTime=True,
             speed=True,
             volume=True,
-            totalSteps=steps_left,
+            totalSteps=steps_total,
             separator="\t",
         )
     )
@@ -160,6 +172,10 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
         getEnergy=True,
         enforcePeriodicBox=True,
     )
+    #
+    chk_fn = "%s.equil.restart" % (output_prefix)
+    with open("%s.pkl" % chk_fn, "wb") as fout:
+        pickle.dump(state, fout)
     #
     boxinfo = state.getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer)
     #
@@ -181,10 +197,6 @@ def equil_md(output_prefix, pdb, psf_fn, crd_fn, options, verbose):
                 for line in options["ssbond"]:
                     fout.write("%s\n" % line)
             fout.write(output)
-    #
-    chk_fn = "%s.equil.restart" % (output_prefix)
-    with open("%s.pkl" % chk_fn, "wb") as fout:
-        pickle.dump(state, fout)
 
 
 def run(input_pdb, input_psf, input_crd, output_prefix, options, verbose, nonstd):
@@ -237,6 +249,9 @@ def main():
     #
     with open(arg.input_json) as fp:
         options = json.load(fp)
+    if "ligand_json" in options:
+        options["ligand"] = read_ligand_json(options["ligand_json"])
+    #
     if arg.toppar is not None:
         options["ff"]["toppar"] = arg.toppar
     if arg.custom_file is not None:

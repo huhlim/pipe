@@ -91,8 +91,6 @@ def run(job):
         options["input"] = {}
         options["input"]["psf"] = equil_home.fn("%s.psf" % job.title).short()
         options["input"]["pdb"] = equil_home.fn("%s.equil.pdb" % job.title).short()
-        if options.get("generate_solute_file", True):
-            options["input"]["n_atom"] = job.n_atom
         if options["restart"]:
             options["input"]["restart"] = equil_home.fn("%s.equil.restart.pkl" % job.title).short()
         if job.has("has_ligand"):
@@ -104,6 +102,9 @@ def run(job):
                     options[key][k] = v
             else:
                 options[key] = value
+        #
+        if options.get("generate_solute_file", True):
+            options["input"]["n_atom"] = job.n_atom
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:
@@ -158,8 +159,6 @@ def submit(job):
         options["input"] = {}
         options["input"]["psf"] = equil_home.fn("%s.psf" % job.title).short()
         options["input"]["pdb"] = equil_home.fn("%s.equil.pdb" % job.title).short()
-        if options.get("generate_solute_file", True):
-            options["input"]["n_atom"] = job.n_atom
         if options["restart"]:
             options["input"]["restart"] = equil_home.fn("%s.equil.restart.pkl" % job.title).short()
         if job.has("has_ligand"):
@@ -171,6 +170,9 @@ def submit(job):
                     options[key][k] = v
             else:
                 options[key] = value
+        #
+        if options.get("generate_solute_file", True):
+            options["input"]["n_atom"] = job.n_atom
         #
         run_json = run_home.fn("input.json")
         with run_json.open("wt") as fout:

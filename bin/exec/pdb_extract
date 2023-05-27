@@ -3,7 +3,6 @@
 import os
 import sys
 import mdtraj
-import openmm.app
 import argparse
 
 def main():
@@ -29,6 +28,7 @@ def main():
         top_pdb = mdtraj.load(arg.ref_fn, standard_names=(not arg.keep_atom_name))
         top = top_pdb.topology
     else:
+        import openmm.app
         psf = openmm.app.CharmmPsfFile(arg.ref_fn)
         top = mdtraj.Topology.from_openmm(psf.topology)
 
@@ -46,6 +46,8 @@ def main():
     for dcd_fn in arg.dcd_fn_s:
         pdb_s = mdtraj.load(dcd_fn, top=top, stride=arg.stride, atom_indices=atomIndex)
         if arg.frame is not None:
+            if -1 in arg.frame:
+                arg.frame.append(len(pdb_s)-1)
             pdb_s = [pdb for i,pdb in enumerate(pdb_s) if i in arg.frame]
         for pdb in pdb_s:
             model_no += 1

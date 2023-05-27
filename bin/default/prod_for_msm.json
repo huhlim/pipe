@@ -1,27 +1,27 @@
 {
   "ff": {
-    "use_modified_CMAP": true,
+    "use_modified_CMAP": false,
     "toppar": [
-      "/home/huhlim/work/ff/c36m.CMAPmod.hv/c36m_ecmap.prm",
-      "/home/huhlim/work/ff/c36m.CMAPmod.hv/c36m_ecmap.rtf",
-      "/home/huhlim/work/ff/c36m.CMAPmod.hv/toppar_water_ions.str",
-      "/home/huhlim/work/ff/c36m.CMAPmod.hv/toppar_ions_won.str"
+      "/home/huhlim/work/ff/c36m/par_all36m_prot.prm",
+      "/home/huhlim/work/ff/c36m/top_all36_prot.rtf",
+      "/home/huhlim/work/ff/c36m/toppar_water_ions.str",
+      "/home/huhlim/work/ff/c36m/toppar_ions_won.str"
     ],
     "cgenff": [
-      "/home/huhlim/work/ff/cgenff.hv/top_all36_cgenff.rtf",
-      "/home/huhlim/work/ff/cgenff.hv/par_all36_cgenff.prm"
+      "/home/huhlim/work/ff/cgenff/top_all36_cgenff.rtf",
+      "/home/huhlim/work/ff/cgenff/par_all36_cgenff.prm"
     ]
   },
   "openmm": {
     "platform": "CUDA"
   },
   "md": {
-    "dyntstep": 0.004,
+    "dyntstep": 0.002,
     "dyntemp": 298.15,
     "lang": true,
     "langfbeta": 0.01,
     "dynoutfrq": 50000,
-    "dynsteps": 12500000,
+    "dynsteps": 10000000,
     "iter": 10
   },
   "restart": true

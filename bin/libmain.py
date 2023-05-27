@@ -258,3 +258,41 @@ def get_outputs(job, method, expand=None):
                     output_expanded.append(out)
             out_s.append(output_expanded)
     return out_s
+
+def get_membrane_topology(job, n_init, wait_after_run, sleep=30):
+    membrane_home = job.work_home.subdir("membrane", build=True)
+    #
+    while True:
+        job.membrane_pdb = []
+        job.membrane_psf = []
+        job.membrane_crd = []
+        #
+        status = True
+        for i in range(n_init):
+            m_home = membrane_home.subdir("%d" % i, build=True)
+            pdb_fn = m_home.glob("*.pdb")
+            psf_fn = m_home.glob("*.psf")
+            crd_fn = m_home.glob("*.crd")
+            if len(pdb_fn) == 0:
+                status = False
+                break
+            if len(psf_fn) == 0:
+                status = False
+                break
+            if len(crd_fn) == 0:
+                status = False
+                break
+            #
+            job.membrane_pdb.append(pdb_fn[0])
+            job.membrane_psf.append(psf_fn[0])
+            job.membrane_crd.append(crd_fn[0])
+        #
+        if wait_after_run and (not status):
+            sys.stderr.write("waiting for CHARMM-GUI membrane topology... \n")
+            time.sleep(sleep)
+        else:
+            break
+        #
+    if status:
+        job.to_json()
+    return status

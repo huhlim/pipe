@@ -83,7 +83,8 @@ def equil_md(output_prefix, solv_fn, psf_fn, crd_fn, options, verbose):
         n_cryst_water = options["md"].get("n_cryst_water", -1)
         if n_cryst_water < 0:
             raise NotImplementedError
-        sys.addForce(construct_water_restraint(psf, pdb, n_cryst_water, 0.5))
+        elif n_cryst_water > 0:
+            sys.addForce(construct_water_restraint(psf, pdb, n_cryst_water, 0.5))
     #
     if "custom" in options["ff"] and options["ff"]["custom"] is not None:
         custom_restraints = read_custom_restraint(options["ff"]["custom"])

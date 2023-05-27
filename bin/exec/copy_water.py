@@ -43,11 +43,15 @@ def select_water(pdblines, bfactor_cutoff=-1):
         elif line.startswith("END"):
             break
     #
-    wat_s.sort(key=lambda x: [0])
+    if len(wat_s) == 0:
+        return None
     #
     for w in wat_s:
         if bfactor_cutoff < 0.0 or w[0] < bfactor_cutoff:
             wrt.extend(w[1])
+    #
+    if len(wrt) == 0:
+        return None
     #
     water_pdb = tempfile.NamedTemporaryFile("wt", suffix=".pdb")
     water_pdb.writelines(wrt)
@@ -95,6 +99,9 @@ def place_water(r_o, xyz, water_cutoff):
 
 def append_water(in_pdb, water, water_cutoff=0.2):
     pdb = mdtraj.load(in_pdb)
+    if water is None:
+        return pdb
+    #
     top = pdb.topology
     xyz = pdb.xyz[0]
     #
@@ -149,7 +156,7 @@ def main():
     arg = arg.parse_args()
     #
     sup = supPDB(arg.ref_pdb)
-    sup.align(arg.in_pdb, method="TMalign")
+    sup.align(arg.in_pdb, method="MMalign")
     water = select_water(sup.write(), bfactor_cutoff=arg.bfactor_cutoff)
     pdb = append_water(arg.in_pdb, water, water_cutoff=0.1 * arg.water_cutoff)
     pdb.save(arg.out_pdb)
